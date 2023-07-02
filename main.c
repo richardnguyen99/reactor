@@ -10,11 +10,14 @@
  */
 
 #include "util.h"
-
-struct configopt conf;
+#include "socket.h"
 
 int main(void)
 {
+    struct configopt conf;
+    struct addrinfo hints, *results, *rp;
+    int status, lfd;
+
     memset(&conf, '\0', sizeof(struct configopt));
     if (readenv(".env", &conf) == JENV_RDERROR)
     {
@@ -25,6 +28,8 @@ int main(void)
     dprintf(stdout, "Root dir: %s\n", conf.root);
     dprintf(stdout, "Port number: %ld\n", conf.port);
     dprintf(stdout, "Number threads: %ld\n", conf.num_thread);
+
+    lfd = bindsocket(conf.port);
 
     return EXIT_SUCCESS;
 }

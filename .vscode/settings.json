@@ -1,6 +1,10 @@
 {
   "cmake.sourceDirectory": "${workspaceRoot}",
   "files.associations": {
-    "defs.h": "c"
+    "defs.h": "c",
+    "util.h": "c",
+    "socket.h": "c",
+    "netdb.h": "c",
+    "features.h": "c"
   }
 }

@@ -1,7 +1,7 @@
 /**
  * @file util.h
  * @author Richard Nguyen (richard@richardhnguyen.com)
- * @brief Utility function
+ * @brief Utility functions header
  * @version 0.1
  * @date 2023-06-30
  *

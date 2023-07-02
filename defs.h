@@ -8,6 +8,8 @@
  * @copyright Copyright (c) 2023
  */
 
+#define _GNU_SOURCE
+
 #ifndef _JAWS_DEFS_H
 #define _JAWS_DEFS_H 1
 
@@ -23,6 +25,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include <arpa/inet.h>
 #include <sys/epoll.h>
 #include <sys/errno.h>
 #include <sys/fcntl.h>

@@ -11,6 +11,7 @@ add_compile_options(-DDEBUG)
 set(SOURCE_FILES
     main.c
     util.c
+    socket.c
 )
 
 # Build jaws executable based on these source files
