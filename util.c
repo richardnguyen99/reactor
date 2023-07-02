@@ -12,7 +12,7 @@ int _nothreadguard(int n)
     return (n < MINNOTHREADS) && (n > MAXNOTHREADS) ? DEFAULTNOTHREADS : n;
 }
 
-void _lineto(struct configopt *conf, const char *buf, size_t len, int *status)
+void _lineto(struct configopt *conf, const char *buf, int *status)
 {
     char *token;
 
@@ -60,7 +60,7 @@ int readenv(const char *filename, struct configopt *conf)
         if (c == '\n')
         {
             buffer[i] = '\0';
-            _lineto(conf, buffer, i, &status);
+            _lineto(conf, buffer, &status);
 
             i = 0;
             memset(buffer, '\0', sizeof(buffer));

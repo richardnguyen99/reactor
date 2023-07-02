@@ -6,6 +6,7 @@ enable_testing(true)
 
 # Uncomment this command to turn off debugging message
 add_compile_options(-DDEBUG)
+add_compile_options(-Wall -Werror -Wextra -Wpedantic)
 
 # List source files to build the project
 set(SOURCE_FILES
