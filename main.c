@@ -11,6 +11,7 @@
 
 #include "util.h"
 #include "socket.h"
+#include "http.h"
 
 int main(void)
 {
@@ -61,6 +62,7 @@ int main(void)
         }
 
         dprintf(stdout, "Connected: %s:%s\n", hostbuf, servbuf);
+        handle(cfd);
     }
 
     return EXIT_SUCCESS;
