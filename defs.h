@@ -13,19 +13,23 @@
 #ifndef _JAWS_DEFS_H
 #define _JAWS_DEFS_H 1
 
+// ISO standard headers
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
+// POSIX standard headers
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <pthread.h>
 #include <unistd.h>
-
 #include <arpa/inet.h>
+
+// Linux-related interface headers
 #include <sys/epoll.h>
 #include <sys/errno.h>
 #include <sys/fcntl.h>

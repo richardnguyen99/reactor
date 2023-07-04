@@ -1,4 +1,5 @@
 #include "http.h"
+#include "util.h"
 
 int endofhdr(const char *msgbuf, const size_t len)
 {
@@ -52,6 +53,7 @@ ssize_t readfrom(int fd)
         if (nread == -1)
             return -1;
 
+        lower(buffer);
         write(STDOUT_FILENO, (const void *)buffer, (size_t)nread);
         n += (size_t)nread;
 
@@ -61,6 +63,7 @@ ssize_t readfrom(int fd)
 
     dprintf(stdout, "End of message\n");
     dprintf(stdout, "Byte read: %ld\n", n);
+    dprintf(stdout, "==================\n\n");
     return n;
 }
 

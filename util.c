@@ -34,6 +34,28 @@ void _lineto(struct configopt *conf, const char *buf, int *status)
         conf->num_thread = _nothreadguard(atoi(token + 1));
 }
 
+void lower(char *str)
+{
+    if (str == NULL)
+        return;
+
+    for (size_t i = 0; str[i] != '\0'; ++i)
+    {
+        str[i] = tolower(str[i]);
+    }
+}
+
+void upper(char *str)
+{
+    if (str == NULL)
+        return;
+
+    for (size_t i = 0; str[i] != '\0'; ++i)
+    {
+        str[i] = toupper(str[i]);
+    }
+}
+
 /* Read env variables from `filename` and store at `conf`. On success, it
  returns 0 if there is no error and all read successfully.
 

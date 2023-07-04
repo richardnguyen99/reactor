@@ -28,4 +28,7 @@ struct configopt
 
 int readenv(const char *filename, struct configopt *conf);
 
+void lower(char *str);
+void upper(char *str);
+
 #endif // _JAWS_UTIL_H

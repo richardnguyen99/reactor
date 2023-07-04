@@ -5,6 +5,8 @@
     "util.h": "c",
     "socket.h": "c",
     "netdb.h": "c",
-    "features.h": "c"
+    "features.h": "c",
+    "inet.h": "c",
+    "epoll.h": "c"
   }
 }
