@@ -7,6 +7,8 @@
     "netdb.h": "c",
     "features.h": "c",
     "inet.h": "c",
-    "epoll.h": "c"
+    "epoll.h": "c",
+    "string.h": "c",
+    "hashmap.h": "c"
   }
 }

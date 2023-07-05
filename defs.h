@@ -8,7 +8,9 @@
  * @copyright Copyright (c) 2023
  */
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 
 #ifndef _JAWS_DEFS_H
 #define _JAWS_DEFS_H 1
@@ -36,6 +38,10 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+
+#define FAILURE 1
+#define SUCCESS 0
+#define ERROR -1
 
 #define MINPORT 1025     /* Minimum port range */
 #define MAXPORT 65536    /* Maximum port range */
