@@ -19,6 +19,14 @@
 #define JENV_PORT_ERR (-3) /* Read invalid port number */
 #define JENV_NTHR_ERR (-4) /* Read invalid thread number */
 
+struct keypair
+{
+    char *key;
+    char *value;
+};
+
+typedef struct keypair keypair_t;
+
 struct configopt
 {
     char root[1024];   // Root directory to serve the content
@@ -30,5 +38,7 @@ int readenv(const char *filename, struct configopt *conf);
 
 void lower(char *str);
 void upper(char *str);
+
+keypair_t getkeypair(const char *str, const size_t maxlen, const char *delim);
 
 #endif // _JAWS_UTIL_H

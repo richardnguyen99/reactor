@@ -93,3 +93,21 @@ int readenv(const char *filename, struct configopt *conf)
 
     return status;
 }
+
+keypair_t getkeypair(const char *raw, const size_t maxlen, const char *delim)
+{
+    keypair_t kp;
+    char *str, *token;
+    memset(&kp, 0, sizeof(keypair_t));
+
+    str = strndup(raw, maxlen);
+    token = strtok(str, delim);
+    kp.key = token;
+
+    token = strtok(NULL, delim);
+    kp.value = token;
+
+    dprintf(stdout, "%s", raw);
+
+    return kp;
+}

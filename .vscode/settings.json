@@ -9,6 +9,7 @@
     "inet.h": "c",
     "epoll.h": "c",
     "string.h": "c",
-    "hashmap.h": "c"
+    "hashmap.h": "c",
+    "http.h": "c"
   }
 }

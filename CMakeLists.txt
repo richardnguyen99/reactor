@@ -31,6 +31,7 @@ endif()
 # List source files to build the project
 set(SOURCE_FILES
     main.c
+    hashmap.c
     util.c
     socket.c
     http.c

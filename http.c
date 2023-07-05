@@ -1,5 +1,5 @@
-#include "http.h"
 #include "util.h"
+#include "http.h"
 
 int endofhdr(const char *msgbuf, const size_t len)
 {
@@ -39,10 +39,10 @@ ssize_t readline(int fd, char *msgbuf)
     return n;
 }
 
-ssize_t readfrom(int fd)
+ssize_t readreq(int fd, http_headers_t headers)
 {
     ssize_t nread = 0;
-    size_t n = 0;
+    size_t line = 0, n = 0;
     char buffer[MSGSIZE];
     memset(buffer, '\0', MSGSIZE);
 
@@ -54,8 +54,17 @@ ssize_t readfrom(int fd)
             return -1;
 
         lower(buffer);
-        write(STDOUT_FILENO, (const void *)buffer, (size_t)nread);
+        // sprintf(buffer, "%s\n", buffer);
+        // write(STDOUT_FILENO, (const void *)buffer, (size_t)nread);
+
+        if (line != 0 && nread > 2)
+        {
+            keypair_t kv = getkeypair(buffer, nread - 2, ": ");
+            hashmap_put(headers, kv.key, kv.value);
+        }
+
         n += (size_t)nread;
+        line++;
 
         if (endofmsg(buffer, (size_t)nread))
             break;
@@ -72,7 +81,13 @@ int handle(int fd)
     ssize_t nread;
     int status = 0;
 
-    nread = readfrom(fd);
+    http_headers_t headers = hashmap_new(strhash, strcmp);
+
+    nread = readreq(fd, headers);
+
+#ifdef DEBUG
+    hashmap_iterate(hashmap_begin(headers), NULL, "http.headers");
+#endif
 
     if (nread == -1)
     {
@@ -83,5 +98,6 @@ int handle(int fd)
 
 safe_exit:
     close(fd);
+    hashmap_delete(headers);
     return status;
 }

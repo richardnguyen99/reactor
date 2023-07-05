@@ -13,6 +13,7 @@
 #define _JAWS_HTTP_H 1
 
 #include "defs.h"
+#include "hashmap.h"
 
 #define HTTP_SUCCESS 200
 #define HTTP_CREATED 201
@@ -27,11 +28,13 @@
 #define HTTP_INTERNAL 500
 #define HTTP_NOTIMPLEMENTED 501
 
+typedef hashmap_t *http_headers_t;
+
 int endofhdr(const char *msgbuf, const size_t len);
 int endofmsg(const char *msgbuf, const size_t len);
 
 ssize_t readline(int fd, char *msgbuf);
-ssize_t readfrom(int fd);
+ssize_t readreq(int fd, http_headers_t headers);
 
 int handle(int fd);
 
