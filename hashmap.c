@@ -97,6 +97,26 @@ struct hashmap *hashmap_new(hashmap_hash_func hash, hashmap_cmp_func cmp)
     return map;
 }
 
+void hashmap_delete(struct hashmap *map)
+{
+    for (size_t i = 0; i < map->capacity; i++)
+    {
+        struct hashmap_entry *entry = map->buckets[i];
+
+        while (entry != NULL)
+        {
+            struct hashmap_entry *next = entry->next;
+            free(entry->key);
+            free(entry->value);
+            free(entry);
+            entry = next;
+        }
+    }
+
+    free(map->buckets);
+    free(map);
+}
+
 int hashmap_put(struct hashmap *map, const char *key, const char *value)
 {
     if (map->size >= map->capacity * HASHMAP_DEFAULT_LOAD_FACTOR)
@@ -128,4 +148,50 @@ int hashmap_put(struct hashmap *map, const char *key, const char *value)
     map->size++;
 
     return SUCCESS;
+}
+
+char *hashmap_get(struct hashmap *map, const char *key)
+{
+    size_t bucket = map->hash(key) % map->capacity;
+    struct hashmap_entry *entry = map->buckets[bucket];
+
+    while (entry != NULL)
+    {
+        if (map->cmp(entry->key, key) == 0)
+            return entry->value;
+
+        entry = entry->next;
+    }
+
+    return NULL;
+}
+
+int hashmap_remove(struct hashmap *map, const char *key)
+{
+    size_t bucket = map->hash(key) % map->capacity;
+    struct hashmap_entry *entry = map->buckets[bucket];
+    struct hashmap_entry *prev = NULL;
+
+    while (entry != NULL)
+    {
+        if (map->cmp(entry->key, key) == 0)
+        {
+            if (prev == NULL)
+                map->buckets[bucket] = entry->next;
+            else
+                prev->next = entry->next;
+
+            free(entry->key);
+            free(entry->value);
+            free(entry);
+            map->size--;
+
+            return SUCCESS;
+        }
+
+        prev = entry;
+        entry = entry->next;
+    }
+
+    return FAILURE;
 }
