@@ -12,19 +12,43 @@
 #define FNV_PRIME 0x01000193
 #define FNV_BASIS 0x811C9DC5
 
+#define DEFAULT_ITER_FUNC NULL
+#define DEFAULT_MAP_NAME "map"
+
 size_t strhash(const char *str);
 size_t strihash(const char *str);
 
-struct hashmap;
-struct hashmap_iterator;
-struct hashmap_entry;
-
-typedef struct hashmap hashmap_t;
-typedef struct hashmap_iterator hashmap_iterator_t;
-typedef struct hashmap_entry hashmap_entry_t;
-
 typedef size_t (*hashmap_hash_func)(const char *);
 typedef int (*hashmap_cmp_func)(const char *, const char *);
+struct hashmap_entry
+{
+    char *key;
+    char *value;
+    struct hashmap_entry *next;
+};
+
+struct hashmap
+{
+    size_t size;
+    size_t capacity;
+    struct hashmap_entry **buckets;
+
+    hashmap_hash_func hash;
+    hashmap_cmp_func cmp;
+};
+
+struct hashmap_iterator
+{
+    struct hashmap *map;
+    size_t bucket;
+    struct hashmap_entry *entry;
+};
+
+typedef struct hashmap hashmap_t;
+typedef struct hashmap_entry hashmap_entry_t;
+typedef struct hashmap_iterator hashmap_iterator_t;
+
+typedef void (*hashmap_iter_func)(struct hashmap_entry *, const char *);
 
 /**
  * @brief Create a new hash map object
@@ -70,8 +94,8 @@ char *hashmap_get(hashmap_t *map, const char *key);
  */
 int hashmap_remove(hashmap_t *map, const char *key);
 
-struct hashmap_iterator *hashmap_iterator(hashmap_t *map);
-struct hashmap_entry *hashmap_next(struct hashmap_iterator *iter);
-void hashmap_iterator_delete(struct hashmap_iterator *iter);
+hashmap_iterator_t hashmap_begin(hashmap_t *map);
+hashmap_iterator_t hashmap_next(hashmap_iterator_t iter);
+void hashmap_iterate(hashmap_iterator_t iter, hashmap_iter_func iter_func, const char *map_name);
 
 #endif // _JAWS_HASHMAP_H

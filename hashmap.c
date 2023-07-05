@@ -26,30 +26,6 @@ size_t strihash(const char *str)
     return hash;
 }
 
-struct hashmap_entry
-{
-    char *key;
-    char *value;
-    struct hashmap_entry *next;
-};
-
-struct hashmap_iterator
-{
-    struct hashmap *map;
-    size_t bucket;
-    struct hashmap_entry *entry;
-};
-
-struct hashmap
-{
-    size_t size;
-    size_t capacity;
-    struct hashmap_entry **buckets;
-
-    hashmap_hash_func hash;
-    hashmap_cmp_func cmp;
-};
-
 int hashmap_resize(struct hashmap *map, size_t capacity)
 {
     struct hashmap_entry **buckets = ((struct hashmap_entry **)
@@ -194,4 +170,47 @@ int hashmap_remove(struct hashmap *map, const char *key)
     }
 
     return FAILURE;
+}
+
+struct hashmap_iterator hashmap_begin(hashmap_t *map)
+{
+    struct hashmap_iterator iter;
+    memset(&iter, 0, sizeof(hashmap_iterator_t));
+
+    iter.map = map;
+
+    while (iter.entry == NULL && iter.bucket < iter.map->capacity)
+        iter.entry = iter.map->buckets[iter.bucket++];
+
+    return iter;
+}
+
+struct hashmap_iterator hashmap_next(struct hashmap_iterator iter)
+{
+    if (iter.entry != NULL)
+        iter.entry = iter.entry->next;
+
+    while (iter.entry == NULL && iter.bucket < iter.map->capacity)
+        iter.entry = iter.map->buckets[iter.bucket++];
+
+    return iter;
+}
+
+void default_iter_func(struct hashmap_entry *entry, const char *map_name)
+{
+    map_name = map_name == NULL ? "map" : map_name;
+
+    fprintf(stdout, "%s[\"%s\"] = \"%s\"\n", map_name, entry->key, entry->value);
+}
+
+void hashmap_iterate(struct hashmap_iterator iter, hashmap_iter_func func, const char *map_name)
+{
+    if (func == NULL)
+        func = default_iter_func;
+
+    while (iter.entry != NULL)
+    {
+        func(iter.entry, map_name);
+        iter = hashmap_next(iter);
+    }
 }
