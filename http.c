@@ -1,6 +1,53 @@
 #include "util.h"
 #include "http.h"
 
+const char *const endpoints[] = {
+    "/",
+    "index.html",
+    "login",
+    "register",
+    "about",
+};
+
+int parsepath(const char *path, char *endpoint, char *query)
+{
+    if (strcmp(path, "/") == 0)
+    {
+        strcpy(endpoint, "/");
+        strcpy(query, "");
+        return SUCCESS;
+    }
+
+    int status = SUCCESS;
+    char *token = NULL;
+    char *saveptr = NULL;
+    char *pathcpy = strdup(path);
+
+    if (pathcpy == NULL)
+        return ERROR;
+
+    strcpy(pathcpy, path);
+
+    token = strtok_r(pathcpy, "/", &saveptr);
+
+    if (token == NULL)
+    {
+        status = ERROR;
+        goto cleanup;
+    }
+
+    strcpy(endpoint, token);
+
+    token = strtok_r(NULL, "/", &saveptr);
+
+    if (token != NULL)
+        strcpy(query, token);
+
+cleanup:
+    free(pathcpy);
+    return status;
+}
+
 int parsestartline(const char *line, req_t *req)
 {
     char *token = NULL;
@@ -12,16 +59,20 @@ int parsestartline(const char *line, req_t *req)
     token = strtok_r((char *)line, " ", &saveptr);
     method = token;
 
+    if (method == NULL)
+        return ERROR;
+
     token = strtok_r(NULL, " ", &saveptr);
     path = token;
+
+    if (path == NULL)
+        return ERROR;
 
     token = strtok_r(NULL, " ", &saveptr);
     version = token;
 
-    if (method == NULL || path == NULL || version == NULL)
-    {
+    if (version == NULL)
         return ERROR;
-    }
 
     if (strcmp(method, "get") == 0)
         req->method = HTTP_METHOD_GET;
@@ -41,8 +92,14 @@ int parsestartline(const char *line, req_t *req)
     if (req->path == NULL)
         return ERROR;
 
-    strcpy(req->path, path);
-    strcpy(req->version, version);
+    req->query = (char *)malloc(sizeof(path));
+    if (req->query == NULL)
+        return ERROR;
+
+    if (parsepath(path, req->path, req->query) == ERROR)
+        return ERROR;
+
+    strncpy(req->version, version, strlen(version) - 2);
 
     return SUCCESS;
 }
@@ -85,6 +142,37 @@ cleanup:
     if (line != NULL)
         free(line);
     return status;
+}
+
+int checkpath(const char *path)
+{
+    size_t i = 0;
+    int status = FAILURE;
+
+    for (; i < sizeof(endpoints) / sizeof(endpoints[0]); i++)
+    {
+        if (strcmp(path, endpoints[i]) == 0)
+        {
+            status = SUCCESS;
+            break;
+        }
+    }
+
+    return status;
+}
+
+void checkstartline(req_t *req)
+{
+    if (req->method == HTTP_METHOD_UNSUPPORTED)
+        req->status = HTTP_NOTALLOWED;
+    else if (checkpath(req->path) == ERROR)
+        req->status = HTTP_BADREQUEST;
+    else if (checkpath(req->path) == FAILURE)
+        req->status = HTTP_BADREQUEST;
+    else if (strcmp(req->version, HTTP_VERSION) != 0)
+        req->status = HTTP_UNSUPPORTED;
+    else
+        req->status = HTTP_SUCCESS;
 }
 
 int endofhdr(const char *msgbuf, const size_t len)
@@ -141,13 +229,13 @@ ssize_t reqread(int fd, req_t *req)
             return -1;
 
         lower(buffer);
-        // sprintf(buffer, "%s\n", buffer);
-        // write(STDOUT_FILENO, (const void *)buffer, (size_t)nread);
 
         if (line == 0)
         {
             if (parsestartline(buffer, req) == ERROR)
                 req->status = HTTP_BADREQUEST;
+            else
+                checkstartline(req);
         }
 
         if (line != 0 && nread > 2 && req->status != HTTP_ENTITIYTOOLARGE)
@@ -235,8 +323,10 @@ int handle(int fd, char *ipaddr)
 
 #ifdef DEBUG
     hashmap_iterate(hashmap_begin(req->headers), NULL, "http.headers");
-    fprintf(stdout, "%d %s %s", req->method, req->path, req->version);
-    fprintf(stdout, "IP: %s\n", req->ip);
+    fprintf(stdout, "%d %s %s\n", req->method, req->path, req->version);
+    fprintf(stdout, "IP: %s\n\n", req->ip);
+    fprintf(stdout, "Status code: %d\n", req->status);
+
 #endif
 
     if (nread == -1)

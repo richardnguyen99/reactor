@@ -15,21 +15,22 @@
 #include "defs.h"
 #include "hashmap.h"
 
-#define HTTP_SUCCESS 200
-#define HTTP_CREATED 201
+#define HTTP_SUCCESS 200 // Request is OK
+#define HTTP_CREATED 201 // Request has created a new resource
 
-#define HTTP_BADREQUEST 400
-#define HTTP_UNAUTHORIZED 401
-#define HTTP_FORBIDDEN 403
-#define HTTP_NOTFOUND 404
-#define HTTP_UNALLOWED 405
-#define HTTP_TIMEOUT 408
-#define HTTP_ENTITIYTOOLARGE 413
+#define HTTP_BADREQUEST 400      // Request is invalid
+#define HTTP_UNAUTHORIZED 401    // Request requires user authentication
+#define HTTP_FORBIDDEN 403       // Server refuses to respond to request
+#define HTTP_NOTFOUND 404        // Server cannot find requested resource
+#define HTTP_NOTALLOWED 405      // Request method is not supported
+#define HTTP_TIMEOUT 408         // Request took too long to complete
+#define HTTP_ENTITIYTOOLARGE 413 // Request header is too large
 
-#define HTTP_INTERNAL 500
-#define HTTP_NOTIMPLEMENTED 501
+#define HTTP_INTERNAL 500    // Server encountered an error
+#define HTTP_NOTIMPL 501     // Server does not support the functionality
+#define HTTP_UNSUPPORTED 505 // Server does not support the HTTP version
 
-#define HTTP_VERSION "HTTP/1.1"
+#define HTTP_VERSION "http/1.1"
 
 #define HTTP_METHOD_GET (1 << 0)
 #define HTTP_METHOD_HEAD (1 << 1)
@@ -45,6 +46,8 @@
 
 #define REQP_DEFAULT 0
 #define REQP_COMPLETE 1
+
+extern const char *const endpoints[];
 
 typedef hashmap_t *http_headers_t;
 struct request
