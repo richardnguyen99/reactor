@@ -11,5 +11,6 @@
     "string.h": "c",
     "hashmap.h": "c",
     "http.h": "c"
-  }
+  },
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

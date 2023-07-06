@@ -62,7 +62,7 @@ int main(void)
         }
 
         dprintf(stdout, "Connected: %s:%s\n", hostbuf, servbuf);
-        handle(cfd);
+        handle(cfd, hostbuf);
     }
 
     return EXIT_SUCCESS;

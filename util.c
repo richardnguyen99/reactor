@@ -107,7 +107,6 @@ keypair_t getkeypair(const char *raw, const size_t maxlen, const char *delim)
     token = strtok(NULL, delim);
     kp.value = token;
 
-    dprintf(stdout, "%s", raw);
-
+    free(str);
     return kp;
 }

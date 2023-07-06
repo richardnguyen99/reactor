@@ -24,18 +24,116 @@
 #define HTTP_NOTFOUND 404
 #define HTTP_UNALLOWED 405
 #define HTTP_TIMEOUT 408
+#define HTTP_ENTITIYTOOLARGE 413
 
 #define HTTP_INTERNAL 500
 #define HTTP_NOTIMPLEMENTED 501
 
+#define HTTP_VERSION "HTTP/1.1"
+
+#define HTTP_METHOD_GET (1 << 0)
+#define HTTP_METHOD_HEAD (1 << 1)
+#define HTTP_METHOD_POST (1 << 2)
+#define HTTP_METHOD_PUT (1 << 3)
+#define HTTP_METHOD_DELETE (1 << 4)
+#define HTTP_METHOD_UNSUPPORTED -1
+
+/*
+ Control the number of bytes that this server allows in a request header.
+*/
+#define HTTP_LIMIT_REQUEST_LINE 8190
+
+#define REQP_DEFAULT 0
+#define REQP_COMPLETE 1
+
 typedef hashmap_t *http_headers_t;
+struct request
+{
+    /**
+     * @brief HTTP method
+     *
+     * https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
+     */
+    int method;
+
+    /**
+     * @brief HTTP Path name
+     *
+     * It contains the path part of the request URL.
+     */
+    char *path;
+
+    /**
+     * @brief  HTTP version
+     *
+     * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host
+     */
+    char version[9];
+
+    /**
+     * @brief HTTP body
+     *
+     * It contains key-value pairs of the request body. It is only available
+     * when the request method is POST or PUT.
+     */
+    char *body;
+
+    /**
+     * @brief  HTTP query string
+     *
+     * It contains key-value pairs of the request query string.
+     */
+    char *query;
+
+    /**
+     * @brief HTTP hostname
+     *
+     * It contains the hostname header in the request.
+     */
+    char *hostname;
+
+    /**
+     * @brief HTTP port number
+     *
+     * It contains the port number header in the request.
+     */
+    char port[7];
+
+    /**
+     * @brief HTTP IP address
+     *
+     * It contains the IP address of the client.
+     */
+    char ip[INET_ADDRSTRLEN];
+
+    /**
+     * @brief HTTP headers
+     *
+     * It contains the headers of the request.
+     */
+    http_headers_t headers;
+
+    /**
+     * @brief HTTP status code
+     *
+     * It contains the status code of the response that will be sent back to the
+     * client.
+     */
+    int status;
+};
+
+typedef struct request req_t;
 
 int endofhdr(const char *msgbuf, const size_t len);
 int endofmsg(const char *msgbuf, const size_t len);
 
 ssize_t readline(int fd, char *msgbuf);
-ssize_t readreq(int fd, http_headers_t headers);
 
-int handle(int fd);
+req_t *reqinit(void);
+void reqfree(req_t *req);
+ssize_t reqread(int fd, req_t *headers);
+void reqprint(req_t *req, int print_options);
+
+int handle(int fd, char *ipaddr);
 
 #endif // _JAWS_HTTP_H
