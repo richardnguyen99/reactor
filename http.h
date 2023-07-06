@@ -135,6 +135,7 @@ ssize_t readline(int fd, char *msgbuf);
 req_t *reqinit(void);
 void reqfree(req_t *req);
 ssize_t reqread(int fd, req_t *headers);
+
 void reqprint(req_t *req, int print_options);
 
 int handle(int fd, char *ipaddr);

@@ -21,18 +21,11 @@
 
 struct keypair
 {
-    char *key;
-    char *value;
+    char key[120];
+    char value[8190];
 };
 
 typedef struct keypair keypair_t;
-
-struct configopt
-{
-    char root[1024];   // Root directory to serve the content
-    size_t port;       // Port number to bind host.
-    size_t num_thread; // Available number of threads in a pool
-};
 
 int readenv(const char *filename, struct configopt *conf);
 
@@ -40,5 +33,8 @@ void lower(char *str);
 void upper(char *str);
 
 keypair_t getkeypair(const char *str, const size_t maxlen, const char *delim);
+
+int buildfilepath(const char *filename, char *result, size_t *len);
+int checkfile(const char *filename);
 
 #endif // _JAWS_UTIL_H

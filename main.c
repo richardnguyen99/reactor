@@ -13,9 +13,10 @@
 #include "socket.h"
 #include "http.h"
 
+struct configopt conf;
+
 int main(void)
 {
-    struct configopt conf;
     char hostbuf[NI_MAXHOST], servbuf[NI_MAXSERV];
     int status, lfd, cfd;
 

@@ -2,6 +2,8 @@
 
 #define BUFSIZE 1024
 
+extern struct configopt conf;
+
 int _portguard(int p)
 {
     return (p < MINPORT) && (p > MAXPORT) ? DEFAULTPORT : p;
@@ -102,11 +104,31 @@ keypair_t getkeypair(const char *raw, const size_t maxlen, const char *delim)
 
     str = strndup(raw, maxlen);
     token = strtok(str, delim);
-    kp.key = token;
+    strcpy(kp.key, token);
 
     token = strtok(NULL, delim);
-    kp.value = token;
+    strcpy(kp.value, token);
 
     free(str);
     return kp;
+}
+
+int buildfilepath(const char *filename, char *result, size_t *len)
+{
+    snprintf(result, *len, "%s/%s", conf.root, filename);
+
+    return SUCCESS;
+}
+
+int checkfile(const char *filename)
+{
+    struct stat st;
+
+    if (stat(filename, &st) == -1)
+        return FAILURE;
+
+    if (!S_ISREG(st.st_mode) || !(S_IXUSR & st.st_mode))
+        return FAILURE;
+
+    return SUCCESS;
 }

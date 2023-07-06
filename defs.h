@@ -51,6 +51,7 @@
 #define MAXNOTHREADS 10    /* Maximum number of threads */
 #define DEFAULTNOTHREADS 2 /* Default number of threads */
 
+#define RSRCSIZE 128 /* Resource size for HTTP request */
 #define BUFSIZE 1024 /* Normal buffer size for small reading */
 #define MSGSIZE 8096 /* Message size for HTTP request */
 
@@ -60,5 +61,14 @@
 #else
 #define dprintf(file, fmt, ...)
 #endif
+
+struct configopt
+{
+    char root[80];     // Root directory to serve the content
+    size_t port;       // Port number to bind host.
+    size_t num_thread; // Available number of threads in a pool
+};
+
+extern struct configopt conf;
 
 #endif // _JAWS_DEFS_H

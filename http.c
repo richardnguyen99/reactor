@@ -32,7 +32,7 @@ int parsepath(const char *path, char *endpoint, char *query)
 
     if (token == NULL)
     {
-        status = ERROR;
+        status = FAILURE;
         goto cleanup;
     }
 
@@ -42,6 +42,8 @@ int parsepath(const char *path, char *endpoint, char *query)
 
     if (token != NULL)
         strcpy(query, token);
+    else
+        strcpy(query, "");
 
 cleanup:
     free(pathcpy);
@@ -55,24 +57,25 @@ int parsestartline(const char *line, req_t *req)
     char *method = NULL;
     char *path = NULL;
     char *version = NULL;
+    int status = SUCCESS;
 
     token = strtok_r((char *)line, " ", &saveptr);
     method = token;
 
     if (method == NULL)
-        return ERROR;
+        return FAILURE;
 
     token = strtok_r(NULL, " ", &saveptr);
     path = token;
 
     if (path == NULL)
-        return ERROR;
+        return FAILURE;
 
     token = strtok_r(NULL, " ", &saveptr);
     version = token;
 
     if (version == NULL)
-        return ERROR;
+        return FAILURE;
 
     if (strcmp(method, "get") == 0)
         req->method = HTTP_METHOD_GET;
@@ -88,20 +91,22 @@ int parsestartline(const char *line, req_t *req)
         req->method = HTTP_METHOD_UNSUPPORTED;
 
     req->path = (char *)malloc(sizeof(path));
-
-    if (req->path == NULL)
-        return ERROR;
-
     req->query = (char *)malloc(sizeof(path));
-    if (req->query == NULL)
-        return ERROR;
 
-    if (parsepath(path, req->path, req->query) == ERROR)
-        return ERROR;
+    if (req->path == NULL || req->query == NULL)
+    {
+        status = ERROR;
+        goto safe_exit;
+    }
+
+    status = parsepath(path, req->path, req->query);
+    if (status != SUCCESS)
+        goto safe_exit;
 
     strncpy(req->version, version, strlen(version) - 2);
 
-    return SUCCESS;
+safe_exit:
+    return status;
 }
 
 int parseheaders(const char *raw, req_t *req)
@@ -158,6 +163,34 @@ int checkpath(const char *path)
         }
     }
 
+    char *resourcepath = (char *)malloc(sizeof(char) * RSRCSIZE);
+    if (resourcepath == NULL)
+    {
+        status = ERROR;
+        goto cleanup;
+    }
+
+    char *duppath = (char *)malloc(sizeof(char) * RSRCSIZE);
+    if (duppath == NULL)
+    {
+        status = ERROR;
+        goto cleanup;
+    }
+
+    if (strcasecmp(path, "/") == 0)
+        strcpy(duppath, "index.html");
+    else
+        strcpy(duppath, path);
+
+    sprintf(resourcepath, "%s/%s", conf.root, duppath);
+    if (checkfile(resourcepath) == ERROR)
+        status = FAILURE;
+
+cleanup:
+    if (resourcepath)
+        free(resourcepath);
+    if (duppath)
+        free(duppath);
     return status;
 }
 
@@ -165,11 +198,9 @@ void checkstartline(req_t *req)
 {
     if (req->method == HTTP_METHOD_UNSUPPORTED)
         req->status = HTTP_NOTALLOWED;
-    else if (checkpath(req->path) == ERROR)
+    else if (checkpath(req->path) != SUCCESS)
         req->status = HTTP_BADREQUEST;
-    else if (checkpath(req->path) == FAILURE)
-        req->status = HTTP_BADREQUEST;
-    else if (strcmp(req->version, HTTP_VERSION) != 0)
+    else if (strcmp(req->version, HTTP_VERSION) != SUCCESS)
         req->status = HTTP_UNSUPPORTED;
     else
         req->status = HTTP_SUCCESS;
@@ -216,42 +247,54 @@ ssize_t readline(int fd, char *msgbuf)
 ssize_t reqread(int fd, req_t *req)
 {
     ssize_t nread = 0;
-    size_t line = 0, n = 0;
+    size_t n = 0;
     char buffer[MSGSIZE];
     int status = 0;
     memset(buffer, '\0', MSGSIZE);
+
+    // Read the start line
+    nread = readline(fd, buffer);
+    if (nread == -1)
+    {
+        perror("readline");
+        req->status = HTTP_INTERNAL;
+        return -1;
+    }
+
+    status = parsestartline(buffer, req);
+    if (status == ERROR)
+    {
+        req->status = HTTP_INTERNAL;
+        return -1;
+    }
+    else if (status == FAILURE)
+    {
+        req->status = HTTP_BADREQUEST;
+        return 0;
+    }
 
     for (; req->status == HTTP_SUCCESS;)
     {
         nread = readline(fd, buffer);
 
         if (nread == -1)
+        {
+            perror("readline");
+            req->status = HTTP_INTERNAL;
             return -1;
-
-        lower(buffer);
-
-        if (line == 0)
-        {
-            if (parsestartline(buffer, req) == ERROR)
-                req->status = HTTP_BADREQUEST;
-            else
-                checkstartline(req);
-        }
-
-        if (line != 0 && nread > 2 && req->status != HTTP_ENTITIYTOOLARGE)
-        {
-            status = parseheaders(buffer, req);
-            if (status == ERROR)
-                req->status = HTTP_BADREQUEST;
-            else if (status == FAILURE)
-                req->status = HTTP_ENTITIYTOOLARGE;
         }
 
         n += (size_t)nread;
-        line++;
-
         if (endofmsg(buffer, (size_t)nread))
             break;
+
+        lower(buffer);
+
+        status = parseheaders(buffer, req);
+        if (status == ERROR)
+            req->status = HTTP_BADREQUEST;
+        else if (status == FAILURE)
+            req->status = HTTP_ENTITIYTOOLARGE;
     }
 
     dprintf(stdout, "End of message\n");
