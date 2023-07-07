@@ -127,7 +127,7 @@ int checkfile(const char *filename)
     if (stat(filename, &st) == -1)
         return FAILURE;
 
-    if (!S_ISREG(st.st_mode) || !(S_IXUSR & st.st_mode))
+    if (!S_ISREG(st.st_mode) || !(S_IRUSR & st.st_mode))
         return FAILURE;
 
     return SUCCESS;

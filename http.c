@@ -2,7 +2,7 @@
 #include "http.h"
 
 const char *const endpoints[] = {
-    "/",
+    "", // Index page
     "login",
     "register",
     "about",
@@ -10,13 +10,6 @@ const char *const endpoints[] = {
 
 int parsepath(const char *path, char *endpoint, char *query)
 {
-    if (strcmp(path, "/") == 0)
-    {
-        strcpy(endpoint, "/");
-        strcpy(query, "");
-        return SUCCESS;
-    }
-
     int status = SUCCESS;
     char *token = NULL;
     char *saveptr = NULL;
@@ -102,7 +95,9 @@ int parsestartline(const char *line, req_t *req)
     if (status != SUCCESS)
         goto safe_exit;
 
-    strncpy(req->version, version, strlen(version) - 2);
+    size_t len = strlen(version) - 2;
+    strncpy(req->version, version, len);
+    req->version[len] = '\0';
 
 safe_exit:
     return status;
@@ -148,61 +143,52 @@ cleanup:
     return status;
 }
 
-int checkpath(const char *path)
+int checkpath(req_t *req)
 {
     size_t i = 0;
     int status = FAILURE;
 
-    for (; i < sizeof(endpoints) / sizeof(endpoints[0]); i++)
+    for (; i < sizeof(endpoints) / sizeof(endpoints[0]); ++i)
     {
-        if (strcmp(path, endpoints[i]) == 0)
+        if (strcmp(req->path, endpoints[i]) == 0)
         {
             status = SUCCESS;
             break;
         }
     }
 
-    char *resourcepath = (char *)malloc(sizeof(char) * RSRCSIZE);
-    if (resourcepath == NULL)
+    for (i = 0; conf.resources[i] != NULL; ++i)
     {
-        status = ERROR;
-        goto cleanup;
+        if (strcmp(req->path, conf.resources[i]) == 0)
+        {
+            status = SUCCESS;
+            break;
+        }
     }
 
-    char *duppath = (char *)malloc(sizeof(char) * RSRCSIZE);
-    if (duppath == NULL)
-    {
-        status = ERROR;
-        goto cleanup;
-    }
+    if (status == FAILURE)
+        req->status = HTTP_NOTFOUND;
 
-    if (strcasecmp(path, "/") == 0)
-        strcpy(duppath, "index.html");
-    else
-        strcpy(duppath, path);
-
-    sprintf(resourcepath, "%s/%s", conf.root, duppath);
-    if (checkfile(resourcepath) == ERROR)
-        status = FAILURE;
-
-cleanup:
-    if (resourcepath)
-        free(resourcepath);
-    if (duppath)
-        free(duppath);
     return status;
 }
 
 void checkstartline(req_t *req)
 {
     if (req->method == HTTP_METHOD_UNSUPPORTED)
+    {
         req->status = HTTP_NOTALLOWED;
-    else if (checkpath(req->path) != SUCCESS)
-        req->status = HTTP_BADREQUEST;
-    else if (strcmp(req->version, HTTP_VERSION) != SUCCESS)
+        return;
+    }
+
+    checkpath(req);
+    if (req->status != HTTP_SUCCESS)
+        return;
+
+    if (strcmp(req->version, HTTP_VERSION) != SUCCESS)
+    {
         req->status = HTTP_UNSUPPORTED;
-    else
-        req->status = HTTP_SUCCESS;
+        return;
+    }
 }
 
 int endofhdr(const char *msgbuf, const size_t len)
@@ -307,6 +293,7 @@ req_t *reqinit(void)
     req->body = NULL;
     req->hostname = NULL;
     req->query = NULL;
+    req->resource = NULL;
     req->status = HTTP_SUCCESS;
 
     req->headers = hashmap_new(strhash, strcmp);
@@ -335,6 +322,9 @@ void reqfree(req_t *req)
 
     if (req->query != NULL)
         free(req->query);
+
+    if (req->resource != NULL)
+        free(req->resource);
 
     if (req->headers != NULL)
         hashmap_delete(req->headers);
@@ -422,6 +412,7 @@ int handle(int fd, char *ipaddr)
     fprintf(stdout, "%d %s %s\n", req->method, req->path, req->version);
     fprintf(stdout, "IP: %s\n\n", req->ip);
     fprintf(stdout, "Status code: %d\n", req->status);
+    // fprintf(stdout, "Resource: %s\n", req->resource);
 
 #endif
 

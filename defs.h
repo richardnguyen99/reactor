@@ -68,6 +68,8 @@ struct configopt
     char root[80];     // Root directory to serve the content
     size_t port;       // Port number to bind host.
     size_t num_thread; // Available number of threads in a pool
+
+    char **resources;
 };
 
 extern struct configopt conf;

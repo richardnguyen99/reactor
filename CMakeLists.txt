@@ -16,6 +16,8 @@ add_compile_options(-Wall -Werror -Wextra -Wpedantic)
 
 # Copy env file from source dir to build dir
 configure_file(${CMAKE_SOURCE_DIR}/.env ${CMAKE_BINARY_DIR}/.env COPYONLY)
+file(COPY ${CMAKE_SOURCE_DIR}/public DESTINATION ${CMAKE_BINARY_DIR})
+
 
 # Check if pthread exists
 check_library_exists(pthread pthread_create "" HAVE_PTHREAD)

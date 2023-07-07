@@ -123,6 +123,13 @@ struct request
      * client.
      */
     int status;
+
+    /**
+     * @brief HTTP resource path
+     *
+     * It contains the path to the reource that the client is requesting.
+     */
+    char *resource;
 };
 
 typedef struct request req_t;

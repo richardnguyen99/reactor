@@ -9,11 +9,47 @@
  *
  */
 
+#define _GNU_SOURCE
+
+#include <dirent.h>
+
 #include "util.h"
 #include "socket.h"
 #include "http.h"
 
 struct configopt conf;
+
+char **getfiles()
+{
+    char **files = NULL;
+    int i = 0;
+    DIR *dir;
+    struct dirent *ent;
+
+    if ((dir = opendir(conf.root)) != NULL)
+    {
+        while ((ent = readdir(dir)) != NULL)
+        {
+            if (ent->d_type == DT_REG)
+            {
+                files = realloc(files, sizeof(char *) * (i + 1));
+                files[i] = malloc(sizeof(char) * (strlen(ent->d_name) + 1));
+                strcpy(files[i], ent->d_name);
+                i++;
+            }
+        }
+        closedir(dir);
+    }
+    else
+    {
+        perror("opendir");
+        exit(EXIT_FAILURE);
+    }
+
+    files[i] = NULL;
+
+    return files;
+}
 
 int main(void)
 {
@@ -26,6 +62,8 @@ int main(void)
         perror("open");
         exit(EXIT_FAILURE);
     }
+
+    conf.resources = getfiles();
 
     dprintf(stdout, "Root dir: %s\n", conf.root);
     dprintf(stdout, "Port number: %ld\n", conf.port);
@@ -65,6 +103,12 @@ int main(void)
         dprintf(stdout, "Connected: %s:%s\n", hostbuf, servbuf);
         handle(cfd, hostbuf);
     }
+
+    for (size_t i = 0; conf.resources[i] != NULL; i++)
+    {
+        free(conf.resources[i]);
+    }
+    free(conf.resources);
 
     return EXIT_SUCCESS;
 }
