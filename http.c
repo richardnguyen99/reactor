@@ -3,7 +3,6 @@
 
 const char *const endpoints[] = {
     "/",
-    "index.html",
     "login",
     "register",
     "about",
@@ -24,7 +23,7 @@ int parsepath(const char *path, char *endpoint, char *query)
     char *pathcpy = strdup(path);
 
     if (pathcpy == NULL)
-        return ERROR;
+        return FATAL;
 
     strcpy(pathcpy, path);
 
@@ -77,15 +76,15 @@ int parsestartline(const char *line, req_t *req)
     if (version == NULL)
         return FAILURE;
 
-    if (strcmp(method, "get") == 0)
+    if (strcmp(method, "GET") == 0)
         req->method = HTTP_METHOD_GET;
-    else if (strcmp(method, "head") == 0)
+    else if (strcmp(method, "HEAD") == 0)
         req->method = HTTP_METHOD_HEAD;
-    else if (strcmp(method, "post") == 0)
+    else if (strcmp(method, "POST") == 0)
         req->method = HTTP_METHOD_POST;
-    else if (strcmp(method, "put") == 0)
+    else if (strcmp(method, "PUT") == 0)
         req->method = HTTP_METHOD_PUT;
-    else if (strcmp(method, "delete") == 0)
+    else if (strcmp(method, "DELETE") == 0)
         req->method = HTTP_METHOD_DELETE;
     else
         req->method = HTTP_METHOD_UNSUPPORTED;
@@ -95,7 +94,7 @@ int parsestartline(const char *line, req_t *req)
 
     if (req->path == NULL || req->query == NULL)
     {
-        status = ERROR;
+        status = FATAL;
         goto safe_exit;
     }
 
@@ -231,7 +230,7 @@ ssize_t readline(int fd, char *msgbuf)
         nread = recv(fd, (void *)(msgbuf + n), 1, 0);
 
         if (nread == -1)
-            return -1;
+            return FATAL;
 
         n += (size_t)nread;
 
@@ -254,24 +253,19 @@ ssize_t reqread(int fd, req_t *req)
 
     // Read the start line
     nread = readline(fd, buffer);
-    if (nread == -1)
+    if (nread == FATAL)
     {
-        perror("readline");
         req->status = HTTP_INTERNAL;
-        return -1;
+        return FATAL;
     }
 
     status = parsestartline(buffer, req);
-    if (status == ERROR)
-    {
-        req->status = HTTP_INTERNAL;
-        return -1;
-    }
-    else if (status == FAILURE)
-    {
-        req->status = HTTP_BADREQUEST;
-        return 0;
-    }
+    if (req->status != HTTP_SUCCESS)
+        return status;
+
+    checkstartline(req);
+    if (req->status != HTTP_SUCCESS)
+        return status;
 
     for (; req->status == HTTP_SUCCESS;)
     {
@@ -348,6 +342,58 @@ void reqfree(req_t *req)
     free(req);
 }
 
+const char *req_strstatus(int status_code)
+{
+    switch (status_code)
+    {
+    case HTTP_SUCCESS:
+        return "OK";
+    case HTTP_CREATED:
+        return "Created";
+    case HTTP_BADREQUEST:
+        return "Bad Request";
+    case HTTP_UNAUTHORIZED:
+        return "Unauthorized";
+    case HTTP_FORBIDDEN:
+        return "Forbidden";
+    case HTTP_NOTFOUND:
+        return "Not Found";
+    case HTTP_NOTALLOWED:
+        return "Method Not Allowed";
+    case HTTP_TIMEOUT:
+        return "Request Timeout";
+    case HTTP_ENTITIYTOOLARGE:
+        return "Request Entity Too Large";
+    case HTTP_INTERNAL:
+        return "Internal Server Error";
+    case HTTP_NOTIMPL:
+        return "Not Implemented";
+    case HTTP_UNSUPPORTED:
+        return "HTTP Version Not Supported";
+    default:
+        return "Bad Request";
+    }
+}
+
+void req_send_error(int fd, int status_code)
+{
+    char buffer[MSGSIZE];
+    memset(buffer, '\0', MSGSIZE);
+
+    snprintf(buffer, MSGSIZE, "HTTP/1.1 %d %s\r\n", status_code, req_strstatus(status_code));
+    send(fd, buffer, strlen(buffer), 0);
+    snprintf(buffer, MSGSIZE, "Content-Length: %ld\r\n", strlen(req_strstatus(status_code)));
+    send(fd, buffer, strlen(buffer), 0);
+    snprintf(buffer, MSGSIZE, "Content-Type: text/plain\r\n");
+    send(fd, buffer, strlen(buffer), 0);
+    snprintf(buffer, MSGSIZE, "Connection: close\r\n");
+    send(fd, buffer, strlen(buffer), 0);
+    snprintf(buffer, MSGSIZE, "\r\n");
+    send(fd, buffer, strlen(buffer), 0);
+    snprintf(buffer, MSGSIZE, "%s", req_strstatus(status_code));
+    send(fd, buffer, strlen(buffer), 0);
+}
+
 int handle(int fd, char *ipaddr)
 {
     ssize_t nread;
@@ -364,6 +410,13 @@ int handle(int fd, char *ipaddr)
     memcpy(req->ip, ipaddr, strlen(ipaddr));
     nread = reqread(fd, req);
 
+    if (nread == FATAL)
+    {
+        perror("recv");
+        status = -1;
+        goto safe_exit;
+    }
+
 #ifdef DEBUG
     hashmap_iterate(hashmap_begin(req->headers), NULL, "http.headers");
     fprintf(stdout, "%d %s %s\n", req->method, req->path, req->version);
@@ -372,12 +425,12 @@ int handle(int fd, char *ipaddr)
 
 #endif
 
-    if (nread == -1)
-    {
-        perror("recv");
-        status = (int)nread;
-        goto safe_exit;
-    }
+    if (nread == FAILURE)
+        goto send_message;
+
+send_message:
+    if (req->status != HTTP_SUCCESS)
+        req_send_error(fd, req->status);
 
 safe_exit:
     if (req != NULL)

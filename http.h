@@ -30,7 +30,7 @@
 #define HTTP_NOTIMPL 501     // Server does not support the functionality
 #define HTTP_UNSUPPORTED 505 // Server does not support the HTTP version
 
-#define HTTP_VERSION "http/1.1"
+#define HTTP_VERSION "HTTP/1.1"
 
 #define HTTP_METHOD_GET (1 << 0)
 #define HTTP_METHOD_HEAD (1 << 1)
@@ -137,6 +137,10 @@ void reqfree(req_t *req);
 ssize_t reqread(int fd, req_t *headers);
 
 void reqprint(req_t *req, int print_options);
+
+const char *req_strstatus(int status_code);
+void req_send_error(int fd, int status_code);
+void req_send_response(int fd, int status);
 
 int handle(int fd, char *ipaddr);
 

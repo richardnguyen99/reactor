@@ -42,6 +42,7 @@
 #define FAILURE 1
 #define SUCCESS 0
 #define ERROR -1
+#define FATAL -2
 
 #define MINPORT 1025     /* Minimum port range */
 #define MAXPORT 65536    /* Maximum port range */
