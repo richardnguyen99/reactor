@@ -7,10 +7,4 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-include_directories(include)
-
-add_executable(reactor main.c)
-
-add_subdirectory(src)
-
-target_link_libraries(reactor PRIVATE reactor_source)
+add_library(reactor_source server.c)

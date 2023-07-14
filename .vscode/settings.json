@@ -1,16 +1,6 @@
 {
-  "cmake.sourceDirectory": "${workspaceRoot}",
-  "files.associations": {
-    "defs.h": "c",
-    "util.h": "c",
-    "socket.h": "c",
-    "netdb.h": "c",
-    "features.h": "c",
-    "inet.h": "c",
-    "epoll.h": "c",
-    "string.h": "c",
-    "hashmap.h": "c",
-    "http.h": "c"
-  },
-  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+    "files.associations": {
+        "server.h": "c",
+        "defs.h": "c"
+    },
 }
