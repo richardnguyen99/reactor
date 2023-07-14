@@ -1,6 +1,17 @@
 {
     "files.associations": {
         "server.h": "c",
-        "defs.h": "c"
+        "defs.h": "c",
+        "util.h": "c",
+        "errno.h": "c",
+        "assert.h": "c",
+        "fcntl.h": "c",
+        "pthread.h": "c",
+        "unistd.h": "c",
+        "signal.h": "c",
+        "in.h": "c",
+        "inet.h": "c",
+        "mman.h": "c",
+        "epoll.h": "c"
     },
 }

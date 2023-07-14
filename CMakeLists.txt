@@ -7,6 +7,18 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
+
+# Check if CMAKE_DEBUG_FLAG is set
+option (CMAKE_DEBUG_FLAG "Set to ON to enable debug flags" ON)
+
+# Set compiler flags according to CMAKE_DEBUG_FLAG
+if (CMAKE_DEBUG_FLAG)
+    add_compile_options(-g -O0 -DDEBUG)
+else()
+    add_compile_options(-Wall -Wextra -Werror)
+    add_compile_options(-O3 -Wpendatic)
+endif()
+
 include_directories(include)
 
 add_executable(reactor main.c)

@@ -26,6 +26,10 @@ struct server {
 
 typedef struct server server_t;
 
-void server_print(void);
+void server_print(server_t *server);
+void server_init(server_t *server);
+void server_load_config(server_t *server, int argc, char *argv[]);
+void server_boot(server_t *server);
+void server_start(server_t *server);
 
 #endif // _REACTOR_SERVER_H
