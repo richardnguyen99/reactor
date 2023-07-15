@@ -14,15 +14,15 @@
 
 #include "defs.h"
 
-struct config {
-    char root[8192];
-    char port[6];
-    size_t nthreads;
-};
-
-typedef struct config config_t;
-
-int read_config(const char *filename, config_t *conf);
-
+/**
+ * @brief Read N bytes from FD into BUF or until a newline is read.
+ * 
+ * @param fd File descriptor to read from
+ * @param buf Buffer to store the read data
+ * @param n Number of bytes to read
+ * 
+ * @return Number of bytes read. -1 is returned if an error occurs.
+ */
+ssize_t read_line(int fd, char *buf, size_t n);
 
 #endif // _REACTOR_UTIL_H

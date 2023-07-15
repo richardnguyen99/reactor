@@ -1,46 +1,24 @@
 #include "util.h"
 
-int read_config(const char *filename, config_t *config)
+ssize_t read_line(int fd, char *buf, size_t n)
 {
-    int fd = open(filename, O_RDONLY);
+    ssize_t nread = 0;
+    size_t total = 0;
 
-    if (fd == -1)
+    for (;;)
     {
-        perror("open");
-        exit(EXIT_FAILURE);
+        // Read one byte at a time to check for newline
+        nread = read(fd, buf + total, 1);
+
+        if (nread == -1)
+            return -1;
+
+        total += (size_t)nread;
+
+        if (nread == 0 || *(buf + total) == '\n')
+            break;
+
     }
 
-    char buf[BUFSIZE];
-    ssize_t nread = read(fd, buf, BUFSIZE);
-
-    if (nread == -1)
-    {
-        perror("read");
-        exit(EXIT_FAILURE);
-    }
-
-    char *line = strtok(buf, "\n");
-
-    while (line != NULL)
-    {
-        char *key = strtok(line, " ");
-        char *value = strtok(NULL, " ");
-
-        if (strcmp(key, "root") == 0)
-        {
-            strcpy(config->root, value);
-        }
-        else if (strcmp(key, "port") == 0)
-        {
-            strcpy(config->port, value);
-        }
-        else if (strcmp(key, "nthreads") == 0)
-        {
-            config->nthreads = atoi(value);
-        }
-
-        line = strtok(NULL, "\n");
-    }
-
-    return 0;
+    return (ssize_t)total;
 }

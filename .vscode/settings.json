@@ -12,6 +12,20 @@
         "in.h": "c",
         "inet.h": "c",
         "mman.h": "c",
-        "epoll.h": "c"
+        "epoll.h": "c",
+        "limits.h": "c",
+        "getopt.h": "c",
+        "string.h": "c",
+        "stdlib.h": "c",
+        "stdio.h": "c",
+        "stdint.h": "c",
+        "cstdint": "c",
+        "stdint-gcc.h": "c",
+        "stddef.h": "c",
+        "stdbool.h": "c",
+        "sendfile.h": "c",
+        "socket.h": "c",
+        "stat.h": "c",
+        "types.h": "c"
     },
 }

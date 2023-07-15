@@ -29,16 +29,52 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 // Linux
+#include <getopt.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/epoll.h>
 #include <sys/mman.h>
 #include <sys/sendfile.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+
+#ifdef HAVE_LIMITS_H
+#include <linux/limits.h>
+#else
+#define PATH_MAX 4096
+#define NAME_MAX 255
+#endif
+
+#ifndef NULL 
+#define NULL ((void *)0)
+#endif
+
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
+
+#ifndef SIZE
+#define SIZE(a) (sizeof(a) / sizeof(a[0]))
+#endif
+
+#ifndef SUCCESS
+#define SUCCESS 0
+#endif
+
+#ifndef FAILURE
+#define FAILURE 1
+#endif
+
+#ifndef ERROR
+#define ERROR -1
+#endif
 
 // Macros & Constants
 #define REACTOR_VERSION "0.1.1"

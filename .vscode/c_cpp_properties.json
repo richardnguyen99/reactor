@@ -6,8 +6,10 @@
                 "${default}",
                 "${workspaceFolder}/include"
             ],
-            "defines": [],
-            "compilerPath": "/usr/local/bin/clang",
+            "defines": [
+                "HAVE_LIMITS_H"
+            ],
+            "compilerPath": "/usr/bin/gcc",
             "cStandard": "c17",
             "cppStandard": "c++17",
             "intelliSenseMode": "linux-clang-x64"
