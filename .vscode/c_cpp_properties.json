@@ -8,7 +8,7 @@
             ],
             "defines": [
                 "HAVE_LIMITS_H",
-                "_GNU_SOURCE",
+                "_GNU_SOURCE"
             ],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c17",

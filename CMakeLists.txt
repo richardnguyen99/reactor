@@ -7,13 +7,19 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-# Check if linux limits.h is available
 include(CheckIncludeFile)
 
 check_include_file(limits.h HAVE_LIMITS_H)
+check_include_file(stdbool.h HAVE_STDBOOL_H)
+check_include_file(sys/epoll.h HAVE_SYS_EPOLL_H)
 
 if (HAVE_LIMITS_H)
     add_definitions(-DHAVE_LIMITS_H)
+endif()
+
+# Exit if epoll.h is not found
+if (NOT HAVE_SYS_EPOLL_H)
+    message(FATAL_ERROR "epoll.h not found")
 endif()
 
 # Check if CMAKE_DEBUG_FLAG is set

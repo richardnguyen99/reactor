@@ -47,7 +47,7 @@ struct reactor_server
     int epollfd;
     
     /* Epoll events associated with a file descriptor for monitoring */
-    struct epoll_event *events;
+    struct epoll_event events[MAX_EVENTS];
 
     /* Address and info of the server instance */
     struct sockaddr_in addr;

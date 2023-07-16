@@ -1,11 +1,13 @@
 #include "server.h"
 #include "util.h"
+#include "poll.h"
 
 void _set_args(struct __reactor_config *config, int argc, char *argv[]);
 void _load_from_env(struct __reactor_config *config);
 void _usage(const char *msg);
 
 void _prepare_socket(struct reactor_server *server);
+void _set_nonblocking(int fd);
 
 // ============================================================================
 
@@ -25,7 +27,7 @@ void server_init(struct reactor_server *server)
     // Initialize the server instance
     memset(server, 0, sizeof(struct reactor_server));
     memset(&(server->config), 0, sizeof(struct __reactor_config));
-    memset(server->config.config_path, '\0', PATH_MAX);
+    memset(server->config.config_path, '\0', PATH_MAX   );
     memset(server->config.root_dir, '\0', PATH_MAX);
     memset(&(server->config.port), '\0', sizeof(port_t));
     memset(&(server->addr), 0, sizeof(struct sockaddr_in));
@@ -36,7 +38,7 @@ void server_init(struct reactor_server *server)
     server->config.nthreads = 0;
     server->config.root_dir[0] = '\0';
 
-    server->events = NULL;
+    memset(&server->events, '\0', sizeof(struct epoll_event) * MAX_EVENTS);
 
     return;
 }
@@ -62,10 +64,25 @@ void server_boot(server_t *server)
 {
     debug("Booting up the server...\n\n");
 
+    // Prepare the socket for listening server
     _prepare_socket(server);
 
     if (listen(server->sockfd, SOMAXCONN) == -1)
         DIE("(boot) listen");
+
+    // Set non blocking socket for epoll
+    _set_nonblocking(server->sockfd);
+    
+    // Create an epoll instance
+    server->epollfd = poll_create(0);
+    
+    if (server->epollfd == -1)
+        DIE("(boot) poll_create");
+
+    // Add the listening socket to the epoll instance
+    if (poll_add(server->epollfd, server->sockfd, (EPOLLIN | EPOLLET), server->events) == -1)
+        DIE("(boot) poll_add");
+
 
     debug("Server is ready...\n\n");
 
@@ -283,6 +300,18 @@ void _prepare_socket(struct reactor_server *server)
     server->sockfd = sockfd;
 
     freeaddrinfo(res);
+}
+
+void _set_nonblocking(int fd)
+{
+    int status = fcntl(fd, F_GETFL, 0);
+
+    if (status == -1)
+        DIE("(set_nonblocking) fcntl");
+
+    status |= O_NONBLOCK;
+    if (fcntl(fd, F_SETFL, status) == -1)
+        DIE("(set_nonblocking) fcntl");
 }
 
 void _usage(const char *msg)

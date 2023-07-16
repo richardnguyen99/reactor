@@ -10,6 +10,7 @@ set(CMAKE_C_EXTENSIONS OFF)
 set(SOURCES
     server.c
     util.c
+    poll.c
 )
 
 add_library(reactor_source ${SOURCES})

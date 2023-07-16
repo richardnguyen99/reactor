@@ -27,6 +27,8 @@
         "socket.h": "c",
         "stat.h": "c",
         "types.h": "c",
-        "netdb.h": "c"
+        "netdb.h": "c",
+        "poll.h": "c",
+        "sys/epoll.h": "c"
     },
 }
