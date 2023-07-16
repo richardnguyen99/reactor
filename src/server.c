@@ -8,6 +8,8 @@ void _usage(const char *msg);
 
 void _prepare_socket(struct reactor_server *server);
 void _set_nonblocking(int fd);
+void *_request_routine(void *arg);
+void _append_request(struct reactor_server *server, int fd);
 
 // ============================================================================
 
@@ -95,6 +97,10 @@ void server_boot(server_t *server)
     if (server->tpool == NULL)
         DIE("(boot) tp_create");
 
+    for (size_t i = 0; i < server->tpool->num_threads; i++)
+        if (pthread_create(&server->tpool->threads[i], NULL, _request_routine, (void *)server) == -1)
+            DIE("(boot) pthread_create");
+
     debug("Server is ready...\n\n");
     debug("Server address: %s\n", inet_ntoa(server->addr.sin_addr));
     debug("Server port: %d\n", ntohs(server->addr.sin_port));
@@ -112,6 +118,34 @@ void server_route(server_t *server, const char *path, void (*handler)(void))
 void server_start(server_t *server) 
 {
     debug("Starting the server...\n\n");
+
+    int n, listen_fd, conn_fd, nfds, epollfd;
+
+    listen_fd = server->sockfd;
+
+    for (;;)
+    {
+        nfds = epoll_wait(server->epollfd, server->events, MAX_EVENTS, -1);
+        if (nfds == -1)
+            DIE("(start) epoll_wait");
+
+        for (n = 0; n < nfds; ++n)
+        {
+            if (server->events[n].data.fd == listen_fd)
+            {
+                conn_fd = accept(listen_fd, NULL, NULL);
+                if (conn_fd == -1)
+                    DIE("(start) accept");
+
+                _set_nonblocking(conn_fd);
+
+                if (poll_add(server->epollfd, conn_fd, (EPOLLIN | EPOLLET)) == -1)
+                    DIE("(start) poll_add");
+            }
+            else
+                _append_request(server, server->events[n].data.fd);
+        }
+    }
 
     return;
 }
@@ -334,6 +368,47 @@ void _set_nonblocking(int fd)
     status |= O_NONBLOCK;
     if (fcntl(fd, F_SETFL, status) == -1)
         DIE("(set_nonblocking) fcntl");
+}
+
+void _append_request(struct reactor_server *server, int fd)
+{
+    if (sem_wait(&server->tpool->full) == -1)
+        DIE("(handle_request) sem_wait (full)");
+
+    if (pthread_mutex_lock(&server->tpool->lock) == -1)
+        DIE("(handle_request) pthread_mutex_lock");
+
+    queue_push_back(server->queue, fd);
+
+    if (pthread_mutex_unlock(&server->tpool->lock) == -1)
+        DIE("(handle_request) pthread_mutex_unlock");
+
+    if (sem_post(&server->tpool->empty) == -1)
+        DIE("(handle_request) sem_post (empty)");
+}
+
+void *_request_routine(void *arg)
+{
+    struct reactor_server *server = (struct reactor_server *)arg;
+
+    for (;;)
+    {
+        if (sem_wait(&server->tpool->empty) == -1)
+            DIE("(request_routine) sem_wait (empty)");
+
+        if (pthread_mutex_lock(&server->tpool->lock) == -1)
+            DIE("(request_routine) pthread_mutex_lock");
+
+        int fd = queue_pop_front(server->queue);
+
+        if (pthread_mutex_unlock(&server->tpool->lock) == -1)
+            DIE("(request_routine) pthread_mutex_unlock");
+
+        if (sem_post(&server->tpool->full) == -1)
+            DIE("(request_routine) sem_post (full)");
+
+        http_req(fd);
+    }
 }
 
 void _usage(const char *msg)

@@ -30,6 +30,7 @@
         "types.h": "c",
         "netdb.h": "c",
         "poll.h": "c",
-        "ring_buffer.h": "c"
+        "ring_buffer.h": "c",
+        "thread_pool.h": "c"
     },
 }

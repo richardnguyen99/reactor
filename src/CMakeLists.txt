@@ -11,8 +11,10 @@ set(SOURCES
     server.c
     util.c
     poll.c
+    hashmap.c
     thread_pool.c
     ring_buffer.c
+    http.c
 )
 
 add_library(reactor_source ${SOURCES})

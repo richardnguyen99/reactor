@@ -14,6 +14,7 @@
 #include "defs.h"
 #include "util.h"
 #include "thread_pool.h"
+#include "http.h"
 
 #define PORTSIZE 6
 typedef struct {
