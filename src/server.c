@@ -52,6 +52,8 @@ void server_load_config(server_t *server, int argc, char *argv[])
     
     _load_from_env(&(server->config));
 
+    
+
     debug("Configuration loaded...\n");
     debug("Port: %d\n", server->config.port.number);
     debug("Root directory: %s\n", server->config.root_dir);
@@ -82,6 +84,16 @@ void server_boot(server_t *server)
     // Add the listening socket to the epoll instance
     if (poll_add(server->epollfd, server->sockfd, (EPOLLIN)) == -1)
         DIE("(boot) poll_add");
+
+    server->queue = queue_init(server->config.queue_cap);
+
+    if (server->queue == NULL)
+        DIE("(boot) queue_init");
+
+    server->tpool = tp_create(server->config.queue_cap, server->config.nthreads);
+
+    if (server->tpool == NULL)
+        DIE("(boot) tp_create");
 
     debug("Server is ready...\n\n");
     debug("Server address: %s\n", inet_ntoa(server->addr.sin_addr));
@@ -119,6 +131,7 @@ void _set_args(struct __reactor_config *config, int argc ,char *argv[])
     static struct option long_options[] = 
     {
         {"port", required_argument, NULL, 'p'},
+        {"queue", required_argument, NULL, 'q' },
         {"rootdir", required_argument, NULL, 'r'},
         {"nthreads", required_argument, NULL, 't'},
         {"config", required_argument, NULL, 'c'},
@@ -135,6 +148,11 @@ void _set_args(struct __reactor_config *config, int argc ,char *argv[])
                 debug("port %s\n", optarg);
                 config->port.number = (uint16_t)atoi(optarg);
                 strncpy(config->port.str, optarg, PORTSIZE);
+
+                break;
+
+            case 'q':
+                config->queue_cap = (size_t)atoi(optarg);
 
                 break;
 
@@ -185,6 +203,9 @@ int _parse_env_to_config(int fd, char *buf, struct __reactor_config *config)
         config->port.number = (uint16_t)atoi(value);
         strncpy(config->port.str, value, PORTSIZE);
     }
+
+    if (strcmp(key, "QUEUE") == 0)
+        config->queue_cap = (size_t)atoi(value);
     
     if (strcmp(key, "ROOTDIR") == 0)
         strncpy(config->root_dir, value, PATH_MAX);
@@ -237,6 +258,9 @@ void _load_from_env(struct __reactor_config *config)
 
     if (config->nthreads <= 0)
         config->nthreads = 4;
+
+    if (config->queue_cap <= 0)
+        config->queue_cap = 20;
 
     if (config->port.number < 1024 || config->port.number > 49151)
     {

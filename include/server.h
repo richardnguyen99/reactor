@@ -13,6 +13,7 @@
 
 #include "defs.h"
 #include "util.h"
+#include "thread_pool.h"
 
 #define PORTSIZE 6
 typedef struct {
@@ -27,6 +28,9 @@ struct __reactor_config {
     /* Number of threads for the thread pool */
     size_t nthreads;
 
+    /* Capacity for task queue */
+    size_t queue_cap;
+
     /* Root directory of the server */
     char root_dir[PATH_MAX];
 
@@ -39,7 +43,6 @@ struct __reactor_config {
 
 struct reactor_server 
 {
-
     /* Listening socket file descriptor of the server instance  */
     int sockfd;
 
@@ -53,7 +56,10 @@ struct reactor_server
     struct sockaddr_in addr;
 
     /* Thread pool for handling IO events */
-    pthread_t *threads;
+    struct thread_pool *tpool;
+
+    /* Ring buffer data structure for handling tasks */
+    struct queue *queue;
 
     /* Contains the configuration of the server instance */
     struct __reactor_config config;
