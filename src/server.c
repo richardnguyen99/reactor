@@ -80,12 +80,10 @@ void server_boot(server_t *server)
         DIE("(boot) poll_create");
 
     // Add the listening socket to the epoll instance
-    if (poll_add(server->epollfd, server->sockfd, (EPOLLIN | EPOLLET), server->events) == -1)
+    if (poll_add(server->epollfd, server->sockfd, (EPOLLIN)) == -1)
         DIE("(boot) poll_add");
 
-
     debug("Server is ready...\n\n");
-
     debug("Server address: %s\n", inet_ntoa(server->addr.sin_addr));
     debug("Server port: %d\n", ntohs(server->addr.sin_port));
 

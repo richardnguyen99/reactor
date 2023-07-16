@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "sys/epoll.h": "c",
         "server.h": "c",
         "defs.h": "c",
         "util.h": "c",
@@ -29,6 +30,5 @@
         "types.h": "c",
         "netdb.h": "c",
         "poll.h": "c",
-        "sys/epoll.h": "c"
     },
 }

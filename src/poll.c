@@ -12,11 +12,9 @@ int poll_create(int flags)
 }
 
 
-int poll_add(int poll_fd, int fd, int events, struct epoll_event *poll_events)
+int poll_add(int poll_fd, int fd, int events)
 {
     struct epoll_event ev;
-
-    ev.data.fd = fd;
     ev.events = events;
 
     int ret = epoll_ctl(poll_fd, EPOLL_CTL_ADD, fd, &ev);

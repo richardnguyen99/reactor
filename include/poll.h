@@ -30,7 +30,7 @@ int poll_create(int flags);
  * @param poll_events Event queue from the server
  * @return 0 on success, -1 on error
  */
-int poll_add(int poll_fd, int fd, int events, struct epoll_event *poll_events);
+int poll_add(int poll_fd, int fd, int events);
 
 /**
  * @brief  Remove a file descriptor from the epoll instance
