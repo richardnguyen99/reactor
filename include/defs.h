@@ -36,6 +36,7 @@
 #include <getopt.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netdb.h>
 #include <sys/epoll.h>
 #include <sys/mman.h>
 #include <sys/sendfile.h>

@@ -14,10 +14,15 @@
 #include "defs.h"
 #include "util.h"
 
+#define PORTSIZE 6
+typedef struct {
+    uint16_t number;
+    char str[PORTSIZE];
+} port_t;
+
+
 /* This is a part of reactor_server struct. Do not use by its own */
 struct __reactor_config {
-    /* Port number to listen on */
-    uint16_t port;
 
     /* Number of threads for the thread pool */
     size_t nthreads;
@@ -27,12 +32,13 @@ struct __reactor_config {
 
     /* Path to the configuration file */
     char config_path[PATH_MAX];
+
+    /* Port number to listen on */
+    port_t port;
 };
 
 struct reactor_server 
 {
-    /* Contains the configuration of the server instance */
-    struct __reactor_config config;
 
     /* Listening socket file descriptor of the server instance  */
     int sockfd;
@@ -48,6 +54,9 @@ struct reactor_server
 
     /* Thread pool for handling IO events */
     pthread_t *threads;
+
+    /* Contains the configuration of the server instance */
+    struct __reactor_config config;
 };
 
 typedef struct reactor_server server_t;

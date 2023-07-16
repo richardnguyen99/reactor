@@ -5,6 +5,8 @@ void _set_args(struct __reactor_config *config, int argc, char *argv[]);
 void _load_from_env(struct __reactor_config *config);
 void _usage(const char *msg);
 
+void _prepare_socket(struct reactor_server *server);
+
 // ============================================================================
 
 void server_print(server_t *server) 
@@ -25,9 +27,12 @@ void server_init(struct reactor_server *server)
     memset(&(server->config), 0, sizeof(struct __reactor_config));
     memset(server->config.config_path, '\0', PATH_MAX);
     memset(server->config.root_dir, '\0', PATH_MAX);
+    memset(&(server->config.port), '\0', sizeof(port_t));
     memset(&(server->addr), 0, sizeof(struct sockaddr_in));
 
-    server->config.port = 0;
+    server->config.port.number = 0;
+    memset(&(server->config.port.str), '\0', 6);
+
     server->config.nthreads = 0;
     server->config.root_dir[0] = '\0';
 
@@ -46,7 +51,7 @@ void server_load_config(server_t *server, int argc, char *argv[])
     _load_from_env(&(server->config));
 
     debug("Configuration loaded...\n");
-    debug("Port: %d\n", server->config.port);
+    debug("Port: %d\n", server->config.port.number);
     debug("Root directory: %s\n", server->config.root_dir);
     debug("Number of threads: %ld\n", server->config.nthreads);
 
@@ -57,7 +62,15 @@ void server_boot(server_t *server)
 {
     debug("Booting up the server...\n\n");
 
+    _prepare_socket(server);
+
+    if (listen(server->sockfd, SOMAXCONN) == -1)
+        DIE("(boot) listen");
+
     debug("Server is ready...\n\n");
+
+    debug("Server address: %s\n", inet_ntoa(server->addr.sin_addr));
+    debug("Server port: %d\n", ntohs(server->addr.sin_port));
 
     return;
 }
@@ -105,7 +118,8 @@ void _set_args(struct __reactor_config *config, int argc ,char *argv[])
         {
             case 'p':
                 debug("port %s\n", optarg);
-                config->port = (uint16_t)atoi(optarg);
+                config->port.number = (uint16_t)atoi(optarg);
+                strncpy(config->port.str, optarg, PORTSIZE);
 
                 break;
 
@@ -152,8 +166,11 @@ int _parse_env_to_config(int fd, char *buf, struct __reactor_config *config)
         return ERROR;
 
     if (strcmp(key, "PORT") == 0)
-        config->port = (uint16_t)atoi(value);
-
+    {
+        config->port.number = (uint16_t)atoi(value);
+        strncpy(config->port.str, value, PORTSIZE);
+    }
+    
     if (strcmp(key, "ROOTDIR") == 0)
         strncpy(config->root_dir, value, PATH_MAX);
 
@@ -186,6 +203,7 @@ int _read_env_to_config(int fd, struct __reactor_config *config)
 
 void _load_from_env(struct __reactor_config *config)
 {
+    // If the configuration file is loaded
     if (config->config_path[0] != '\0')
     {
         int fd = open(config->config_path, O_RDONLY);
@@ -205,11 +223,66 @@ void _load_from_env(struct __reactor_config *config)
     if (config->nthreads <= 0)
         config->nthreads = 4;
 
-    if (config->port < 1024 || config->port > 49151)
-        config->port = 7777;
+    if (config->port.number < 1024 || config->port.number > 49151)
+    {
+        config->port.number = 7777;
+        strncpy(config->port.str, "7777", PORTSIZE);
+    }
 
     if (config->root_dir[0] == '\0')
         strncpy(config->root_dir, "public", PATH_MAX);
+}
+
+void _load_addr_info(struct sockaddr_in * addr, struct addrinfo *p)
+{
+    struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
+
+    addr->sin_addr = ipv4->sin_addr;
+    addr->sin_family = p->ai_family;
+    addr->sin_port = ipv4->sin_port;
+}
+
+void _prepare_socket(struct reactor_server *server)
+{
+    struct addrinfo hints, *res, *p;
+    int status, sockfd, yes = 1;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;          // IPv4
+    hints.ai_socktype = SOCK_STREAM;    // TCP
+    hints.ai_flags = AI_PASSIVE;        // Fill in my IP for me
+
+    // Get address info based on hints and server configuration
+    if ((status = getaddrinfo(NULL, server->config.port.str, &hints, &res)) != 0)
+        DIE("(prepare_socket) getaddrinfo");
+
+    for (p = res; p != NULL; p = p->ai_next)
+    {
+        // Create a socket
+        if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
+            continue;
+
+        // Set socket options
+        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
+            DIE("(prepare_socket) setsockopt");
+
+        // Bind the socket to the address
+        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1)
+        {
+            close(sockfd);
+            continue;
+        }
+
+        break;
+    }
+
+    if (p == NULL)
+        DIE("Failed to bind socket");
+
+    _load_addr_info(&server->addr, p);
+    server->sockfd = sockfd;
+
+    freeaddrinfo(res);
 }
 
 void _usage(const char *msg)
