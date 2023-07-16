@@ -7,4 +7,9 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-add_library(reactor_source server.c)
+set(SOURCES
+    server.c
+    util.c
+)
+
+add_library(reactor_source ${SOURCES})

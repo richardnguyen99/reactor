@@ -2,7 +2,7 @@
  * @file server.h
  * @author Richard Nguyen (richard@richardhnguyen.com)
  * @brief Server header file
- * @version 0.1.1
+ * @version 0.1.2
  * @date 2023-07-14
  *
  * @copyright Copyright (c) 2023
@@ -23,7 +23,7 @@ struct __reactor_config {
     size_t nthreads;
 
     /* Root directory of the server */
-    char rootdir[PATH_MAX];
+    char root_dir[PATH_MAX];
 
     /* Path to the configuration file */
     char config_path[PATH_MAX];
