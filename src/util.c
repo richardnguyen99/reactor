@@ -1,26 +1,34 @@
 #include "util.h"
 
-ssize_t read_line(int fd, char *buf, size_t n)
+int endofhdr(const char *msgbuf, const size_t len)
 {
-    ssize_t nread = 0;
-    size_t total = 0;
+    return len >= 2 && msgbuf[len - 2] == '\r' && msgbuf[len - 1] == '\n';
+}
 
-    for (;total < n;)
+int endofmsg(const char *msgbuf, const size_t len)
+{
+    return len == 2 && msgbuf[0] == '\r' && msgbuf[1] == '\n';
+}
+
+ssize_t read_line(int fd, char *buffer, size_t size)
+{
+    size_t n = 0;
+    ssize_t nread = 0;
+
+    for (; n < size;)
     {
-        // Read one byte at a time to check for newline
-        nread = read(fd, buf + total, 1);
+        nread = read(fd, (void *)(buffer + n), 1);
 
         if (nread == -1)
-            return -1;
+            return ERROR;
 
-        total += (size_t)nread;
+        n += (size_t)nread;
 
-        if (nread == 0 || *(buf + total - 1) == '\n')
+        if (endofhdr(buffer, n))
             break;
     }
 
-    // Remove newline character
-    *(buf + total - 1) = '\0';
+    buffer[n] = '\0';
 
-    return (ssize_t)total;
+    return n;
 }

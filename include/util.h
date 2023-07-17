@@ -15,7 +15,7 @@
 #include "defs.h"
 
 /**
- * @brief Read N bytes from FD into BUF or until a newline is read.
+ * @brief Read no more than N bytes from FD into BUF or until a newline is read.
  * 
  * @param fd File descriptor to read from
  * @param buf Buffer to store the read data
@@ -24,5 +24,9 @@
  * @return Number of bytes read. -1 is returned if an error occurs.
  */
 ssize_t read_line(int fd, char *buf, size_t n);
+
+
+int endofhdr(const char *msgbuf, const size_t len);
+int endofmsg(const char *msgbuf, const size_t len);
 
 #endif // _REACTOR_UTIL_H

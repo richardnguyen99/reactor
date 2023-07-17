@@ -54,12 +54,11 @@ void server_load_config(server_t *server, int argc, char *argv[])
     
     _load_from_env(&(server->config));
 
-    
-
     debug("Configuration loaded...\n");
     debug("Port: %d\n", server->config.port.number);
     debug("Root directory: %s\n", server->config.root_dir);
     debug("Number of threads: %ld\n", server->config.nthreads);
+    debug("Queue capacity: %ld\n", server->config.queue_cap);
 
     return;
 }
@@ -138,6 +137,7 @@ void server_start(server_t *server)
                     DIE("(start) accept");
 
                 _set_nonblocking(conn_fd);
+                debug("New connection: %d\n", conn_fd);
 
                 if (poll_add(server->epollfd, conn_fd, (EPOLLIN | EPOLLET)) == -1)
                     DIE("(start) poll_add");
@@ -407,7 +407,11 @@ void *_request_routine(void *arg)
         if (sem_post(&server->tpool->full) == -1)
             DIE("(request_routine) sem_post (full)");
 
+        debug("Handling request: %d\n", fd);
         http_req(fd);
+
+        if (close(fd) == -1)
+            DIE("(request_routine) close");
     }
 }
 

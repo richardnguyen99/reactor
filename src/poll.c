@@ -16,6 +16,7 @@ int poll_add(int poll_fd, int fd, int events)
 {
     struct epoll_event ev;
     ev.events = events;
+    ev.data.fd = fd;
 
     int ret = epoll_ctl(poll_fd, EPOLL_CTL_ADD, fd, &ev);
     if(ret == -1)
