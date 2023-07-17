@@ -10,7 +10,8 @@
     "epoll.h": "c",
     "string.h": "c",
     "hashmap.h": "c",
-    "http.h": "c"
+    "http.h": "c",
+    "cstdlib": "c"
   },
   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }
