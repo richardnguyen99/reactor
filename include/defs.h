@@ -95,18 +95,21 @@
 #endif
 
 // Macros & Constants
-#define REACTOR_VERSION "0.1.1"
-#define REACTOR_VERSION_MAJOR 0
-#define REACTOR_VERSION_MINOR 1
-#define REACTOR_VERSION_PATCH 2
+#define REACTOR_VERSION         "0.1.2"
+#define REACTOR_VERSION_MAJOR   0
+#define REACTOR_VERSION_MINOR   1
+#define REACTOR_VERSION_PATCH   2
 
-#define DEFAULT_PORT 9999
-#define DEFAULT_ROOTDIR "public/"
-#define DEFAULT_NTHREADS 4
+#define DEFAULT_PORT            9999
+#define DEFAULT_ROOTDIR         "public/"
+#define DEFAULT_NTHREADS        4
 
-#define MAX_EVENTS 1024
-#define BUFSIZE 1024
-#define MSGSIZE 8192
+#define MAX_EVENTS      1024
+#define MSGSIZE         8192
+
+#ifndef BUFSIZ
+#define BUFSIZ 8192
+#endif
 
 #ifdef DEBUG
 #define debug(fmt, ...) fprintf(stdout, fmt, ##__VA_ARGS__)

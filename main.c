@@ -8,11 +8,13 @@
  * @copyright Copyright (c) 2023
  */
 
-#include "defs.h"
+#include "reactor.h"
 
 int main(int argc, char *argv[])
 {
-    printf("Hello, world!\n");
+    struct reactor *server = reactor_init(argc, argv);
+
+    reactor_destroy(server);
 
     return 0;
 }

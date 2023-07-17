@@ -7,7 +7,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(SOURCES
-    server.c
+    reactor.c
 )
 
 add_library(reactor_source ${SOURCES})# Cmake basic configuration
