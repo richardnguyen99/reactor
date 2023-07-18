@@ -25,6 +25,9 @@ struct reactor
 {
     port_t port;
     int server_fd;
+    int epollfd;
+
+    struct epoll_event events[MAX_EVENTS];
 
     char ip[INET_ADDRSTRLEN];
 };
