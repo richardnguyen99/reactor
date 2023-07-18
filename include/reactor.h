@@ -35,6 +35,9 @@ reactor_init(int argc, char *argv[]);
 int
 reactor_load(struct reactor *server);
 
+int
+reactor_boot(struct reactor *server);
+
 void
 reactor_destroy(struct reactor *server);
 

@@ -21,7 +21,16 @@ main(int argc, char *argv[])
 
     printf("Listening on %s:%d\n", server->ip, server->port.number);
 
+    if ((status = reactor_boot(server)) != SUCCESS)
+        goto safe_exit;
+
 safe_exit:
+    if (status == FAILURE)
+        fprintf(stderr, "Failure from %s\n", strerror(errno));
+
+    if (status == ERROR)
+        fprintf(stderr, "Error: %s\n", strerror(errno));
+
     reactor_destroy(server);
 
     return status;

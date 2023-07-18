@@ -36,6 +36,18 @@ reactor_load(struct reactor *server)
     return status;
 }
 
+int
+reactor_boot(struct reactor *server)
+{
+    int status = SUCCESS;
+
+    if ((status = listen(server->server_fd, SOMAXCONN) == ERROR))
+        goto safe_exit;
+
+safe_exit:
+    return status;
+}
+
 void
 reactor_destroy(struct reactor *server)
 {
