@@ -2,7 +2,7 @@
  * @file defs.h
  * @author Richard Nguyen (richard@richardhnguyen.com)
  * @brief Definitions header file with macros, constants, and functions
- * @version 0.1.2
+ * @version 0.1.3
  * @date 2023-07-14
  *
  * @copyright Copyright (c) 2023
@@ -95,10 +95,10 @@
 #endif
 
 // Macros & Constants
-#define REACTOR_VERSION       "0.1.2"
+#define REACTOR_VERSION       "0.1.3"
 #define REACTOR_VERSION_MAJOR 0
 #define REACTOR_VERSION_MINOR 1
-#define REACTOR_VERSION_PATCH 2
+#define REACTOR_VERSION_PATCH 3
 
 #define DEFAULT_PORT     9999
 #define DEFAULT_ROOTDIR  "public/"

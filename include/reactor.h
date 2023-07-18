@@ -2,7 +2,7 @@
  * @file reactor.h
  * @author Richard Nguyen (richard@richardhnguyen.com)
  * @brief Reactor class header file.
- * @version 0.1
+ * @version 0.1.3
  * @date 2023-07-17
  *
  * @copyright Copyright (c) 2023

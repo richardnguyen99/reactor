@@ -28,3 +28,10 @@ I/O. It includes the implementation and the project structure.
 - Add `struct reactor` to represent the reactor server
 - Add `reactor_init` to initialize a server instance
 - Add `reactor_destroy` to destroy a server instance
+
+### `[0.1.3]`
+
+- Add `reactor_run` to run the server
+- Add `reactor_load` to load the server
+- Add event loop to monitor file descriptors
+- Add basic reading requests and sending responses
