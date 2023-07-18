@@ -39,6 +39,9 @@ int
 reactor_boot(struct reactor *server);
 
 void
+reactor_run(struct reactor *server);
+
+void
 reactor_destroy(struct reactor *server);
 
 #endif // _REACTOR_H_

@@ -24,6 +24,8 @@ main(int argc, char *argv[])
     if ((status = reactor_boot(server)) != SUCCESS)
         goto safe_exit;
 
+    reactor_run(server);
+
 safe_exit:
     if (status == FAILURE)
         fprintf(stderr, "Failure from %s\n", strerror(errno));

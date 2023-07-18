@@ -49,6 +49,62 @@ safe_exit:
 }
 
 void
+reactor_run(struct reactor *server)
+{
+    int fd = -1;
+    ssize_t nread;
+    size_t total;
+    char buf[BUFSIZ];
+
+    for (;;)
+    {
+        fd = accept(server->server_fd, NULL, NULL);
+
+        if (fd == -1)
+            DIE("(reactor_run) accept");
+
+        debug("Accepted connection on fd %d\n", fd);
+
+        for (;;)
+        {
+            nread = 0;
+            total = 0;
+            memset(buf, '\0', BUFSIZ);
+
+            for (;;)
+            {
+#ifndef MSG_NO_FLAG
+#define MSG_NO_FLAG 0
+#endif
+                nread = recv(fd, buf + total, 1, MSG_NO_FLAG);
+
+                if (nread == -1)
+                    DIE("(reactor_run) recv");
+
+                if (nread == 0)
+                    break;
+
+                total += nread;
+
+                if (buf[total - 2] == '\r' && buf[total - 1] == '\n')
+                    break;
+            }
+
+            if (total == 2 && buf[0] == '\r' && buf[1] == '\n')
+                break;
+
+            debug("Buffer:\t%s", buf);
+            debug("Received %zu bytes\n", total);
+        }
+
+        if (close(fd) == ERROR)
+            DIE("(reactor_run) close");
+    }
+
+    return;
+}
+
+void
 reactor_destroy(struct reactor *server)
 {
     if (server->server_fd != -1)
