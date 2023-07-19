@@ -15,7 +15,8 @@
         "reactor.h": "c",
         "struct_iovec.h": "c",
         "stddef.h": "c",
-        "error_t.h": "c"
+        "error_t.h": "c",
+        "random": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

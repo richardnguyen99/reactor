@@ -16,14 +16,17 @@ main(int argc, char *argv[])
     int status             = SUCCESS;
     struct reactor *server = reactor_init(argc, argv);
 
+    // Load configuration into the server instance
     if ((status = reactor_load(server)) != SUCCESS)
         goto safe_exit;
 
     printf("Listening on %s:%d\n", server->ip, server->port.number);
 
+    // Boot the server instance
     if ((status = reactor_boot(server)) != SUCCESS)
         goto safe_exit;
 
+    // Main loop
     reactor_run(server);
 
 safe_exit:

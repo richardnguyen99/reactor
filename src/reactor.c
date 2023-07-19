@@ -94,11 +94,16 @@ reactor_run(struct reactor *server)
                 debug("Accepted connection on fd %d\n", fd);
 
                 _set_nonblocking(fd);
-                ev.data.ptr = malloc(sizeof(struct request));
-                ((struct request *)(ev.data.ptr))->fd   = fd;
-                ((struct request *)(ev.data.ptr))->raw  = malloc(BUFSIZ);
-                ((struct request *)(ev.data.ptr))->body = NULL;
-                ((struct request *)(ev.data.ptr))->len  = 0;
+                ev.data.ptr = malloc(sizeof(struct reactor_event));
+                struct reactor_event *rev =
+                    (struct reactor_event *)(ev.data.ptr);
+
+                rev->fd   = fd;
+                rev->raw  = malloc(BUFSIZ);
+                rev->body = NULL;
+                rev->len  = 0;
+                rev->req  = (struct request *)malloc(sizeof(struct request));
+                rev->res  = (struct response *)malloc(sizeof(struct response));
 
                 ev.events = EPOLLIN | EPOLLET;
 
@@ -108,13 +113,17 @@ reactor_run(struct reactor *server)
                 continue;
             }
 
-            struct epoll_event *evp = &(server->events[n]);
-            struct request *req     = (struct request *)(evp->data.ptr);
+            struct epoll_event *evp   = &(server->events[n]);
+            struct reactor_event *rev = (struct reactor_event *)(evp->data.ptr);
 
             if (evp->events & (EPOLLERR | EPOLLHUP))
             {
-                close(req->fd);
-                epoll_ctl(server->epollfd, EPOLL_CTL_DEL, req->fd, NULL);
+                free(rev->raw);
+                free(rev->req);
+                free(rev->res);
+                close(rev->fd);
+                epoll_ctl(server->epollfd, EPOLL_CTL_DEL, rev->fd, NULL);
+                free(server->events[n].data.ptr);
             }
             else if (evp->events & EPOLLIN)
             {
@@ -124,7 +133,7 @@ reactor_run(struct reactor *server)
 
                 for (;;)
                 {
-                    nread = read_line(req->fd, req->raw + req->len, BUFSIZ, 0);
+                    nread = read_line(rev->fd, rev->raw + rev->len, BUFSIZ, 0);
 
                     if (errno == EAGAIN)
                         goto wait_to_read;
@@ -132,16 +141,16 @@ reactor_run(struct reactor *server)
                     if (nread == -1)
                         DIE("(reactor_run) recv");
 
-                    req->len += (uint32_t)nread;
-                    ((char *)req->raw)[req->len] = '\n';
-                    req->len += 1;
+                    rev->len += (uint32_t)nread;
+                    ((char *)rev->raw)[rev->len] = '\n';
+                    rev->len += 1;
 
                     if (nread == 0)
                         break;
                 }
 
                 ev.events = EPOLLOUT | EPOLLET;
-                epoll_ctl(server->epollfd, EPOLL_CTL_MOD, req->fd, &ev);
+                epoll_ctl(server->epollfd, EPOLL_CTL_MOD, rev->fd, &ev);
 
             wait_to_read:
                 continue;
@@ -159,11 +168,11 @@ reactor_run(struct reactor *server)
                                      "Server: reactor/%s\r\n"
                                      "\r\n"
                                      "<html><body>%s</body></html>\r\n",
-                                     req->len, REACTOR_VERSION, req->raw);
+                                     rev->len, REACTOR_VERSION, rev->raw);
 
                 for (; total_sent < content_length;)
                 {
-                    nsent = send(req->fd, msg + total_sent,
+                    nsent = send(rev->fd, msg + total_sent,
                                  content_length - total_sent, MSG_DONTWAIT);
 
                     if (errno == EAGAIN)
@@ -175,8 +184,12 @@ reactor_run(struct reactor *server)
                     total_sent += (size_t)nsent;
                 }
 
-                close(req->fd);
-                epoll_ctl(server->epollfd, EPOLL_CTL_DEL, req->fd, NULL);
+                free(rev->raw);
+                free(rev->req);
+                free(rev->res);
+                close(rev->fd);
+                epoll_ctl(server->epollfd, EPOLL_CTL_DEL, rev->fd, NULL);
+                free(server->events[n].data.ptr);
 
             wait_to_send:
                 continue;

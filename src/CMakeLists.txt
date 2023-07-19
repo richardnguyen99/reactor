@@ -10,6 +10,7 @@ set(SOURCES
     reactor.c
     http.c
     util.c
+    dict.c
 )
 
 add_library(reactor_source ${SOURCES})# Cmake basic configuration

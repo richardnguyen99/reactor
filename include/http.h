@@ -22,6 +22,15 @@ struct request
     char *params;
 };
 
+struct response
+{
+    char *version;
+    char *status;
+    char *reason;
+
+    char *body;
+};
+
 struct request *
 http_request_parse(int fd);
 
