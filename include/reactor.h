@@ -12,6 +12,31 @@
 #define _REACTOR_H_ 1
 
 #include "defs.h"
+#include "util.h"
+
+struct request
+{
+    // char *method;
+    // char *path;
+    // char *version;
+    // char *host;
+    // char *user_agent;
+    // char *accept;
+    // char *accept_language;
+    // char *accept_encoding;
+    // char *connection;
+    // char *upgrade_insecure_requests;
+    // char *cache_control;
+    // char *content_type;
+    // char *content_length;
+    // char *body;
+
+    int fd;
+    char *raw;
+    char *body;
+
+    uint64_t len;
+};
 
 struct __port
 {

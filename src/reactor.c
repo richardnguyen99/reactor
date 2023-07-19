@@ -69,7 +69,7 @@ reactor_run(struct reactor *server)
     int fd, nfds, n;
     bool end_of_msg = false;
     ssize_t nread, nsent;
-    size_t total_read, total_sent;
+    size_t total_read, total_sent, content_length;
     char buf[BUFSIZ], msg[BUFSIZ];
     struct epoll_event ev;
 
@@ -82,6 +82,7 @@ reactor_run(struct reactor *server)
 
         for (n = 0; n < nfds; ++n)
         {
+
             if (server->events[n].data.fd == server->server_fd)
             {
 
@@ -93,19 +94,29 @@ reactor_run(struct reactor *server)
                 debug("Accepted connection on fd %d\n", fd);
 
                 _set_nonblocking(fd);
-                ev.events  = EPOLLIN | EPOLLET;
-                ev.data.fd = fd;
+                ev.data.ptr = malloc(sizeof(struct request));
+                ((struct request *)(ev.data.ptr))->fd   = fd;
+                ((struct request *)(ev.data.ptr))->raw  = malloc(BUFSIZ);
+                ((struct request *)(ev.data.ptr))->body = NULL;
+                ((struct request *)(ev.data.ptr))->len  = 0;
+
+                ev.events = EPOLLIN | EPOLLET;
 
                 if (epoll_ctl(server->epollfd, EPOLL_CTL_ADD, fd, &ev) == -1)
                     DIE("(reactor_run) epoll_ctl");
+
+                continue;
             }
-            else if (server->events[n].events & (EPOLLERR | EPOLLHUP))
+
+            struct epoll_event *evp = &(server->events[n]);
+            struct request *req     = (struct request *)(evp->data.ptr);
+
+            if (evp->events & (EPOLLERR | EPOLLHUP))
             {
-                close(server->events[n].data.fd);
-                epoll_ctl(server->epollfd, EPOLL_CTL_DEL,
-                          server->events[n].data.fd, NULL);
+                close(req->fd);
+                epoll_ctl(server->epollfd, EPOLL_CTL_DEL, req->fd, NULL);
             }
-            else
+            else if (evp->events & EPOLLIN)
             {
                 total_read = 0;
                 nread      = 0;
@@ -113,32 +124,62 @@ reactor_run(struct reactor *server)
 
                 for (;;)
                 {
-                    nread = recv(server->events[n].data.fd, buf, BUFSIZ, 0);
+                    nread = read_line(req->fd, req->raw + req->len, BUFSIZ, 0);
+
+                    if (errno == EAGAIN)
+                        goto wait_to_read;
 
                     if (nread == -1)
                         DIE("(reactor_run) recv");
 
+                    req->len += (uint32_t)nread;
+                    ((char *)req->raw)[req->len] = '\n';
+                    req->len += 1;
+
                     if (nread == 0)
-                        break;
-
-                    total_read += (size_t)nread;
-
-                    if (total_read >= 2 && buf[total_read - 2] == '\r' &&
-                        buf[total_read - 1] == '\n')
                         break;
                 }
 
-                buf[total_read - 2] = '\0'; // Remove \r\n
-                total_read -= 2;
+                ev.events = EPOLLOUT | EPOLLET;
+                epoll_ctl(server->epollfd, EPOLL_CTL_MOD, req->fd, &ev);
 
-                dprintf(server->events[n].data.fd,
-                        "HTTP/1.1 200 OK\r\n"
-                        "Server: Reactor/%s\r\n"
-                        "Content-Type: text/html\r\n"
-                        "Content-Length: %ld\r\n"
-                        "\r\n"
-                        "<html><body><h1>%s</h1></body></html>\r\n",
-                        REACTOR_VERSION, total_read, buf);
+            wait_to_read:
+                continue;
+            }
+            else if (evp->events & EPOLLOUT)
+            {
+                nsent      = 0;
+                total_sent = 0;
+                content_length =
+                    (size_t)snprintf(msg, BUFSIZ,
+                                     "HTTP/1.1 200 OK\r\n"
+                                     "Content-Type: text/html\r\n"
+                                     "Content-Length: %ld\r\n"
+                                     "Connection: close\r\n"
+                                     "Server: reactor/%s\r\n"
+                                     "\r\n"
+                                     "<html><body>%s</body></html>\r\n",
+                                     req->len, REACTOR_VERSION, req->raw);
+
+                for (; total_sent < content_length;)
+                {
+                    nsent = send(req->fd, msg + total_sent,
+                                 content_length - total_sent, MSG_DONTWAIT);
+
+                    if (errno == EAGAIN)
+                        goto wait_to_send;
+
+                    if (nsent == -1)
+                        DIE("(reactor_run) send");
+
+                    total_sent += (size_t)nsent;
+                }
+
+                close(req->fd);
+                epoll_ctl(server->epollfd, EPOLL_CTL_DEL, req->fd, NULL);
+
+            wait_to_send:
+                continue;
             }
         }
     }

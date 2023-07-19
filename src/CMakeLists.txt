@@ -8,6 +8,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(SOURCES
     reactor.c
+    http.c
+    util.c
 )
 
 add_library(reactor_source ${SOURCES})# Cmake basic configuration
