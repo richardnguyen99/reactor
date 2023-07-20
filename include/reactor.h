@@ -54,7 +54,7 @@ reactor_load(struct reactor *server);
 int
 reactor_boot(struct reactor *server);
 
-void
+int
 reactor_run(struct reactor *server);
 
 void

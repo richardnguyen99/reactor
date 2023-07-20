@@ -6,6 +6,9 @@ _prepare_socket(char *host, const char *service);
 int
 _set_nonblocking(int fd);
 
+struct reactor_event *
+_init_event(int fd);
+
 // =============================================================================
 
 struct reactor *
@@ -63,7 +66,7 @@ safe_exit:
     return status;
 }
 
-void
+int
 reactor_run(struct reactor *server)
 {
     int fd, nfds, n;
@@ -94,16 +97,11 @@ reactor_run(struct reactor *server)
                 debug("Accepted connection on fd %d\n", fd);
 
                 _set_nonblocking(fd);
-                ev.data.ptr = malloc(sizeof(struct reactor_event));
-                struct reactor_event *rev =
-                    (struct reactor_event *)(ev.data.ptr);
 
-                rev->fd   = fd;
-                rev->raw  = malloc(BUFSIZ);
-                rev->body = NULL;
-                rev->len  = 0;
-                rev->req  = (struct request *)malloc(sizeof(struct request));
-                rev->res  = (struct response *)malloc(sizeof(struct response));
+                ev.data.ptr = _init_event(fd);
+
+                if (ev.data.ptr == NULL)
+                    return ERROR;
 
                 ev.events = EPOLLIN | EPOLLET;
 
@@ -197,7 +195,8 @@ reactor_run(struct reactor *server)
         }
     }
 
-    return;
+    // Not intended to reach here
+    return SUCCESS;
 }
 
 void
@@ -282,4 +281,54 @@ _set_nonblocking(int fd)
         return ERROR;
 
     return SUCCESS;
+}
+
+struct reactor_event *
+_init_event(int fd)
+{
+    void *mem                 = malloc(sizeof(struct reactor_event));
+    struct reactor_event *rev = (struct reactor_event *)mem;
+
+    if (rev == NULL)
+        return NULL;
+
+    rev->fd   = fd;
+    rev->body = NULL;
+    rev->len  = 0;
+
+    rev->req = (struct request *)malloc(sizeof(struct request));
+    rev->res = (struct response *)malloc(sizeof(struct response));
+    rev->raw = malloc(BUFSIZ);
+
+    if (rev->req == NULL || rev->res == NULL || rev->raw == NULL)
+        goto safe_exit;
+
+    return rev;
+
+safe_exit:
+    if (rev->raw)
+    {
+        free(rev->raw);
+        rev->raw = NULL;
+    }
+
+    if (rev->req)
+    {
+        free(rev->req);
+        rev->req = NULL;
+    }
+
+    if (rev->res)
+    {
+        free(rev->res);
+        rev->res = NULL;
+    }
+
+    if (rev != NULL)
+    {
+        free(rev);
+        rev = NULL;
+    }
+
+    return NULL;
 }
