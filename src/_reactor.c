@@ -124,3 +124,32 @@ safe_exit:
 
     return NULL;
 }
+
+int
+_accept_event(int epoll_fd, int fd)
+{
+    struct epoll_event ev;
+    ev.events = EPOLLIN | EPOLLET;
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) == -1)
+        return ERROR;
+
+    return SUCCESS;
+}
+
+int
+_destroy_event(struct reactor_event *rev, int epoll_fd)
+{
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, rev->fd, NULL) == ERROR)
+        return ERROR;
+
+    if (close(rev->fd) == ERROR)
+        return ERROR;
+
+    free(rev->raw);
+    free(rev->req);
+    free(rev->res);
+    free(rev);
+
+    return SUCCESS;
+}

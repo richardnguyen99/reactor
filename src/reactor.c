@@ -3,7 +3,10 @@
 // clang-format off
 int _prepare_socket(char *host, const char *service);
 int _set_nonblocking(int fd);
+
 struct reactor_event *_init_event(int fd);
+int _accept_event(int epoll_fd, int fd);
+int _destroy_event(struct reactor_event *rev, int fd);
 // clang-format on
 
 // =============================================================================
@@ -71,14 +74,15 @@ reactor_run(struct reactor *server)
     ssize_t nread, nsent;
     size_t total_read, total_sent, content_length;
     char buf[BUFSIZ], msg[BUFSIZ];
-    struct epoll_event ev;
+    struct epoll_event ev, *evp;
+    struct reactor_event *rev;
 
     for (;;)
     {
         nfds = epoll_wait(server->epollfd, server->events, MAX_EVENTS, -1);
 
         if (nfds == -1)
-            DIE("(reactor_run) epoll_wait");
+            return ERROR;
 
         for (n = 0; n < nfds; ++n)
         {
@@ -89,36 +93,34 @@ reactor_run(struct reactor *server)
                 fd = accept(server->server_fd, NULL, NULL);
 
                 if (fd == -1)
-                    DIE("(reactor_run) accept");
+                    return ERROR;
 
                 debug("Accepted connection on fd %d\n", fd);
 
-                _set_nonblocking(fd);
+                if (_set_nonblocking(fd) == ERROR)
+                    return ERROR;
 
-                ev.data.ptr = _init_event(fd);
+                if ((ev.data.ptr = _init_event(fd)) == NULL)
+                    return ERROR;
 
                 if (ev.data.ptr == NULL)
                     return ERROR;
 
-                ev.events = EPOLLIN | EPOLLET;
-
-                if (epoll_ctl(server->epollfd, EPOLL_CTL_ADD, fd, &ev) == -1)
-                    DIE("(reactor_run) epoll_ctl");
+                if (_accept_event(server->epollfd, fd) == ERROR)
+                    return ERROR;
 
                 continue;
             }
 
-            struct epoll_event *evp   = &(server->events[n]);
-            struct reactor_event *rev = (struct reactor_event *)(evp->data.ptr);
+            evp = &(server->events[n]);
+            rev = (struct reactor_event *)(evp->data.ptr);
 
             if (evp->events & (EPOLLERR | EPOLLHUP))
             {
-                free(rev->raw);
-                free(rev->req);
-                free(rev->res);
-                close(rev->fd);
-                epoll_ctl(server->epollfd, EPOLL_CTL_DEL, rev->fd, NULL);
-                free(server->events[n].data.ptr);
+                if (_destroy_event(rev, server->epollfd) == ERROR)
+                    return ERROR;
+
+                evp->data.ptr = NULL;
             }
             // Some sockets have some data and are ready to read
             else if (evp->events & EPOLLIN)
@@ -181,12 +183,10 @@ reactor_run(struct reactor *server)
                     total_sent += (size_t)nsent;
                 }
 
-                free(rev->raw);
-                free(rev->req);
-                free(rev->res);
-                close(rev->fd);
-                epoll_ctl(server->epollfd, EPOLL_CTL_DEL, rev->fd, NULL);
-                free(server->events[n].data.ptr);
+                if (_destroy_event(rev, server->epollfd) == ERROR)
+                    return ERROR;
+
+                evp->data.ptr = NULL;
 
             wait_to_send:
                 continue;
