@@ -105,9 +105,10 @@
 #define DEFAULT_ROOTDIR  "public/"
 #define DEFAULT_NTHREADS 4
 
-#define MAX_EVENTS 1024
-#define MSGSIZE    8192
-#define PRTSIZ     6
+#define MAX_EVENTS    1024
+#define MSGSIZE       8192
+#define PRTSIZ        6
+#define HTTP_VER_SIZE 10
 
 #ifndef BUFSIZ
 #define BUFSIZ 8192

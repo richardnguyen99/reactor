@@ -26,8 +26,6 @@ revent_add(struct reactor_event *rev)
     ev.data.ptr = rev;
     ev.events   = EPOLLIN | EPOLLET;
 
-    printf("Connection: %d\n", rev->fd);
-
     if (epoll_ctl(rev->epoll_fd, EPOLL_CTL_ADD, rev->fd, &ev) == ERROR)
         return ERROR;
 

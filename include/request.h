@@ -15,15 +15,17 @@
 
 struct request
 {
-    char *method;
-    char *path;
-    char *version;
+    int method;
+    char path[BUFSIZ];
+    char version[HTTP_VER_SIZE];
 
-    char *params;
+    char *raw;
+    size_t len;
+    size_t cap;
 };
 
 struct request *
-request_new(int fd);
+request_new();
 
 void
 request_free(struct request *request);

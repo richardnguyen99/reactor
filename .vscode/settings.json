@@ -17,7 +17,8 @@
         "stddef.h": "c",
         "error_t.h": "c",
         "random": "c",
-        "chrono": "c"
+        "chrono": "c",
+        "request.h": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

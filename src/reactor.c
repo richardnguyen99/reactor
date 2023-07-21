@@ -66,7 +66,7 @@ safe_exit:
 int
 reactor_run(struct reactor *server)
 {
-    int fd, nfds, n;
+    int fd, nfds, n, http_status;
     bool end_of_msg = false;
     ssize_t nread, nsent;
     size_t total_read, total_sent, content_length;
@@ -121,30 +121,22 @@ reactor_run(struct reactor *server)
             // Some sockets have some data and are ready to read
             else if (evp->events & EPOLLIN)
             {
-                total_read = 0;
-                nread      = 0;
-                memset(buf, '\0', BUFSIZ);
+                rev->req = request_new();
 
-                for (;;)
-                {
-                    nread = read_line(rev->fd, rev->raw + rev->len, BUFSIZ, 0);
+                if (rev->req == NULL)
+                    DIE("(reactor_run) request_new");
 
-                    if (errno == EAGAIN)
-                        goto wait_to_read;
+                http_status = http_request(rev->fd, rev->req);
 
-                    if (nread == -1)
-                        DIE("(reactor_run) recv");
+                if (http_status == HTTP_READ_AGAIN)
+                    goto wait_to_read;
 
-                    rev->len += (uint32_t)nread;
-                    ((char *)rev->raw)[rev->len] = '\n';
-                    rev->len += 1;
-
-                    if (nread == 0)
-                        break;
-                }
+                if (http_status == HTTP_ERROR)
+                    DIE("(reactor_run) http_request");
 
                 ev.events = EPOLLOUT | EPOLLET;
-                epoll_ctl(server->epollfd, EPOLL_CTL_MOD, rev->fd, &ev);
+                if (epoll_ctl(rev->epoll_fd, EPOLL_CTL_MOD, rev->fd, &ev) == -1)
+                    DIE("(reactor_run) epoll_ctl");
 
             wait_to_read:
                 continue;
@@ -152,18 +144,18 @@ reactor_run(struct reactor *server)
             // Some sockets wants to send data out
             else if (evp->events & EPOLLOUT)
             {
-                nsent      = 0;
-                total_sent = 0;
-                content_length =
-                    (size_t)snprintf(msg, BUFSIZ,
-                                     "HTTP/1.1 200 OK\r\n"
-                                     "Content-Type: text/html\r\n"
-                                     "Content-Length: %ld\r\n"
-                                     "Connection: close\r\n"
-                                     "Server: reactor/%s\r\n"
-                                     "\r\n"
-                                     "<html><body>%s</body></html>\r\n",
-                                     rev->len, REACTOR_VERSION, rev->raw);
+                nsent          = 0;
+                total_sent     = 0;
+                content_length = (size_t)snprintf(
+                    msg, BUFSIZ,
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: text/html\r\n"
+                    "Content-Length: %ld\r\n"
+                    "Connection: close\r\n"
+                    "Server: reactor/%s\r\n"
+                    "\r\n"
+                    "<html><body>%s</body></html>\r\n",
+                    rev->req->len, REACTOR_VERSION, rev->req->raw);
 
                 for (; total_sent < content_length;)
                 {

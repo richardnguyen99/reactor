@@ -14,9 +14,13 @@
 #include "defs.h"
 #include "request.h"
 #include "response.h"
+#include "util.h"
 
 // clang-format off
-#define HTTP_NOT_SET                -1
+#define HTTP_ERROR                 -1
+#define HTTP_NOT_SET                0
+#define HTTP_READ_AGAIN             1
+
 #define HTTP_SUCCESS                200
 #define HTTP_CREATED                201
 
@@ -68,7 +72,7 @@
     : (status == HTTP_SERVICE_UNAVAILABLE)   ? HTTP_SERVICE_UNAVAILABLE_MSG    \
                                              : NULL
 
-struct request *
-http_request_parse(int fd);
+int
+http_request(int fd, struct request *req);
 
 #endif // _REACTOR_HTTP_H_
