@@ -18,7 +18,8 @@
         "error_t.h": "c",
         "random": "c",
         "chrono": "c",
-        "request.h": "c"
+        "request.h": "c",
+        "*.tcc": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

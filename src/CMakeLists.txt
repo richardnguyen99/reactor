@@ -13,6 +13,7 @@ set(SOURCES
     util.c
     dict.c
     poll.c
+    _request.c
     request.c
     response.c
 )

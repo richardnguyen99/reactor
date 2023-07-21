@@ -12,8 +12,6 @@
 #define _REACTOR_HTTP_H_ 1
 
 #include "defs.h"
-#include "request.h"
-#include "response.h"
 #include "util.h"
 
 // clang-format off
@@ -37,6 +35,7 @@
 #define HTTP_NOT_IMPLEMENTED        501
 #define HTTP_BAD_GATEWAY            502
 #define HTTP_SERVICE_UNAVAILABLE    503
+#define HTTP_VERSION_NOT_SUPPORTED  505
 
 #define HTTP_SUCCESS_MSG                "OK"
 #define HTTP_CREATED_MSG                "Created"
@@ -72,7 +71,19 @@
     : (status == HTTP_SERVICE_UNAVAILABLE)   ? HTTP_SERVICE_UNAVAILABLE_MSG    \
                                              : NULL
 
-int
-http_request(int fd, struct request *req);
+#define HTTP_METHOD_INVALID 0
+#define HTTP_METHOD_GET     (1 << 0)
+#define HTTP_METHOD_HEAD    (1 << 1)
+#define HTTP_METHOD_POST    (1 << 2)
+#define HTTP_METHOD_PUT     (1 << 3)
+#define HTTP_METHOD_DELETE  (1 << 4)
+
+#define GET_HTTP_METHOD(method)                                                \
+    (method == HTTP_METHOD_GET)      ? "GET"                                   \
+    : (method == HTTP_METHOD_HEAD)   ? "HEAD"                                  \
+    : (method == HTTP_METHOD_POST)   ? "POST"                                  \
+    : (method == HTTP_METHOD_PUT)    ? "PUT"                                   \
+    : (method == HTTP_METHOD_DELETE) ? "DELETE"                                \
+                                     : NULL
 
 #endif // _REACTOR_HTTP_H_

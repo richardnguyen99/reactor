@@ -11,13 +11,13 @@
 #ifndef _REACTOR_REQUEST_H_
 #define _REACTOR_REQUEST_H_ 1
 
-#include "defs.h"
+#include "http.h"
 
 struct request
 {
     int method;
-    char path[BUFSIZ];
-    char version[HTTP_VER_SIZE];
+    char *path;
+    char *version;
 
     char *raw;
     size_t len;
@@ -26,6 +26,9 @@ struct request
 
 struct request *
 request_new();
+
+int
+request_parse(struct request *req, int fd);
 
 void
 request_free(struct request *request);

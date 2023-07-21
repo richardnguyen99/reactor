@@ -12,8 +12,9 @@
 #define _REACTOR_H_ 1
 
 #include "defs.h"
-#include "http.h"
 #include "poll.h"
+#include "request.h"
+#include "response.h"
 #include "util.h"
 
 struct __port

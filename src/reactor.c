@@ -126,7 +126,7 @@ reactor_run(struct reactor *server)
                 if (rev->req == NULL)
                     DIE("(reactor_run) request_new");
 
-                http_status = http_request(rev->fd, rev->req);
+                http_status = request_parse(rev->req, rev->fd);
 
                 if (http_status == HTTP_READ_AGAIN)
                     goto wait_to_read;
@@ -144,18 +144,33 @@ reactor_run(struct reactor *server)
             // Some sockets wants to send data out
             else if (evp->events & EPOLLOUT)
             {
-                nsent          = 0;
-                total_sent     = 0;
-                content_length = (size_t)snprintf(
-                    msg, BUFSIZ,
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Type: text/html\r\n"
-                    "Content-Length: %ld\r\n"
-                    "Connection: close\r\n"
-                    "Server: reactor/%s\r\n"
-                    "\r\n"
-                    "<html><body>%s</body></html>\r\n",
-                    rev->req->len, REACTOR_VERSION, rev->req->raw);
+                content_length = snprintf(buf, BUFSIZ,
+                                          "<!DOCTYPE>\r\n"
+                                          "<html>\r\n"
+                                          "<head>\r\n"
+                                          "<title>Reactor</title>\r\n"
+                                          "</head>\r\n"
+                                          "<body>\r\n"
+                                          "<h1>Method: %s</h1>\r\n"
+                                          "<h1>Path: %s</h1>\r\n"
+                                          "<h1>Version: %s</h1>\r\n"
+                                          "</body>\r\n"
+                                          "</html>\r\n",
+                                          GET_HTTP_METHOD(rev->req->method),
+                                          rev->req->path, rev->req->version);
+
+                nsent      = 0;
+                total_sent = 0;
+                content_length =
+                    (size_t)snprintf(msg, BUFSIZ,
+                                     "HTTP/1.1 200 OK\r\n"
+                                     "Content-Type: text/html\r\n"
+                                     "Content-Length: %ld\r\n"
+                                     "Connection: close\r\n"
+                                     "Server: reactor/%s\r\n"
+                                     "\r\n"
+                                     "%s",
+                                     content_length, REACTOR_VERSION, buf);
 
                 for (; total_sent < content_length;)
                 {
