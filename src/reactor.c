@@ -4,9 +4,6 @@
 int _prepare_socket(char *host, const char *service);
 int _set_nonblocking(int fd);
 
-struct reactor_event *_init_event(int fd);
-int _accept_event(int epoll_fd, int fd);
-int _destroy_event(struct reactor_event *rev, int fd);
 // clang-format on
 
 // =============================================================================
@@ -100,14 +97,13 @@ reactor_run(struct reactor *server)
                 if (_set_nonblocking(fd) == ERROR)
                     return ERROR;
 
-                if ((ev.data.ptr = _init_event(fd)) == NULL)
-                    return ERROR;
+                ev.data.ptr = revent_new(server->epollfd, fd);
 
                 if (ev.data.ptr == NULL)
-                    return ERROR;
+                    DIE("(reactor_run) revent_new");
 
-                if (_accept_event(server->epollfd, fd) == ERROR)
-                    return ERROR;
+                if (revent_add((struct reactor_event *)ev.data.ptr) == ERROR)
+                    DIE("(reactor_run) revent_add");
 
                 continue;
             }
@@ -117,7 +113,7 @@ reactor_run(struct reactor *server)
 
             if (evp->events & (EPOLLERR | EPOLLHUP))
             {
-                if (_destroy_event(rev, server->epollfd) == ERROR)
+                if (revent_destroy(rev) == ERROR)
                     return ERROR;
 
                 evp->data.ptr = NULL;
@@ -183,7 +179,7 @@ reactor_run(struct reactor *server)
                     total_sent += (size_t)nsent;
                 }
 
-                if (_destroy_event(rev, server->epollfd) == ERROR)
+                if (revent_destroy(rev) == ERROR)
                     return ERROR;
 
                 evp->data.ptr = NULL;

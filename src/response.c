@@ -45,6 +45,5 @@ response_free(struct response *response)
     if (response->body != NULL)
         free(response->body);
 
-    dict_free(response->headers);
     free(response);
 }

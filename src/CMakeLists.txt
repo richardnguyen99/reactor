@@ -12,6 +12,7 @@ set(SOURCES
     http.c
     util.c
     dict.c
+    poll.c
     request.c
     response.c
 )

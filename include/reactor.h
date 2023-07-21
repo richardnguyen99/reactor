@@ -13,18 +13,8 @@
 
 #include "defs.h"
 #include "http.h"
+#include "poll.h"
 #include "util.h"
-
-struct reactor_event
-{
-    int fd;
-    char *raw;
-    char *body;
-    uint64_t len;
-
-    struct request *req;
-    struct response *res;
-};
 
 struct __port
 {
