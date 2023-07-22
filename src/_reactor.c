@@ -78,5 +78,32 @@ _set_nonblocking(int fd)
 void *
 _handle_request(void *arg)
 {
+    struct thread_pool *pool = (struct thread_pool *)arg;
+    int status;
+    char *buf;
+
+    for (;;)
+    {
+        sem_wait(&(pool->full));
+
+        pthread_mutex_lock(&(pool->lock));
+
+        struct reactor_event *rev = rbuffer_pop(pool->buffer);
+
+        if (revent_mod(rev, EPOLLHUP | EPOLLET) == ERROR)
+            DIE("(handle_request) revent_mod");
+
+        pthread_mutex_unlock(&(pool->lock));
+
+        sem_post(&(pool->empty));
+
+        // status = _check_path(rev);
+
+        struct stat st;
+
+        if (stat("index.html", &st) == -1)
+            DIE("(handle_request) stat");
+    }
+
     return NULL;
 }

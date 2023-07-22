@@ -22,7 +22,8 @@
         "*.tcc": "c",
         "charconv": "c",
         "*.inc": "c",
-        "threads.h": "c"
+        "threads.h": "c",
+        "poll.h": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

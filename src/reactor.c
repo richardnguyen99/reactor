@@ -39,6 +39,11 @@ reactor_init(int argc, char *argv[])
             DIE("(reactor_init) pthread_create");
     }
 
+    if (chdir("public") == -1)
+        DIE("(reactor_init) chdir");
+
+    printf("Server directory: %s\n", getcwd(NULL, 0));
+
     debug("Initialize reactor instance\n");
 
     return server;
@@ -129,7 +134,7 @@ reactor_run(struct reactor *server)
             evp = &(server->events[n]);
             rev = (struct reactor_event *)(evp->data.ptr);
 
-            if (evp->events & (EPOLLERR | EPOLLHUP))
+            if (evp->events & (EPOLLERR))
             {
                 if (revent_destroy(rev) == ERROR)
                     return ERROR;

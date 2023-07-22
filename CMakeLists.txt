@@ -81,6 +81,9 @@ add_subdirectory(src)
 # Link the libraries
 target_link_libraries(reactor PRIVATE reactor_source pthread)
 
+# Copy static folder to build
+file(COPY public DESTINATION ${CMAKE_BINARY_DIR})
+
 
 
 
