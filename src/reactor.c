@@ -153,9 +153,7 @@ reactor_run(struct reactor *server)
                                           "<body>\r\n"
                                           "<h1>Method: %s</h1>\r\n"
                                           "<h1>Path: %s</h1>\r\n"
-                                          "<h1>Version: %s</h1>\r\n"
-                                          "</body>\r\n"
-                                          "</html>\r\n",
+                                          "<h1>Version: %s</h1>\r\n",
                                           GET_HTTP_METHOD(rev->req->method),
                                           rev->req->path, rev->req->version);
 

@@ -3,6 +3,9 @@
 int
 _get_start_line(struct request *req, char *buf);
 
+int
+_get_header(struct dict *headers, char *buf);
+
 // =============================================================================
 
 struct request *
@@ -27,6 +30,15 @@ request_new()
         return NULL;
     }
 
+    request->headers = dict_new(NULL, NULL);
+
+    if (request->headers == NULL)
+    {
+        free(request->raw);
+        free(request);
+        return NULL;
+    }
+
     return request;
 }
 
@@ -41,7 +53,7 @@ request_parse(struct request *req, int fd)
 
     /// An HTTP request has the minimum layout as beflow
     ///
-    /// GET / HTTP/1.1\r\n              <- Start line       (required)
+    /// GET /some-path HTTP/1.1\r\n     <- Start line       (required)
     /// Host: localhost:8080\r\n        <- Host header      (required)
     /// User-Agent: curl/7.64.1\r\n     <- Header           (optional)
     /// Accept: */*\r\n                 <- Header           (optional)
@@ -62,20 +74,22 @@ request_parse(struct request *req, int fd)
 
     for (;;)
     {
-        nread = read_line(fd, req->raw + req->len, BUFSIZ, MSG_DONTWAIT);
+        nread = read_line(fd, buf, BUFSIZ, MSG_DONTWAIT);
 
         if (errno == EAGAIN)
             return HTTP_READ_AGAIN;
 
+        if (nread == 0)
+            break;
+
         if (nread == -1)
             return HTTP_ERROR;
 
-        req->len += (size_t)nread;
-        ((char *)req->raw)[req->len] = '\n';
-        req->len += 1;
-
-        if (nread == 0)
+        if (strcmp(buf, "\r\n") == 0)
             break;
+
+        if (_get_header(req->headers, buf) == ERROR)
+            return HTTP_ERROR;
     }
 
     return HTTP_SUCCESS;

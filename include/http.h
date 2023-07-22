@@ -12,6 +12,7 @@
 #define _REACTOR_HTTP_H_ 1
 
 #include "defs.h"
+#include "dict.h"
 #include "util.h"
 
 // clang-format off

@@ -75,3 +75,28 @@ _get_start_line(struct request *req, char *buf)
 
     return HTTP_SUCCESS;
 }
+
+int
+_get_header(struct dict *header, char *buf)
+{
+    char *token, *key, *value;
+
+    token = strtok(buf, ": ");
+
+    if (token == NULL)
+        return HTTP_BAD_REQUEST;
+
+    key = token;
+
+    token = strtok(NULL, ": ");
+
+    if (token == NULL)
+        return HTTP_BAD_REQUEST;
+
+    value = token;
+
+    if (dict_put(header, key, value) == ERROR)
+        return HTTP_INTERNAL_SERVER_ERROR;
+
+    return HTTP_SUCCESS;
+}

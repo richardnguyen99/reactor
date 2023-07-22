@@ -19,7 +19,9 @@
         "random": "c",
         "chrono": "c",
         "request.h": "c",
-        "*.tcc": "c"
+        "*.tcc": "c",
+        "charconv": "c",
+        "*.inc": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

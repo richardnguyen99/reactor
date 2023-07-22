@@ -22,6 +22,8 @@ struct request
     char *raw;
     size_t len;
     size_t cap;
+
+    struct dict *headers;
 };
 
 struct request *
