@@ -21,7 +21,8 @@
         "request.h": "c",
         "*.tcc": "c",
         "charconv": "c",
-        "*.inc": "c"
+        "*.inc": "c",
+        "threads.h": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

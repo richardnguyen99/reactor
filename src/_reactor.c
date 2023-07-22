@@ -74,3 +74,9 @@ _set_nonblocking(int fd)
 
     return SUCCESS;
 }
+
+void *
+_handle_request(void *arg)
+{
+    return NULL;
+}

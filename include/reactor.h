@@ -15,7 +15,7 @@
 #include "poll.h"
 #include "request.h"
 #include "response.h"
-#include "ring_buffer.h"
+#include "threads.h"
 #include "util.h"
 
 struct __port
@@ -36,7 +36,7 @@ struct reactor
 
     char ip[INET_ADDRSTRLEN];
 
-    struct ring_buffer *rbuffer;
+    struct thread_pool *pool;
 };
 
 struct reactor *

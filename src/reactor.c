@@ -5,6 +5,8 @@
 int _prepare_socket(char *host, const char *service);
 int _set_nonblocking(int fd);
 
+void *_handle_request(void * arg);
+
 // clang-format on
 
 // =============================================================================
@@ -25,6 +27,17 @@ reactor_init(int argc, char *argv[])
 
     server->port.number = 9999;
     server->server_fd   = -1;
+
+    server->pool = pool_new(8, 8, _handle_request);
+    if (server->pool == NULL)
+        DIE("(reactor_init) pool_new");
+
+    for (size_t i = 0; i < server->pool->size; ++i)
+    {
+        if (pthread_create(&(server->pool->threads[i]), NULL, _handle_request,
+                           server->pool) != 0)
+            DIE("(reactor_init) pthread_create");
+    }
 
     debug("Initialize reactor instance\n");
 
@@ -214,8 +227,8 @@ reactor_destroy(struct reactor *server)
     if (server->epollfd != -1)
         close(server->epollfd);
 
-    if (server->rbuffer != NULL)
-        rbuffer_free(server->rbuffer);
+    if (server->pool != NULL)
+        pool_free(server->pool);
 
     free(server);
 }
