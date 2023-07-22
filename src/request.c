@@ -92,6 +92,8 @@ request_parse(struct request *req, int fd)
             return HTTP_ERROR;
     }
 
+    // TODO: Parse body
+
     return HTTP_SUCCESS;
 }
 
@@ -103,6 +105,9 @@ request_free(struct request *request)
 
     if (request->version != NULL)
         free(request->version);
+
+    if (request->headers != NULL)
+        dict_delete(request->headers);
 
     free(request->raw);
     free(request);

@@ -16,6 +16,7 @@ set(SOURCES
     _request.c
     request.c
     response.c
+    ring_buffer.c
 )
 
 add_library(reactor_source ${SOURCES})# Cmake basic configuration

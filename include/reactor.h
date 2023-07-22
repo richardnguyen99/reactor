@@ -15,6 +15,7 @@
 #include "poll.h"
 #include "request.h"
 #include "response.h"
+#include "ring_buffer.h"
 #include "util.h"
 
 struct __port
@@ -34,6 +35,8 @@ struct reactor
     struct epoll_event events[MAX_EVENTS];
 
     char ip[INET_ADDRSTRLEN];
+
+    struct ring_buffer *rbuffer;
 };
 
 struct reactor *

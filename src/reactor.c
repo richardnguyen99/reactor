@@ -1,6 +1,7 @@
 #include "reactor.h"
 
 // clang-format off
+
 int _prepare_socket(char *host, const char *service);
 int _set_nonblocking(int fd);
 
@@ -37,8 +38,12 @@ reactor_load(struct reactor *server)
     struct epoll_event ev;
 
     server->server_fd = _prepare_socket(server->ip, "9999");
-    server->epollfd   = epoll_create1(0);
 
+    // server->rbuffer = rbuffer_new(8);
+    // if (server->rbuffer == NULL)
+    // return ERROR;
+
+    server->epollfd = epoll_create1(0);
     if (server->epollfd == -1)
         return ERROR;
 
@@ -141,6 +146,7 @@ reactor_run(struct reactor *server)
             wait_to_read:
                 continue;
             }
+
             // Some sockets wants to send data out
             else if (evp->events & EPOLLOUT)
             {
@@ -204,6 +210,12 @@ reactor_destroy(struct reactor *server)
 {
     if (server->server_fd != -1)
         close(server->server_fd);
+
+    if (server->epollfd != -1)
+        close(server->epollfd);
+
+    if (server->rbuffer != NULL)
+        rbuffer_free(server->rbuffer);
 
     free(server);
 }
