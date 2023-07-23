@@ -13,8 +13,12 @@
 int
 main(int argc, char *argv[])
 {
-    int status             = SUCCESS;
+    int status = SUCCESS;
+
+    // Load server configuration from command line arguments
     struct reactor *server = reactor_init(argc, argv);
+    if (server == NULL)
+        goto safe_exit;
 
     // Load configuration into the server instance
     if ((status = reactor_load(server)) != SUCCESS)
