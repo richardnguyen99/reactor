@@ -1,34 +1,39 @@
 #include "util.h"
 
-int endofhdr(const char *msgbuf, const size_t len)
+ssize_t
+read_until(int fd, void *buf, size_t buflen, const char *delim, int flags)
 {
-    return len >= 2 && msgbuf[len - 2] == '\r' && msgbuf[len - 1] == '\n';
-}
+    const size_t delim_len = strlen(delim);
 
-int endofmsg(const char *msgbuf, const size_t len)
-{
-    return len == 2 && msgbuf[0] == '\r' && msgbuf[1] == '\n';
-}
-
-ssize_t read_line(int fd, char *buffer, size_t size)
-{
-    size_t n = 0;
     ssize_t nread = 0;
+    size_t total  = 0;
+    size_t cmp_idx;
 
-    for (; n < size;)
+    for (; total < buflen;)
     {
-        nread = read(fd, (void *)(buffer + n), 1);
+        nread = recv(fd, (char *)(buf + total), 1, flags);
 
         if (nread == -1)
-            return ERROR;
+            return -1;
+        else if (nread == 0)
+            return 0;
 
-        n += (size_t)nread;
+        total += (size_t)nread;
 
-        if (endofhdr(buffer, n))
+        cmp_idx = total - delim_len;
+        if (strncmp((char *)(buf + cmp_idx), delim, delim_len) == 0)
             break;
     }
 
-    buffer[n] = '\0';
+    // Only read the content before the delimiter
+    total -= delim_len;
+    ((char *)buf)[total] = '\0';
 
-    return n;
+    return total;
+}
+
+ssize_t
+read_line(int fd, char *buf, size_t buflen, int flags)
+{
+    return read_until(fd, buf, buflen, "\r\n", flags);
 }

@@ -1,34 +1,42 @@
 /**
  * @file main.c
  * @author Richard Nguyen (richard@richardhnguyen.com)
- * @brief Main entry of the web server program
- * @version 0.1.1
- * @date 2023-07-14
+ * @brief Main entry point for the Reactor server
+ * @version 0.1
+ * @date 2023-07-17
  *
  * @copyright Copyright (c) 2023
- *
  */
 
-#include "defs.h"
-#include "server.h"
+#include "reactor.h"
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
-    // Server instance and initialize the instance
-    server_t server;
-    server_init(&server);
+    int status             = SUCCESS;
+    struct reactor *server = reactor_init(argc, argv);
 
-    // Load configuration
-    server_load_config(&server, argc, argv);
+    // Load configuration into the server instance
+    if ((status = reactor_load(server)) != SUCCESS)
+        goto safe_exit;
 
-    // Boot up the server and prepare the socket
-    server_boot(&server);
+    printf("Listening on %s:%d\n", server->ip, server->port.number);
 
-    // Print out server information on debuggin
-    server_print(&server);
+    // Boot the server instance
+    if ((status = reactor_boot(server)) != SUCCESS)
+        goto safe_exit;
 
-    // Start the server and listen for incoming connections
-    server_start(&server);
+    // Main loop
+    reactor_run(server);
 
-    return 0;
+safe_exit:
+    if (status == FAILURE)
+        fprintf(stderr, "Failure from %s\n", strerror(errno));
+
+    if (status == ERROR)
+        fprintf(stderr, "Error: %s\n", strerror(errno));
+
+    reactor_destroy(server);
+
+    return status;
 }

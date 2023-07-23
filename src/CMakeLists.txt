@@ -5,16 +5,20 @@ project(reactor VERSION 0.1.0 LANGUAGES C)
 # Set the C standard
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
 
 set(SOURCES
-    server.c
-    util.c
-    poll.c
-    hashmap.c
-    thread_pool.c
-    ring_buffer.c
+    _reactor.c
+    reactor.c
     http.c
+    util.c
+    dict.c
+    poll.c
+    _request.c
+    request.c
+    response.c
+    ring_buffer.c
+    threads.c
 )
 
-add_library(reactor_source ${SOURCES})
+add_library(reactor_source ${SOURCES})# Cmake basic configuration
+

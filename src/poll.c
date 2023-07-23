@@ -1,40 +1,69 @@
 #include "poll.h"
 
-int poll_create(int flags)
+struct reactor_event *
+revent_new(int epoll_fd, int fd)
 {
-    int epoll_fd = epoll_create1(flags);
+    struct reactor_event *rev = malloc(sizeof(struct reactor_event));
 
-    if (epoll_fd == -1)
-        return ERROR;
+    if (rev == NULL)
+        return NULL;
 
-    return epoll_fd;
+    rev->fd       = fd;
+    rev->epoll_fd = epoll_fd;
 
+    rev->req = NULL;
+    rev->res = NULL;
+
+    rev->raw = (char *)malloc(BUFSIZ);
+
+    return rev;
 }
 
-
-int poll_add(int poll_fd, int fd, int events)
+int
+revent_add(struct reactor_event *rev)
 {
     struct epoll_event ev;
-    ev.events = events;
-    ev.data.fd = fd;
+    ev.data.ptr = rev;
+    ev.events   = EPOLLIN | EPOLLET;
 
-    int ret = epoll_ctl(poll_fd, EPOLL_CTL_ADD, fd, &ev);
-    if(ret == -1)
-        return -1;
+    if (epoll_ctl(rev->epoll_fd, EPOLL_CTL_ADD, rev->fd, &ev) == ERROR)
+        return ERROR;
+
+    return SUCCESS;
 }
 
-int poll_del(int poll_fd, int fd, int events, struct epoll_event *poll_events)
+int
+revent_mod(struct reactor_event *rev, int flags)
 {
-    return 0;
+    struct epoll_event ev;
+    ev.data.ptr = rev;
+    ev.events   = flags | EPOLLET;
+
+    if (epoll_ctl(rev->epoll_fd, EPOLL_CTL_MOD, rev->fd, &ev) == -1)
+        return ERROR;
+
+    return SUCCESS;
 }
 
-
-int poll_mod(int poll_fd, int fd, int events, struct epoll_event *poll_events)
+int
+revent_destroy(struct reactor_event *rev)
 {
-    return 0;
-}
+    if (epoll_ctl(rev->epoll_fd, EPOLL_CTL_DEL, rev->fd, NULL) == ERROR)
+        return ERROR;
 
-int poll_wait(int poll_fd, int timeout, struct epoll_event *events)
-{
-    return 0;
+    if (close(rev->fd) == ERROR)
+        return ERROR;
+
+    if (rev->raw != NULL)
+        free(rev->raw);
+
+    if (rev->req != NULL)
+        request_free(rev->req);
+
+    if (rev->res != NULL)
+        response_free(rev->res);
+
+    free(rev);
+
+    return SUCCESS;
 }

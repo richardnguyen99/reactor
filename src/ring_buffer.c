@@ -1,45 +1,61 @@
 #include "ring_buffer.h"
 
-struct queue *queue_init(size_t cap)
+struct ring_buffer *
+rbuffer_new(size_t cap)
 {
-    struct queue *q = malloc(sizeof(struct queue));
+    void *buf = malloc(sizeof(struct ring_buffer));
 
-    if (q == NULL)
+    if (buf == NULL)
         return NULL;
 
-    q->cap = cap;
-    q->size = 0;
-    q->in = 0;
-    q->out = 0;
-    q->fds = malloc(sizeof(int) * cap);
+    struct ring_buffer *buffer = (struct ring_buffer *)buf;
 
-    if (q->fds == NULL)
+    buffer->cap  = cap;
+    buffer->size = 0;
+    buffer->in   = 0;
+    buffer->out  = 0;
+    buffer->events =
+        (struct reactor_event **)malloc(sizeof(struct reactor_event *) * cap);
+
+    if (buffer->events == NULL)
     {
-        free(q);
+        free(buffer);
         return NULL;
     }
 
     for (size_t i = 0; i < cap; i++)
-        q->fds[i] = -1;
+        buffer->events[i] = NULL;
 
-    return q;
+    return buffer;
 }
 
-void queue_push_back(struct queue *q, int fd)
+size_t
+rbuffer_append(struct ring_buffer *buf, struct reactor_event *ev)
 {
-    q->fds[q->in] = fd;
-    q->in = (q->in + 1) % q->cap;
-    q->size++;
+    size_t i       = buf->in;
+    buf->events[i] = ev;
+    buf->in        = (i + 1) % buf->cap;
+    buf->size++;
+
+    return i;
 }
 
-int queue_pop_front(struct queue *q)
+struct reactor_event *
+rbuffer_pop(struct ring_buffer *buf)
 {
-    size_t i = q->out;
-    int fd = q->fds[i];
+    size_t i                  = buf->out;
+    struct reactor_event *rev = buf->events[i];
 
-    q->fds[i] = -1;
-    q->out = (i + 1) % q->cap;
-    q->size--;
+    buf->events[i] = NULL;
+    buf->out       = (i + 1) % buf->cap;
+    buf->size--;
 
-    return fd;
+    return rev;
+}
+
+void
+rbuffer_free(struct ring_buffer *buf)
+{
+    free(buf->events);
+    free(buf);
 }

@@ -1,64 +1,47 @@
 /**
  * @file ring_buffer.h
  * @author Richard Nguyen (richard@richardhnguyen.com)
- * @brief Ring buffer header file
+ * @brief Ring buffer header for bounded buffer
  * @version 0.1
- * @date 2023-07-16
- * 
+ * @date 2023-07-22
+ *
  * @copyright Copyright (c) 2023
  */
 
-#ifndef _RING_BUFFER_H
-#define _RING_BUFFER_H 1
+#ifndef _REACTOR_RING_BUFFER_H_
+#define _REACTOR_RING_BUFFER_H_ 1
 
 #include "defs.h"
+#include "poll.h"
 
-struct queue {
-    /* Capacity of file descriptors in this ring buffer */
+struct ring_buffer
+{
+    /* Maximum capacity of this ring buffer */
     size_t cap;
 
-    /* Current number of file descriptors in this ring buffer */
+    /* Current number of items in this ring buffer */
     size_t size;
 
-    /* Index position for enqueueing a new file descriptor */
+    /* Index position to enqueue a new fd*/
     size_t in;
 
-    /* Index position for dequeueing a file descriptor */
+    /* Index position to dequeue an existing fd */
     size_t out;
 
-    /* List of file descriptors in this ring buffer */
-    int *fds;
+    /* Array of reactor events */
+    struct reactor_event **events;
 };
 
-/**
- * @brief Initialize a malloc'd ring buffer to store file descriptors
- * 
- * @param cap Maximum number of file descriptors to store
- * @return Pointer to the ring buffer. NULL if malloc fails.
- */
-struct queue *queue_init(size_t cap);
+struct ring_buffer *
+rbuffer_new(size_t cap);
 
-/**
- * @brief Push a file descriptor to the back of the ring buffer
- * 
- * @param q Pointer to the ring buffer
- * @param fd File descriptor to push
- */
-void queue_push_back(struct queue *q, int fd);
+size_t
+rbuffer_append(struct ring_buffer *buffer, struct reactor_event *rev);
 
-/**
- * @brief Remove the file descriptor at the front of the ring buffer
- * 
- * @param q Pointer to the ring buffer
- * @return File descriptor at the front of the ring buffer
- */
-int queue_pop_front(struct queue *q);
+struct reactor_event *
+rbuffer_pop(struct ring_buffer *buffer);
 
-/**
- * @brief Free the ring buffer
- * 
- * @param q Pointer to the ring buffer
- */
-void queue_free(struct queue *q);
+void
+rbuffer_free(struct ring_buffer *buffer);
 
-#endif // _RING_BUFFER_H
+#endif // _REACTOR_RING_BUFFER_H_
