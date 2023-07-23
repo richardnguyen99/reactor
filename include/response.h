@@ -22,6 +22,7 @@ struct response
 
     struct dict *headers;
     char *body;
+    size_t body_len;
 };
 
 struct response *

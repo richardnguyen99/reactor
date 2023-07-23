@@ -36,7 +36,8 @@ int
 revent_mod(struct reactor_event *rev, int flags)
 {
     struct epoll_event ev;
-    ev.events = flags | EPOLLET;
+    ev.data.ptr = rev;
+    ev.events   = flags | EPOLLET;
 
     if (epoll_ctl(rev->epoll_fd, EPOLL_CTL_MOD, rev->fd, &ev) == -1)
         return ERROR;
