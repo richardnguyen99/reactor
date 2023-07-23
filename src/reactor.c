@@ -158,29 +158,23 @@ reactor_run(struct reactor *server)
                 if (http_status == HTTP_ERROR)
                     DIE("(reactor_run) http_request");
 
-                // sem_wait(&(server->pool->empty));
-                // pthread_mutex_lock(&(server->pool->lock));
+                if (sem_wait(&(server->pool->empty)) == ERROR)
+                    DIE("(reactor_run) sem_wait");
 
-                // if (revent_mod(rev, EPOLLHUP) == ERROR)
-                // DIE("(reactor_run) revent_mod");
+                if (pthread_mutex_lock(&(server->pool->lock)) == ERROR)
+                    return ERROR;
 
-                // if (rbuffer_append(server->pool->buffer, rev) == ERROR)
-                // DIE("(reactor_run) rbuffer_push");
+                if (revent_mod(rev, EPOLLHUP) == ERROR)
+                    DIE("(reactor_run) revent_mod");
 
-                // printf("Append to buffer: %p\n", rev);
-                // printf("Queue size: %ld\n", server->pool->buffer->size);
-                // printf("File descriptor: %d\n", rev->fd);
+                if (rbuffer_append(server->pool->buffer, rev) == ERROR)
+                    DIE("(reactor_run) rbuffer_push");
 
-                // pthread_mutex_unlock(&(server->pool->lock));
-                // sem_post(&(server->pool->full));
+                if (pthread_mutex_unlock(&(server->pool->lock)) == ERROR)
+                    DIE("(reactor_run) pthread_mutex_unlock");
 
-                struct epoll_event e;
-                e.data.ptr = rev;
-                e.events   = EPOLLOUT | EPOLLET;
-
-                if (epoll_ctl(server->epollfd, EPOLL_CTL_MOD, rev->fd, &e) ==
-                    ERROR)
-                    DIE("(reactor_run) epoll_ctl");
+                if (sem_post(&(server->pool->full)) == ERROR)
+                    DIE("(reactor_run) sem_post");
 
             wait_to_read:
                 continue;
@@ -193,17 +187,16 @@ reactor_run(struct reactor *server)
                 nsent      = 0;
                 total_sent = 0;
 
-                content_length =
-                    (size_t)snprintf(msg, BUFSIZ,
-                                     "HTTP/1.1 200 OK\r\n"
-                                     "Content-Type: %ld\r\n"
-                                     "Content-Length: \r\n"
-                                     "Connection: close\r\n"
-                                     "Server: reactor/%s\r\n"
-                                     "\r\n"
-                                     "GET %s %s\n",
-                                     rev->req->len, REACTOR_VERSION,
-                                     rev->req->path, rev->req->version);
+                content_length = (size_t)snprintf(
+                    msg, BUFSIZ,
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: %ld\r\n"
+                    "Content-Length: \r\n"
+                    "Connection: close\r\n"
+                    "Server: reactor/%s\r\n"
+                    "\r\n"
+                    "%s",
+                    rev->res->body_len, REACTOR_VERSION, rev->res->body);
 
                 for (; total_sent < content_length;)
                 {
@@ -219,7 +212,8 @@ reactor_run(struct reactor *server)
                     total_sent += (size_t)nsent;
                 }
 
-                // munmap(rev->res->body, rev->res->body_len);
+                munmap(rev->res->body, rev->res->body_len);
+                rev->res->body = NULL;
 
                 if (revent_destroy(rev) == ERROR)
                     return ERROR;
