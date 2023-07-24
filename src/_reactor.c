@@ -2,6 +2,38 @@
 
 #include "reactor.h"
 
+void
+__construct_response(struct response *res, int status, char *body,
+                     size_t body_len)
+{
+    res->status      = status;
+    res->status_text = http_get_status_text(status);
+    res->body        = body;
+    res->body_len    = body_len;
+    res->version     = strdup("HTTP/1.1");
+}
+
+int
+__validate_response(struct response *res, char *body)
+{
+    if (res == NULL)
+        return ERROR;
+
+    if (res->status_text == NULL)
+        return ERROR;
+
+    if (body != NULL && res->body == NULL)
+        return ERROR;
+
+    if (body != NULL && res->body_len == 0)
+        return ERROR;
+
+    if (res->version == NULL)
+        return ERROR;
+
+    return SUCCESS;
+}
+
 int
 _prepare_socket(char *host, const char *service)
 {
@@ -103,45 +135,23 @@ _handle_request(void *arg)
             DIE("(handle_request) sem_post");
 
         struct route route = http_get_uri_handle(rev->req->path);
+        rev->res = response_new();
 
          if (route.uri == NULL)
          {
-             rev->res = (struct response *)malloc(sizeof(struct response));
-
-             if (rev->res == NULL)
-                 DIE("(handle_request) malloc");
-
-             rev->res->headers     = NULL;
-             rev->res->status      = HTTP_NOT_FOUND;
-             rev->res->status_text = http_get_status_text(HTTP_NOT_FOUND);
-             rev->res->version     = NULL;
-             rev->res->body        = NULL;
-             rev->res->body_len    = 0;
-
-             if (revent_mod(rev, EPOLLOUT) == ERROR)
-                 DIE("(handle_request) revent_mod");
+             __construct_response(rev->res, HTTP_NOT_FOUND, NULL, 0);
+             __validate_response(rev->res, NULL);
 
              continue;
          }
 
-        // if (rev->req->method & route.methods == 0)
-        // {
-            // rev->res = (struct response *)malloc(sizeof(struct response));
-            // if (rev->res == NULL)
-                // DIE("(handle_request) malloc");
-
-            // rev->res->headers     = NULL;
-            // rev->res->status      = HTTP_METHOD_NOT_ALLOWED;
-            // rev->res->status_text = http_get_status_text(HTTP_METHOD_NOT_ALLOWED);
-            // rev->res->version     = NULL;
-            // rev->res->body        = NULL;
-            // rev->res->body_len    = 0;
-
-            // if (revent_mod(rev, EPOLLOUT) == ERROR)
-                // DIE("(handle_request) revent_mod");
-
-            // continue;
-        // }
+         if (rev->req->method & route.methods == 0)
+         {
+                __construct_response(rev->res, HTTP_METHOD_NOT_ALLOWED, NULL, 0);
+                __validate_response(rev->res, NULL);
+    
+                continue;
+         }
 
         if ((ffd = open(route.resource, O_RDONLY, 0)) == -1)
             DIE("(handle_request) open");
@@ -154,12 +164,6 @@ _handle_request(void *arg)
         if (buf == MAP_FAILED)
             DIE("(handle_request) mmap");
 
-        rev->res = (struct response *)malloc(sizeof(struct response));
-
-        if (rev->res == NULL)
-            DIE("(handle_request) malloc");
-
-        rev->res->headers     = NULL;
         rev->res->status      = HTTP_SUCCESS;
         rev->res->status_text = http_get_status_text(HTTP_SUCCESS);
         rev->res->version     = NULL;

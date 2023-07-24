@@ -48,6 +48,9 @@ revent_mod(struct reactor_event *rev, int flags)
 int
 revent_destroy(struct reactor_event *rev)
 {
+    if (rev == NULL)
+        return SUCCESS;
+
     if (epoll_ctl(rev->epoll_fd, EPOLL_CTL_DEL, rev->fd, NULL) == ERROR)
         return ERROR;
 

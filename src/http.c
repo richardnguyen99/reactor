@@ -41,6 +41,9 @@ http_get_status_text(int status)
     const size_t len = strlen(GET_HTTP_MSG(status));
 
     status_text = (char *)malloc(len + 1);
+    if (status_text == NULL)
+        return NULL;
+
     strncpy(status_text, GET_HTTP_MSG(status), len);
 
     status_text[len] = '\0';

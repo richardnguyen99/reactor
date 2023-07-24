@@ -1,31 +1,26 @@
 #include "response.h"
 
 struct response *
-http_response_new()
+response_new()
 {
-    struct response *resp = malloc(sizeof(struct response));
+    struct response *res = (struct response *)malloc(sizeof(struct response));
 
-    if (resp == NULL)
+    if (res == NULL)
         return NULL;
 
-    resp->status = -1;
+    res->headers = dict_new(NULL, NULL);
+    if (res->headers == NULL)
+    {
+        free(res);
+        return NULL;
+    }
 
-    memset(resp->version, 0, sizeof(resp->version));
-    memset(resp->status_text, 0, sizeof(resp->status_text));
+    res->status      = -1;
+    res->status_text = NULL;
+    res->body        = NULL;
+    res->body_len    = 0;
 
-    // Let the caller set the body
-    resp->body    = NULL;
-    resp->headers = dict_new(NULL, NULL);
-
-    return resp;
-}
-
-char *
-response_compose(struct response *response)
-{
-    char *msg = NULL;
-
-    return msg;
+    return res;
 }
 
 ssize_t
@@ -50,6 +45,9 @@ response_free(struct response *response)
 
     if (response->headers != NULL)
         dict_delete(response->headers);
+
+    if (response->version != NULL)
+        free(response->version);
 
     free(response);
 }

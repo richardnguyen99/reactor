@@ -26,11 +26,7 @@ struct response
 };
 
 struct response *
-response_new(const char *version, int status, const char *status_text,
-             struct dict *headers);
-
-char *
-response_compose(struct response *response);
+response_new();
 
 ssize_t
 response_send(struct response *response, int fd);
