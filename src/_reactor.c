@@ -88,17 +88,13 @@ _handle_request(void *arg)
     {
         if (sem_wait(&(pool->full)) == -1)
             DIE("(handle_request) sem_wait");
-
         if (pthread_mutex_lock(&(pool->lock)) == -1)
             DIE("(handle_request) pthread_mutex_lock");
 
         struct reactor_event *rev = rbuffer_pop(pool->buffer);
-        debug("Dequeue: %p\n", rev);
-        debug("Queue size: %ld\n", pool->buffer->size);
 
         if (pthread_mutex_unlock(&(pool->lock)) == -1)
             DIE("(handle_request) pthread_mutex_unlock");
-
         if (sem_post(&(pool->empty)) == -1)
             DIE("(handle_request) sem_post");
 

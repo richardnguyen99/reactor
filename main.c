@@ -16,11 +16,11 @@ main(int argc, char *argv[])
     int status = SUCCESS;
 
     // Load server configuration from command line arguments
-    struct reactor *server = reactor_init(argc, argv);
+    struct reactor *server = NULL;
+    reactor_init(&server, argc, argv);
 
-    // Load configuration into the server instance
-    if ((status = reactor_load(server)) != SUCCESS)
-        goto safe_exit;
+    // Load the server configuration into the server instance
+    reactor_load(server);
 
     debug("Listening on %s:%d\n", server->ip, server->port.number);
 

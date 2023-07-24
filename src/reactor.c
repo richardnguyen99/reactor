@@ -11,41 +11,39 @@ void *_handle_request(void * arg);
 
 // =============================================================================
 
-struct reactor *
-reactor_init(int argc, char *argv[])
+void
+reactor_init(struct reactor **server, int argc, char *argv[])
 {
-    struct reactor *server = malloc(sizeof(struct reactor));
+    *server = (struct reactor *)malloc(sizeof(struct reactor));
 
     if (server == NULL)
         DIE("(reactor_init) malloc");
 
-    memset(&(server->port), '\0', sizeof(server->port));
-    memset(server->port.str, '\0', sizeof(char) * PRTSIZ);
-    memset(server->events, '\0', sizeof(struct epoll_event) * MAX_EVENTS);
+    memset(&((*server)->port), '\0', sizeof((*server)->port));
+    memset((*server)->port.str, '\0', sizeof(char) * PRTSIZ);
+    memset((*server)->events, '\0', sizeof(struct epoll_event) * MAX_EVENTS);
 
-    memset(server->ip, '\0', INET_ADDRSTRLEN);
+    memset((*server)->ip, '\0', INET_ADDRSTRLEN);
 
-    server->port.number = 9999;
-    server->server_fd   = -1;
+    (*server)->port.number = 9999;
+    (*server)->server_fd   = -1;
 
-    server->pool = pool_new(8, 8, _handle_request);
-    if (server->pool == NULL)
+    (*server)->pool = pool_new(8, 8, _handle_request);
+    if ((*server)->pool == NULL)
         DIE("(reactor_init) pool_new");
 
-    for (size_t i = 0; i < server->pool->size; ++i)
+    for (size_t i = 0; i < (*server)->pool->size; ++i)
     {
-        if (pthread_create(&(server->pool->threads[i]), NULL, _handle_request,
-                           server->pool) != 0)
+        if (pthread_create(&((*server)->pool->threads[i]), NULL,
+                           _handle_request, (*server)->pool) != 0)
             DIE("(reactor_init) pthread_create");
     }
 
     if (chdir("public") == -1)
         DIE("(reactor_init) chdir");
-
-    return server;
 }
 
-int
+void
 reactor_load(struct reactor *server)
 {
     int status = SUCCESS;
@@ -55,15 +53,13 @@ reactor_load(struct reactor *server)
 
     server->epollfd = epoll_create1(0);
     if (server->epollfd == -1)
-        return ERROR;
+        DIE("(reactor_load) epoll_create1");
 
     ev.events  = EPOLLIN;
     ev.data.fd = server->server_fd;
 
     if (epoll_ctl(server->epollfd, EPOLL_CTL_ADD, server->server_fd, &ev) == -1)
-        return ERROR;
-
-    return status;
+        DIE("(reactor_load) epoll_ctl");
 }
 
 int
@@ -107,8 +103,6 @@ reactor_run(struct reactor *server)
 
                 if (fd == -1)
                     return ERROR;
-
-                debug("Accepted connection on fd %d\n", fd);
 
                 if (_set_nonblocking(fd) == ERROR)
                     return ERROR;

@@ -58,17 +58,15 @@ struct reactor
  * @param argv Array of arguments (from the main function)
  * @return {struct reactor*} Pointer to the reactor server instance
  */
-struct reactor *
-reactor_init(int argc, char *argv[]);
+void
+reactor_init(struct reactor **server, int argc, char *argv[]);
 
 /**
  * @brief Load the server configuration into the server instance.
  *
  * @param server A pointer to the server instance
- * @return {int} On success, the function returns 0 (SUCCESS in macro). On
- * error, -1 (ERROR in macro) is returned.
  */
-int
+void
 reactor_load(struct reactor *server);
 
 /**
