@@ -17,14 +17,12 @@ main(int argc, char *argv[])
 
     // Load server configuration from command line arguments
     struct reactor *server = reactor_init(argc, argv);
-    if (server == NULL)
-        goto safe_exit;
 
     // Load configuration into the server instance
     if ((status = reactor_load(server)) != SUCCESS)
         goto safe_exit;
 
-    printf("Listening on %s:%d\n", server->ip, server->port.number);
+    debug("Listening on %s:%d\n", server->ip, server->port.number);
 
     // Boot the server instance
     if ((status = reactor_boot(server)) != SUCCESS)
@@ -33,13 +31,11 @@ main(int argc, char *argv[])
     // Main loop
     reactor_run(server);
 
+    // The server is supposed to run forever. If the main loop exits, there is
+    // a fatal error that needs to be handled. Therefore, these codes are solely
+    // for "best practices".
+
 safe_exit:
-    if (status == FAILURE)
-        fprintf(stderr, "Failure from %s\n", strerror(errno));
-
-    if (status == ERROR)
-        fprintf(stderr, "Error: %s\n", strerror(errno));
-
     reactor_destroy(server);
 
     return status;

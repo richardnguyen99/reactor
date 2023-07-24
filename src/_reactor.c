@@ -86,17 +86,21 @@ _handle_request(void *arg)
 
     for (;;)
     {
-        sem_wait(&(pool->full));
+        if (sem_wait(&(pool->full)) == -1)
+            DIE("(handle_request) sem_wait");
 
-        pthread_mutex_lock(&(pool->lock));
+        if (pthread_mutex_lock(&(pool->lock)) == -1)
+            DIE("(handle_request) pthread_mutex_lock");
 
         struct reactor_event *rev = rbuffer_pop(pool->buffer);
         debug("Dequeue: %p\n", rev);
         debug("Queue size: %ld\n", pool->buffer->size);
 
-        pthread_mutex_unlock(&(pool->lock));
+        if (pthread_mutex_unlock(&(pool->lock)) == -1)
+            DIE("(handle_request) pthread_mutex_unlock");
 
-        sem_post(&(pool->empty));
+        if (sem_post(&(pool->empty)) == -1)
+            DIE("(handle_request) sem_post");
 
         // status = _check_path(rev);
 
@@ -108,14 +112,12 @@ _handle_request(void *arg)
         if (ffd == -1)
             DIE("(handle_request) open");
 
-        debug("Read file %ld\n", st.st_size);
         buf = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, ffd, 0);
 
         if (buf == MAP_FAILED)
             DIE("(handle_request) mmap");
 
         rev->res = (struct response *)malloc(sizeof(struct response));
-        debug("Read file %ld\n", st.st_size);
 
         if (rev->res == NULL)
             DIE("(handle_request) malloc");

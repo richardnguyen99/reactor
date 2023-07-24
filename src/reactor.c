@@ -42,10 +42,6 @@ reactor_init(int argc, char *argv[])
     if (chdir("public") == -1)
         DIE("(reactor_init) chdir");
 
-    printf("Server directory: %s\n", getcwd(NULL, 0));
-
-    debug("Initialize reactor instance\n");
-
     return server;
 }
 
@@ -56,10 +52,6 @@ reactor_load(struct reactor *server)
     struct epoll_event ev;
 
     server->server_fd = _prepare_socket(server->ip, "9999");
-
-    // server->rbuffer = rbuffer_new(8);
-    // if (server->rbuffer == NULL)
-    // return ERROR;
 
     server->epollfd = epoll_create1(0);
     if (server->epollfd == -1)
@@ -211,9 +203,6 @@ reactor_run(struct reactor *server)
 
                     total_sent += (size_t)nsent;
                 }
-
-                munmap(rev->res->body, rev->res->body_len);
-                rev->res->body = NULL;
 
                 if (revent_destroy(rev) == ERROR)
                     return ERROR;

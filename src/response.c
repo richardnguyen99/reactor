@@ -43,7 +43,7 @@ response_free(struct response *response)
         return;
 
     if (response->body != NULL)
-        free(response->body);
+        munmap(response->body, response->body_len);
 
     free(response);
 }
