@@ -164,11 +164,8 @@ _handle_request(void *arg)
         if (buf == MAP_FAILED)
             DIE("(handle_request) mmap");
 
-        rev->res->status      = HTTP_SUCCESS;
-        rev->res->status_text = http_get_status_text(HTTP_SUCCESS);
-        rev->res->version     = NULL;
-        rev->res->body        = buf;
-        rev->res->body_len    = st.st_size;
+        __construct_response(rev->res, HTTP_SUCCESS, buf, st.st_size);
+        __validate_response(rev->res, buf);
 
         if (revent_mod(rev, EPOLLOUT) == ERROR)
             DIE("(handle_request) revent_mod");

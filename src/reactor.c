@@ -97,8 +97,6 @@ reactor_run(struct reactor *server)
         {
             if (server->events[n].data.fd == server->server_fd)
             {
-                struct epoll_event ev;
-
                 fd = accept(server->server_fd, NULL, NULL);
 
                 if (fd == -1)
@@ -107,12 +105,15 @@ reactor_run(struct reactor *server)
                 if (_set_nonblocking(fd) == ERROR)
                     return ERROR;
 
-                rev = revent_new(server->epollfd, fd);
+                server->events[n].data.ptr = revent_new(server->epollfd, fd);
 
                 if (rev == NULL)
                     DIE("(reactor_run) revent_new");
 
-                if (revent_add(rev) == ERROR)
+                ret = revent_add(
+                    (struct reactor_event *)(server->events[n].data.ptr));
+
+                if (ret == ERROR)
                     DIE("(reactor_run) revent_add");
             }
             else if (server->events[n].events & EPOLLERR)

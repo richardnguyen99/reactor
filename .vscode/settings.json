@@ -25,7 +25,8 @@
         "threads.h": "c",
         "poll.h": "c",
         "ring_buffer.h": "c",
-        "response.h": "c"
+        "response.h": "c",
+        "cstdint": "cpp"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

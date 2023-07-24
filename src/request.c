@@ -109,6 +109,8 @@ request_free(struct request *request)
     if (request->headers != NULL)
         dict_delete(request->headers);
 
-    free(request->raw);
+    if (request->raw != NULL)
+        free(request->raw);
+
     free(request);
 }
