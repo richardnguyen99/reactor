@@ -9,6 +9,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(SOURCES
     _reactor.c
     reactor.c
+    _http.c
     http.c
     util.c
     dict.c

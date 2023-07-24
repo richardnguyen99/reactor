@@ -28,8 +28,12 @@ _prepare_socket(char *host, const char *service)
         if (fd == -1)
             continue;
 
-        status =
-            setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
+        // clang-format off
+
+        status = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 
+                            &(int){1}, sizeof(int));
+
+        // clang-format on       
 
         if (status == -1)
         {
@@ -98,15 +102,52 @@ _handle_request(void *arg)
         if (sem_post(&(pool->empty)) == -1)
             DIE("(handle_request) sem_post");
 
-        // status = _check_path(rev);
+        struct route route = http_get_uri_handle(rev->req->path);
 
-        if (stat("index.html", &st) == -1)
-            DIE("(handle_request) stat");
+         if (route.uri == NULL)
+         {
+             rev->res = (struct response *)malloc(sizeof(struct response));
 
-        ffd = open("index.html", O_RDONLY, 0);
+             if (rev->res == NULL)
+                 DIE("(handle_request) malloc");
 
-        if (ffd == -1)
+             rev->res->headers     = NULL;
+             rev->res->status      = HTTP_NOT_FOUND;
+             rev->res->status_text = http_get_status_text(HTTP_NOT_FOUND);
+             rev->res->version     = NULL;
+             rev->res->body        = NULL;
+             rev->res->body_len    = 0;
+
+             if (revent_mod(rev, EPOLLOUT) == ERROR)
+                 DIE("(handle_request) revent_mod");
+
+             continue;
+         }
+
+        // if (rev->req->method & route.methods == 0)
+        // {
+            // rev->res = (struct response *)malloc(sizeof(struct response));
+            // if (rev->res == NULL)
+                // DIE("(handle_request) malloc");
+
+            // rev->res->headers     = NULL;
+            // rev->res->status      = HTTP_METHOD_NOT_ALLOWED;
+            // rev->res->status_text = http_get_status_text(HTTP_METHOD_NOT_ALLOWED);
+            // rev->res->version     = NULL;
+            // rev->res->body        = NULL;
+            // rev->res->body_len    = 0;
+
+            // if (revent_mod(rev, EPOLLOUT) == ERROR)
+                // DIE("(handle_request) revent_mod");
+
+            // continue;
+        // }
+
+        if ((ffd = open(route.resource, O_RDONLY, 0)) == -1)
             DIE("(handle_request) open");
+
+        if (fstat(ffd, &st) == -1)
+            DIE("(handle_request) fstat");
 
         buf = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, ffd, 0);
 
@@ -120,7 +161,7 @@ _handle_request(void *arg)
 
         rev->res->headers     = NULL;
         rev->res->status      = HTTP_SUCCESS;
-        rev->res->status_text = NULL;
+        rev->res->status_text = http_get_status_text(HTTP_SUCCESS);
         rev->res->version     = NULL;
         rev->res->body        = buf;
         rev->res->body_len    = st.st_size;

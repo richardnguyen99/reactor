@@ -45,5 +45,11 @@ response_free(struct response *response)
     if (response->body != NULL)
         munmap(response->body, response->body_len);
 
+    if (response->status_text != NULL)
+        free(response->status_text);
+
+    if (response->headers != NULL)
+        dict_delete(response->headers);
+
     free(response);
 }
