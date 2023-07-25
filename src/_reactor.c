@@ -134,24 +134,25 @@ _handle_request(void *arg)
         if (sem_post(&(pool->empty)) == -1)
             DIE("(handle_request) sem_post");
 
+        printf("Path: %s\n", rev->req->path);
         struct route route = http_get_uri_handle(rev->req->path);
         rev->res = response_new();
 
-         if (route.uri == NULL)
-         {
-             __construct_response(rev->res, HTTP_NOT_FOUND, NULL, 0);
-             __validate_response(rev->res, NULL);
+        if (route.uri == NULL)
+        {
+            __construct_response(rev->res, HTTP_NOT_FOUND, NULL, 0);
+            __validate_response(rev->res, NULL);
 
-             continue;
-         }
+            goto send_response;
+        }
 
-         if (rev->req->method & route.methods == 0)
-         {
-                __construct_response(rev->res, HTTP_METHOD_NOT_ALLOWED, NULL, 0);
-                __validate_response(rev->res, NULL);
+        if (rev->req->method & route.methods == 0)
+        {
+            __construct_response(rev->res, HTTP_METHOD_NOT_ALLOWED, NULL, 0);
+            __validate_response(rev->res, NULL);
     
-                continue;
-         }
+            goto send_response;
+        }
 
         if ((ffd = open(route.resource, O_RDONLY, 0)) == -1)
             DIE("(handle_request) open");
@@ -167,6 +168,7 @@ _handle_request(void *arg)
         __construct_response(rev->res, HTTP_SUCCESS, buf, st.st_size);
         __validate_response(rev->res, buf);
 
+send_response:
         if (revent_mod(rev, EPOLLOUT) == ERROR)
             DIE("(handle_request) revent_mod");
     }

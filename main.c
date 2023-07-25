@@ -2,7 +2,7 @@
  * @file main.c
  * @author Richard Nguyen (richard@richardhnguyen.com)
  * @brief Main entry point for the Reactor server
- * @version 0.1
+ * @version 0.2
  * @date 2023-07-17
  *
  * @copyright Copyright (c) 2023
