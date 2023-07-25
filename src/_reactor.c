@@ -111,14 +111,101 @@ _set_nonblocking(int fd)
     return SUCCESS;
 }
 
+char *__get_internal_server(size_t *len)
+{
+    char *buf = NULL;
+    struct stat st;
+    int ffd;
+
+    if ((ffd = open("500.html", O_RDONLY, 0)) == -1)
+        DIE("(handle_request) open");
+
+    if (fstat(ffd, &st) == -1)
+        DIE("(handle_request) fstat");
+
+    buf = (char *)mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, ffd, 0);
+
+    // Force internal server error to be done
+    while (buf == NULL)
+        buf = (char *)mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, ffd, 0);
+
+    *len = st.st_size;
+
+    return buf;
+}
+
+char * __get_mmap(const char *file, size_t *len, int *status)
+{
+    int ffd;
+    struct stat st;
+    char *buf;
+
+    if ((ffd = open(file, O_RDONLY, 0)) == -1)
+    {
+        *status = HTTP_INTERNAL_SERVER_ERROR;
+        buf = __get_internal_server(len);
+        return buf;
+    }
+
+    if (fstat(ffd, &st) == -1)
+    {
+        *status = HTTP_INTERNAL_SERVER_ERROR;
+        buf = __get_internal_server(len);
+        return buf;
+    }
+
+    buf = (char *)mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, ffd, 0);
+    if (buf == MAP_FAILED)
+    {
+        *status = HTTP_INTERNAL_SERVER_ERROR;
+        buf = __get_internal_server(len);
+        return buf;
+    }
+
+    *len = st.st_size;
+
+    return buf;
+}
+
+void
+__compose_response(struct response *res, int status, const char *filename)
+{
+    int ret, http_status = status;
+    char *buf;
+    size_t len;
+
+    http_status = HTTP_SUCCESS;
+    buf  = __get_mmap(filename, &len, &http_status);
+
+    __construct_response(res, http_status, buf, len);
+    ret = __validate_response(res, buf);
+
+
+    if (ret == ERROR)
+    {
+        while (res->body == NULL)
+            res->body = __get_internal_server(&res->body_len);
+
+        while (res->status_text == NULL)
+            res->status_text = http_get_status_text(HTTP_INTERNAL_SERVER_ERROR);
+
+        while (res->version == NULL)
+            res->version = strdup("HTTP/1.1");
+
+        res->status      = HTTP_INTERNAL_SERVER_ERROR;
+    }
+}
+
+
 void *
 _handle_request(void *arg)
 {
     struct thread_pool *pool = (struct thread_pool *)arg;
-    int status;
-    char *buf = NULL;
+    int http_status, ffd;
+    char *buf;
     struct stat st;
-    int ffd;
+    size_t len;
+
 
     for (;;)
     {
@@ -134,39 +221,31 @@ _handle_request(void *arg)
         if (sem_post(&(pool->empty)) == -1)
             DIE("(handle_request) sem_post");
 
-        printf("Path: %s\n", rev->req->path);
         struct route route = http_get_uri_handle(rev->req->path);
+
         rev->res = response_new();
 
+        // Response cannot be created. Instead of shutting down, just letting
+        // the client know that the request is dropped.
+        if (rev->res == NULL)       
+            continue;
+
+        // Resource not found
         if (route.uri == NULL)
         {
-            __construct_response(rev->res, HTTP_NOT_FOUND, NULL, 0);
-            __validate_response(rev->res, NULL);
+            __compose_response(rev->res, HTTP_NOT_FOUND, "404.html");
 
             goto send_response;
         }
 
         if (rev->req->method & route.methods == 0)
         {
-            __construct_response(rev->res, HTTP_METHOD_NOT_ALLOWED, NULL, 0);
-            __validate_response(rev->res, NULL);
+            __compose_response(rev->res, HTTP_METHOD_NOT_ALLOWED, "405.html");
     
             goto send_response;
         }
 
-        if ((ffd = open(route.resource, O_RDONLY, 0)) == -1)
-            DIE("(handle_request) open");
-
-        if (fstat(ffd, &st) == -1)
-            DIE("(handle_request) fstat");
-
-        buf = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, ffd, 0);
-
-        if (buf == MAP_FAILED)
-            DIE("(handle_request) mmap");
-
-        __construct_response(rev->res, HTTP_SUCCESS, buf, st.st_size);
-        __validate_response(rev->res, buf);
+        __compose_response(rev->res, HTTP_SUCCESS, route.resource);
 
 send_response:
         if (revent_mod(rev, EPOLLOUT) == ERROR)
