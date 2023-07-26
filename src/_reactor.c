@@ -105,7 +105,8 @@ _handle_request(void *arg)
 
         struct route route = http_get_uri_handle(rev->req->path);
 
-        rev->res = response_new();
+        if (rev->res == NULL)
+            rev->res = response_new();
 
         // Response cannot be created. Instead of shutting down, just letting
         // the client know that the request is dropped.

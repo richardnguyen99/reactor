@@ -72,7 +72,7 @@
     : (status == HTTP_SERVICE_UNAVAILABLE)   ? HTTP_SERVICE_UNAVAILABLE_MSG    \
                                              : NULL
 
-#define HTTP_METHOD_INVALID 0
+#define HTTP_METHOD_INVALID -1
 #define HTTP_METHOD_GET     (1 << 0)
 #define HTTP_METHOD_HEAD    (1 << 1)
 #define HTTP_METHOD_POST    (1 << 2)

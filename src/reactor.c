@@ -131,23 +131,26 @@ reactor_run(struct reactor *server)
             // Some sockets have some data and are ready to read
             else if (server->events[n].events & EPOLLIN)
             {
-                rev      = (struct reactor_event *)(server->events[n].data.ptr);
-                rev->req = request_new();
+                rev = (struct reactor_event *)(server->events[n].data.ptr);
+
+                if (rev->req == NULL)
+                    rev->req = request_new();
 
                 if (rev->req == NULL)
                     DIE("(reactor_run) request_new");
 
                 http_status = request_parse(rev->req, rev->fd);
 
+                // Don't continue if the request processing is not ready
                 if (http_status == HTTP_READ_AGAIN)
                     goto wait_to_read;
 
                 if (http_status == HTTP_ERROR)
                     DIE("(reactor_run) http_request");
 
+                // Start to put the task to the queue for thread pool
                 if (sem_wait(&(server->pool->empty)) == ERROR)
                     DIE("(reactor_run) sem_wait");
-
                 if (pthread_mutex_lock(&(server->pool->lock)) == ERROR)
                     return ERROR;
 
@@ -159,7 +162,6 @@ reactor_run(struct reactor *server)
 
                 if (pthread_mutex_unlock(&(server->pool->lock)) == ERROR)
                     DIE("(reactor_run) pthread_mutex_unlock");
-
                 if (sem_post(&(server->pool->full)) == ERROR)
                     DIE("(reactor_run) sem_post");
 

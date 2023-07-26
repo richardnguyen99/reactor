@@ -18,7 +18,7 @@ request_new()
 
     request->version = NULL;
     request->path    = NULL;
-    request->method  = -1;
+    request->method  = HTTP_METHOD_INVALID;
 
     request->raw = (char *)malloc(sizeof(char) * BUFSIZ);
     request->len = 0;
@@ -62,6 +62,9 @@ request_parse(struct request *req, int fd)
     /// (data)                          <- Body             (optional)
     ///
 
+    if (req->method != HTTP_METHOD_INVALID)
+        goto read_header;
+
     nread = read_line(fd, buf, BUFSIZ, MSG_DONTWAIT);
 
     if (errno == EAGAIN)
@@ -72,12 +75,14 @@ request_parse(struct request *req, int fd)
     if (status != HTTP_SUCCESS)
         return status;
 
+read_header:
     for (;;)
     {
         nread = read_line(fd, buf, BUFSIZ, MSG_DONTWAIT);
 
         if (errno == EAGAIN)
             return HTTP_READ_AGAIN;
+        printf("nread: %ld\n", nread);
 
         if (nread == 0)
             break;
