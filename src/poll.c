@@ -57,6 +57,8 @@ revent_destroy(struct reactor_event *rev)
     if (close(rev->fd) == ERROR)
         return ERROR;
 
+    printf("Closed fd: %d\n", rev->fd);
+
     if (rev->raw != NULL)
         free(rev->raw);
 

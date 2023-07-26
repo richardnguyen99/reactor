@@ -62,6 +62,7 @@ request_parse(struct request *req, int fd)
     /// (data)                          <- Body             (optional)
     ///
 
+    printf("(before) method: %d\n", req->method);
     if (req->method != HTTP_METHOD_INVALID)
         goto read_header;
 
@@ -72,25 +73,24 @@ request_parse(struct request *req, int fd)
 
     status = _get_start_line(req, buf);
 
-    if (status != HTTP_SUCCESS)
-        return status;
+    if (status == ERROR)
+        return HTTP_ERROR;
 
 read_header:
+    printf("(after) method: %d\n", req->method);
     for (;;)
     {
         nread = read_line(fd, buf, BUFSIZ, MSG_DONTWAIT);
 
-        if (errno == EAGAIN)
+        if (nread == -1 && errno == EAGAIN)
             return HTTP_READ_AGAIN;
-        printf("nread: %ld\n", nread);
-
-        if (nread == 0)
-            break;
 
         if (nread == -1)
             return HTTP_ERROR;
 
-        if (strcmp(buf, "\r\n") == 0)
+        printf("nread: %ld\n", nread);
+
+        if (nread == 0)
             break;
 
         if (_get_header(req->headers, buf) == ERROR)

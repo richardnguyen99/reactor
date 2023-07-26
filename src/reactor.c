@@ -193,7 +193,7 @@ reactor_run(struct reactor *server)
                     nsent = send(rev->fd, msg + total_sent,
                                  content_length - total_sent, MSG_DONTWAIT);
 
-                    if (errno == EAGAIN)
+                    if (nsent == -1 && errno == EAGAIN)
                         goto wait_to_send;
 
                     if (nsent == -1)
