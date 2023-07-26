@@ -46,6 +46,9 @@ __set_version(char *version)
 int
 _get_start_line(struct request *req, char *buf)
 {
+    if (buf == NULL)
+        return HTTP_BAD_REQUEST;
+
     char *token;
 
     token = strtok(buf, " ");
@@ -77,26 +80,38 @@ _get_start_line(struct request *req, char *buf)
 }
 
 int
-_get_header(struct dict *header, char *buf)
+_get_header(struct dict *header, const char *buf)
 {
-    char *token, *key, *value;
+    if (buf == NULL)
+        return HTTP_BAD_REQUEST;
 
-    token = strtok(buf, ": ");
+    char *token, *start, *key, *value;
+    char *string = strdup(buf);
+
+    if (string == NULL)
+        DIE("(get_header) strdup");
+
+    //        key   value = token + 2
+    //        |     |
+    // buf -> Host: localhost:8080\r\n <- \0
+    //            |
+    //            token
+
+    start = strcasestr(buf, ": ");
+    token = strtok(string, ": ");
 
     if (token == NULL)
         return HTTP_BAD_REQUEST;
 
-    key = token;
-
-    token = strtok(NULL, ": ");
-
-    if (token == NULL)
-        return HTTP_BAD_REQUEST;
-
-    value = token;
+    key   = token;
+    value = start + 2;
 
     if (dict_put(header, key, value) == ERROR)
         return HTTP_INTERNAL_SERVER_ERROR;
+
+    debug("headers[%s] = %s\n", key, value);
+
+    free(string);
 
     return HTTP_SUCCESS;
 }
