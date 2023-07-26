@@ -79,6 +79,21 @@ _set_nonblocking(int fd)
     return SUCCESS;
 }
 
+int _require_host_header(const char *value)
+{
+    // TODO: Maybe check localhost
+    if (strncmp(value, "localhost", 9) == 0)
+        return SUCCESS;
+    
+    if (strncmp(value, "0.0.0.0", 7) == 0)
+        return SUCCESS;
+
+    if (strncmp(value, "127.0.0.1", 9) == 0)
+        return SUCCESS;
+    
+    return FAILURE;
+}
+
 void *
 _handle_request(void *arg)
 {
@@ -127,6 +142,14 @@ _handle_request(void *arg)
             response_construct(rev->res, HTTP_METHOD_NOT_ALLOWED,
                                rev->req->method, "404.html");
     
+            goto send_response;
+        }
+
+        if (http_require_header(rev->req->headers, "Host", _require_host_header) == ERROR)
+        {
+            response_construct(rev->res, HTTP_BAD_REQUEST, rev->req->method,
+                               "400.html");
+
             goto send_response;
         }
 

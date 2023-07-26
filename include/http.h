@@ -123,4 +123,17 @@ http_get_uri_handle(const char *path);
 char *
 http_get_status_text(int status);
 
+typedef int (*http_header_handler)(const char *);
+
+/**
+ * @brief
+ *
+ * @param headers
+ * @param key
+ * @return int
+ */
+int
+http_require_header(struct dict *headers, const char *key,
+                    http_header_handler func);
+
 #endif // _REACTOR_HTTP_H_

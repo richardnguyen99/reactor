@@ -11,3 +11,15 @@ _check_with_static_folder(const char *path)
 
     return SUCCESS;
 }
+
+int
+_default_header_handler(const char *value)
+{
+    if (value == NULL)
+        return ERROR;
+
+    if (strlen(value) == 0)
+        return ERROR;
+
+    return SUCCESS;
+}
