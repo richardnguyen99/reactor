@@ -121,16 +121,16 @@ _handle_request(void *arg)
             goto send_response;
         }
 
-        if (~(rev->req->method & route.methods))
+        if (rev->req->method & route.methods == 0)
         {
             response_construct(rev->res, HTTP_METHOD_NOT_ALLOWED,
-                               rev->req->method, "405.html");
+                               rev->req->method, "404.html");
     
             goto send_response;
         }
 
         response_construct(rev->res, HTTP_SUCCESS, rev->req->method,
-                           route.uri);
+                           route.resource);
 
 send_response:
         if (revent_mod(rev, EPOLLOUT) == ERROR)

@@ -4,7 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${default}",
-                "${workspaceFolder}/include"
+                "${workspaceFolder}/include/**/"
             ],
             "defines": [
                 "HAVE_LIMITS_H",

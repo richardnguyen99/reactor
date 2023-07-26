@@ -177,13 +177,13 @@ reactor_run(struct reactor *server)
                 content_length = (size_t)snprintf(
                     msg, BUFSIZ,
                     "HTTP/1.1 %d %s\r\n"
-                    "Content-Type: %ld\r\n"
-                    "Content-Length: \r\n"
+                    "Content-Type: text/html\r\n"
+                    "Content-Length: %ld\r\n"
                     "Connection: close\r\n"
                     "Server: reactor/%s\r\n"
                     "\r\n"
                     "%s",
-                    rev->res->status, GET_HTTP_METHOD(rev->res->status),
+                    rev->res->status, GET_HTTP_MSG(rev->res->status),
                     rev->res->body_len, REACTOR_VERSION, rev->res->body);
 
                 for (; total_sent < content_length;)
