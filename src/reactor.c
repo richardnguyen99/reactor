@@ -183,8 +183,8 @@ reactor_run(struct reactor *server)
                     "Server: reactor/%s\r\n"
                     "\r\n"
                     "%s",
-                    rev->res->status, rev->res->status_text, rev->res->body_len,
-                    REACTOR_VERSION, rev->res->body);
+                    rev->res->status, GET_HTTP_METHOD(rev->res->status),
+                    rev->res->body_len, REACTOR_VERSION, rev->res->body);
 
                 for (; total_sent < content_length;)
                 {

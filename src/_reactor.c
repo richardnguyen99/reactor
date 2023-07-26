@@ -2,38 +2,6 @@
 
 #include "reactor.h"
 
-void
-__construct_response(struct response *res, int status, char *body,
-                     size_t body_len)
-{
-    res->status      = status;
-    res->status_text = http_get_status_text(status);
-    res->body        = body;
-    res->body_len    = body_len;
-    res->version     = strdup("HTTP/1.1");
-}
-
-int
-__validate_response(struct response *res, char *body)
-{
-    if (res == NULL)
-        return ERROR;
-
-    if (res->status_text == NULL)
-        return ERROR;
-
-    if (body != NULL && res->body == NULL)
-        return ERROR;
-
-    if (body != NULL && res->body_len == 0)
-        return ERROR;
-
-    if (res->version == NULL)
-        return ERROR;
-
-    return SUCCESS;
-}
-
 int
 _prepare_socket(char *host, const char *service)
 {
@@ -111,92 +79,6 @@ _set_nonblocking(int fd)
     return SUCCESS;
 }
 
-char *__get_internal_server(size_t *len)
-{
-    char *buf = NULL;
-    struct stat st;
-    int ffd;
-
-    if ((ffd = open("500.html", O_RDONLY, 0)) == -1)
-        DIE("(handle_request) open");
-
-    if (fstat(ffd, &st) == -1)
-        DIE("(handle_request) fstat");
-
-    buf = (char *)mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, ffd, 0);
-
-    // Force internal server error to be done
-    while (buf == NULL)
-        buf = (char *)mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, ffd, 0);
-
-    *len = st.st_size;
-
-    return buf;
-}
-
-char * __get_mmap(const char *file, size_t *len, int *status)
-{
-    int ffd;
-    struct stat st;
-    char *buf;
-
-    if ((ffd = open(file, O_RDONLY, 0)) == -1)
-    {
-        *status = HTTP_INTERNAL_SERVER_ERROR;
-        buf = __get_internal_server(len);
-        return buf;
-    }
-
-    if (fstat(ffd, &st) == -1)
-    {
-        *status = HTTP_INTERNAL_SERVER_ERROR;
-        buf = __get_internal_server(len);
-        return buf;
-    }
-
-    buf = (char *)mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, ffd, 0);
-    if (buf == MAP_FAILED)
-    {
-        *status = HTTP_INTERNAL_SERVER_ERROR;
-        buf = __get_internal_server(len);
-        return buf;
-    }
-
-    *len = st.st_size;
-
-    return buf;
-}
-
-void
-__compose_response(struct response *res, int status, const char *filename)
-{
-    int ret, http_status = status;
-    char *buf;
-    size_t len;
-
-    http_status = HTTP_SUCCESS;
-    buf  = __get_mmap(filename, &len, &http_status);
-
-    __construct_response(res, http_status, buf, len);
-    ret = __validate_response(res, buf);
-
-
-    if (ret == ERROR)
-    {
-        while (res->body == NULL)
-            res->body = __get_internal_server(&res->body_len);
-
-        while (res->status_text == NULL)
-            res->status_text = http_get_status_text(HTTP_INTERNAL_SERVER_ERROR);
-
-        while (res->version == NULL)
-            res->version = strdup("HTTP/1.1");
-
-        res->status      = HTTP_INTERNAL_SERVER_ERROR;
-    }
-}
-
-
 void *
 _handle_request(void *arg)
 {
@@ -233,19 +115,22 @@ _handle_request(void *arg)
         // Resource not found
         if (route.uri == NULL)
         {
-            __compose_response(rev->res, HTTP_NOT_FOUND, "404.html");
+            response_construct(rev->res, HTTP_NOT_FOUND, rev->req->method,
+                               "404.html");
 
             goto send_response;
         }
 
-        if (rev->req->method & route.methods == 0)
+        if (~(rev->req->method & route.methods))
         {
-            __compose_response(rev->res, HTTP_METHOD_NOT_ALLOWED, "405.html");
+            response_construct(rev->res, HTTP_METHOD_NOT_ALLOWED,
+                               rev->req->method, "405.html");
     
             goto send_response;
         }
 
-        __compose_response(rev->res, HTTP_SUCCESS, route.resource);
+        response_construct(rev->res, HTTP_SUCCESS, rev->req->method,
+                           route.uri);
 
 send_response:
         if (revent_mod(rev, EPOLLOUT) == ERROR)

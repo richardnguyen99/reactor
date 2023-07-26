@@ -13,12 +13,12 @@
 
 #include "defs.h"
 #include "dict.h"
+#include "http.h"
 
 struct response
 {
     int status;
-    char *status_text;
-    char *version;
+    int method;
 
     struct dict *headers;
     char *body;
@@ -27,6 +27,10 @@ struct response
 
 struct response *
 response_new();
+
+void
+response_construct(struct response *res, int status, int method,
+                   const char *filename);
 
 ssize_t
 response_send(struct response *response, int fd);
