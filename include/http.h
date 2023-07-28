@@ -75,6 +75,14 @@
     : (status == HTTP_SERVICE_UNAVAILABLE)   ? HTTP_SERVICE_UNAVAILABLE_MSG    \
                                              : NULL
 
+#define GET_HTTP_ERROR_FILE(status)                                            \
+    (status == HTTP_BAD_REQUEST)             ? "400.html"                      \
+    : (status == HTTP_FORBIDDEN)             ? "403.html"                      \
+    : (status == HTTP_NOT_FOUND)             ? "404.html"                      \
+    : (status == HTTP_NOT_ACCEPTABLE)        ? "406.html"                      \
+    : (status == HTTP_INTERNAL_SERVER_ERROR) ? "500.html"                      \
+                                             : NULL
+
 #define HTTP_METHOD_INVALID -1
 #define HTTP_METHOD_GET     (1 << 0)
 #define HTTP_METHOD_HEAD    (1 << 1)
@@ -140,6 +148,9 @@ struct route
 
     /* Supported methods for this endpoint */
     const int methods;
+
+    /* Returned status */
+    const int status;
 };
 
 /*

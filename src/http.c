@@ -1,20 +1,28 @@
 #include "http.h"
 
 const struct route supported_uris[] = {
-    {"/",      "index.html", (HTTP_METHOD_GET | HTTP_METHOD_HEAD)},
-    {"/about", "about.html", (HTTP_METHOD_GET)                   },
-    {"/form",  "form.html",  (HTTP_METHOD_GET | HTTP_METHOD_POST)},
-    {NULL,     NULL,         -1                                  }
+    {"/",      "index.html", (HTTP_METHOD_GET | HTTP_METHOD_HEAD), 0},
+    {"/about", "about.html", (HTTP_METHOD_GET),                    0},
+    {"/form",  "form.html",  (HTTP_METHOD_GET | HTTP_METHOD_POST), 0},
+    {NULL,     NULL,         -1,                                   0}
 };
 
 static int
 _check_with_static_folder(const char *path)
 {
-    // This doesn't actually open the file, it just checks if it exists.
-    int status = access(path, F_OK);
+    // Prevent malicious path
+    if (strcmp(path, ".") == 0 || strcmp(path, "..") == 0)
+        return HTTP_BAD_REQUEST;
 
-    if (status == -1)
-        return ERROR;
+    struct stat st;
+
+    // Check if a file is found
+    if (stat(path, &st) == -1)
+        return HTTP_NOT_FOUND;
+
+    // Check if the path is a regular file
+    if (!S_ISREG(st.st_mode))
+        return HTTP_FORBIDDEN; // This could Not Found to hide 403 in practice
 
     return SUCCESS;
 }
@@ -66,19 +74,20 @@ http_get_uri_handle(const char *path)
         return (struct route){NULL, NULL, -1};
 
     const struct route *uri;
+    int status = 0;
 
     // Check from the predefined routes to support different HTTP methods
     for (uri = supported_uris; uri->uri != NULL; uri++)
-    {
         if (strcmp(path, uri->uri) == 0)
             return *uri;
-    }
 
     // Check if the path is a static file (only GET method allowed)
-    if (_check_with_static_folder(path) == SUCCESS)
-        return (struct route){path, path, (HTTP_METHOD_GET)};
+    status = _check_with_static_folder(path);
 
-    return (struct route){NULL, NULL, -1};
+    if (status == SUCCESS)
+        return (struct route){path, path, (HTTP_METHOD_GET), HTTP_SUCCESS};
+
+    return (struct route){NULL, NULL, -1, status};
 }
 
 char *

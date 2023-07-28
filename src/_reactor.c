@@ -131,11 +131,11 @@ _handle_request(void *arg)
         if (rev->req->headers != NULL)
             rev->res->accepts = http_require_accept(rev->req->headers);
 
-        // Resource not found
+        // There is something wrong with the requested resource
         if (route.uri == NULL)
         {
-            response_construct(rev->res, HTTP_NOT_FOUND, rev->req->method,
-                               "404.html");
+            response_construct(rev->res, route.status, rev->req->method,
+                               GET_HTTP_ERROR_FILE(route.status));
 
             goto send_response;
         }
