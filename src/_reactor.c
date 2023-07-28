@@ -140,46 +140,46 @@ _handle_request(void *arg)
             rev->res->accepts = http_require_accept(rev->req->headers);
 
         // There is something wrong with the requested resource
-        if (route.uri == NULL)
-        {
-            response_construct(rev->res, route.status, rev->req->method,
-                               GET_HTTP_ERROR_FILE(route.status));
+        //if (route.uri == NULL)
+        //{
+            //response_construct(rev->res, route.status, rev->req->method,
+                               //GET_HTTP_ERROR_FILE(route.status));
 
-            goto send_response;
-        }
+            //goto send_response;
+        //}
 
-        if ((rev->req->method & route.methods) == 0)
-        {
-            char body[BUFSIZ];
+        //if ((rev->req->method & route.methods) == 0)
+        //{
+            //char body[BUFSIZ];
 
-            // clang-format off
-            snprintf(body, BUFSIZ, 
-"{\r\n"
-    "\"error\": \"Method not allowed\",\r\n"
-    "\"message\": \"The requested resource %s does not support the HTTP method '%s'\"\r\n"
-"}\n", 
-                rev->req->path,
-                GET_HTTP_METHOD(rev->req->method));
-            // clang-format on
+            //// clang-format off
+            //snprintf(body, BUFSIZ, 
+//"{\r\n"
+    //"\"error\": \"Method not allowed\",\r\n"
+    //"\"message\": \"The requested resource %s does not support the HTTP method '%s'\"\r\n"
+//"}\n", 
+                //rev->req->path,
+                //GET_HTTP_METHOD(rev->req->method));
+            //// clang-format on
 
-            response_status(rev->res, HTTP_METHOD_NOT_ALLOWED);
-            response_method(rev->res, rev->req->method);
-            response_json(rev->res, body);
+            //response_status(rev->res, HTTP_METHOD_NOT_ALLOWED);
+            //response_method(rev->res, rev->req->method);
+            //response_json(rev->res, body);
 
-            goto send_response;
-        }
+            //goto send_response;
+        //}
 
-        if (http_require_header(rev->req->headers, "Host",
-                                _require_host_header) == ERROR)
-        {
-            response_construct(rev->res, HTTP_BAD_REQUEST, rev->req->method,
-                               "400.html");
+        //if (http_require_header(rev->req->headers, "Host",
+                                //_require_host_header) == ERROR)
+        //{
+            //response_construct(rev->res, HTTP_BAD_REQUEST, rev->req->method,
+                               //"400.html");
 
-            goto send_response;
-        }
+            //goto send_response;
+        //}
 
-        response_construct(rev->res, HTTP_SUCCESS, rev->req->method,
-                           route.resource);
+        if ((rev->res->method & HTTP_METHOD_GET) == 1)
+            r.handler.get(rev->req, rev->res);
 
     send_response:
         if (revent_mod(rev, EPOLLOUT) == ERROR)

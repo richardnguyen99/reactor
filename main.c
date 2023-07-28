@@ -14,13 +14,40 @@
 void
 ping_get_handler(struct request *req, struct response *res)
 {
-    return;
+    int accept_ret;
+
+    if ((accept_ret = response_accept(res, "json")) == ERROR)
+        return;
+
+    if (accept_ret == HTTP_CONTENT_TYPE_INVALID)
+        return;
+
+    res->status       = HTTP_SUCCESS;
+    res->method       = HTTP_METHOD_GET;
+    res->content_type = accept_ret;
+
+    response_json(res, "{\r\n"
+                       "\"message\": \"Hey, I\'m alive!\",\r\n"
+                       "\"status\": 200\r\n"
+                       "}\r\n");
 }
 
 void
 index_get_handler(struct request *req, struct response *res)
 {
-    return;
+    int accept_ret;
+    // There must be some errors within the server
+    if ((accept_ret = response_accept(res, "hmtl")) == ERROR)
+        return;
+
+    if (accept_ret == HTTP_CONTENT_TYPE_INVALID)
+        return;
+
+    res->status       = HTTP_SUCCESS;
+    res->method       = HTTP_METHOD_GET;
+    res->content_type = accept_ret;
+
+    response_send_file(res, "index.html");
 }
 
 void

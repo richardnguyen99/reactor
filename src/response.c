@@ -181,6 +181,14 @@ response_accept(struct response *res, const char *type)
 }
 
 void
+response_send_file(struct response *res, const char *filename)
+{
+    res->body = __get_body(filename, &res->body_len, &res->status);
+    if (res->body == NULL)
+        DIE("(response_send_file) __get_body");
+}
+
+void
 response_construct(struct response *res, int status, int method,
                    const char *filename)
 {
@@ -243,6 +251,7 @@ response_json(struct response *res, const char *str)
         DIE("(response_json) json_object_to_json_string_ext");
 
     res->body_len = strlen(res->body);
+    printf("Body: %s\n", res->body);
 
     json_object_put(obj);
 }

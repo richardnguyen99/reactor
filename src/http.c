@@ -1,7 +1,7 @@
 #include "http.h"
 
 const struct route supported_uris[] = {
-    {"/",      "index.html", (HTTP_METHOD_GET | HTTP_METHOD_HEAD), 0},
+  //{"/",      "index.html", (HTTP_METHOD_GET | HTTP_METHOD_HEAD), 0},
     {"/about", "about.html", (HTTP_METHOD_GET),                    0},
     {"/form",  "form.html",  (HTTP_METHOD_GET | HTTP_METHOD_POST), 0},
     {NULL,     NULL,         -1,                                   0}

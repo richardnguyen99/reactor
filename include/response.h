@@ -57,6 +57,9 @@ response_text(struct response *res, const char *str, const size_t len);
 void
 response_json(struct response *res, const char *str);
 
+void
+response_send_file(struct response *res, const char *filename);
+
 ssize_t
 response_send(struct response *response, int fd);
 

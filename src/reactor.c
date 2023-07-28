@@ -175,8 +175,6 @@ reactor_run(struct reactor *server)
                 nsent      = 0;
                 total_sent = 0;
 
-                printf("Content Type: ");
-                printf("%s\n", GET_HTTP_CONTENT_TYPE(rev->res->content_type));
                 content_length = (size_t)snprintf(
                     msg, BUFSIZ,
                     "HTTP/1.1 %d %s\r\n"
