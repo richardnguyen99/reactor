@@ -1,6 +1,7 @@
 // Private methods for reactor.c
 
 #include "reactor.h"
+#include "route.h"
 
 int
 _prepare_socket(char *host, const char *service)
@@ -119,6 +120,13 @@ _handle_request(void *arg)
             DIE("(handle_request) sem_post");
 
         struct route route = http_get_uri_handle(rev->req->path);
+        struct __route r = route_get_handler(rev->req->path);
+
+        if (r.endpoint != NULL)
+        {
+            printf("Endpoint: %s\n", r.endpoint);
+            printf("Handler (GET): %p\n", r.handler.get);
+        }
 
         if (rev->res == NULL)
             rev->res = response_new();

@@ -9,6 +9,60 @@
  */
 
 #include "reactor.h"
+#include "route.h"
+
+void
+ping_get_handler(struct request *req, struct response *res)
+{
+    return;
+}
+
+void
+index_get_handler(struct request *req, struct response *res)
+{
+    return;
+}
+
+void
+index_head_handler(struct request *req, struct response *res)
+{
+    return;
+}
+
+void
+about_get_handler(struct request *req, struct response *res)
+{
+    return;
+}
+
+const struct __route router_table[] = {
+    {"/",
+     "index.html",   {.get    = index_get_handler,
+      .head   = NULL,
+      .post   = NULL,
+      .delete = NULL,
+      .put    = NULL},
+     -1                                    },
+
+    {"/ping",
+     NULL,           {
+         .get    = ping_get_handler,
+         .post   = NULL,
+         .delete = NULL,
+         .put    = NULL,
+         .head   = NULL,
+     },                        -1},
+
+    {"/about",
+     NULL,           {.get    = about_get_handler,
+      .head   = NULL,
+      .post   = NULL,
+      .delete = NULL,
+      .put    = NULL},
+     -1                                    },
+
+    {NULL,     NULL, {0},                -1}
+};
 
 int
 main(int argc, char *argv[])
