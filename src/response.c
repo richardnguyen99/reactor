@@ -49,6 +49,8 @@ __get_body(const char *filename, size_t *len, int *status)
 
     *len = st.st_size;
 
+    close(ffd);
+
     return buf;
 }
 
@@ -58,29 +60,89 @@ response_new()
     struct response *res = (struct response *)malloc(sizeof(struct response));
 
     if (res == NULL)
-        return NULL;
+        DIE("(response_new) malloc");
 
     res->headers = dict_new(NULL, NULL);
     if (res->headers == NULL)
-    {
-        free(res);
-        return NULL;
-    }
+        DIE("(response_new) dict_new");
 
-    res->status   = -1;
-    res->method   = -1;
+    res->accepts = NULL;
+
+    res->status       = -1;
+    res->method       = -1;
+    res->content_type = -1;
+
     res->body     = NULL;
     res->body_len = 0;
 
     return res;
 }
 
+int
+response_accept(struct response *res, const char *type)
+{
+    if (res == NULL)
+        return ERROR;
+
+    if (dict_get(res->accepts, "*/*") != NULL)
+        return SUCCESS;
+
+    if (strcmp(type, "html") == 0 &&
+        dict_get(res->accepts, "text/html") != NULL)
+        return SUCCESS;
+
+    if (strcmp(type, "css") == 0 && dict_get(res->accepts, "text/css") != NULL)
+        return SUCCESS;
+
+    if (strcmp(type, "js") == 0 &&
+        dict_get(res->accepts, "text/javascript") != NULL)
+        return SUCCESS;
+
+    if (strcmp(type, "png") == 0 && dict_get(res->accepts, "image/png") != NULL)
+        return SUCCESS;
+
+    if (strcmp(type, "jpg") == 0 &&
+        dict_get(res->accepts, "image/jpeg") != NULL)
+        return SUCCESS;
+
+    if (strcmp(type, "webp") == 0 &&
+        dict_get(res->accepts, "image/webp") != NULL)
+        return SUCCESS;
+
+    if (strcmp(type, "svg") == 0 &&
+        dict_get(res->accepts, "image/svg+xml") != NULL)
+        return SUCCESS;
+
+    if (strcmp(type, "icon") == 0 &&
+        (dict_get(res->accepts, "image/x-icon") != NULL ||
+         dict_get(res->accepts, "image/avif") != NULL))
+        return SUCCESS;
+
+    if (strcmp(type, "txt") == 0 &&
+        dict_get(res->accepts, "text/plain") != NULL)
+        return SUCCESS;
+
+    return FAILURE;
+}
+
 void
 response_construct(struct response *res, int status, int method,
                    const char *filename)
 {
+    const char *ext = strrchr(filename, '.');
+
     res->status = status;
     res->method = method;
+
+    if (response_accept(res, ext + 1) == ERROR)
+    {
+        printf("Not accepted\n");
+        res->body = __get_body("406.html", &res->body_len, &res->status);
+        if (res->body == NULL)
+            DIE("(response_construct) mmap");
+
+        return;
+    }
 
     res->body = __get_body(filename, &res->body_len, &res->status);
     if (res->body == NULL)
@@ -106,6 +168,9 @@ response_free(struct response *response)
 
     if (response->headers != NULL)
         dict_delete(response->headers);
+
+    if (response->accepts != NULL)
+        dict_delete(response->accepts);
 
     free(response);
 }

@@ -31,6 +31,34 @@ _default_method_handler(const char *value)
     return SUCCESS;
 }
 
+static void
+_parse_accept_header(const char *string, struct dict *headers)
+{
+    char *dup, *save_ptr1, *save_ptr2, *token, *key, *value;
+
+    debug("=== Parse Accept header ===\n");
+
+    dup = strdup(string);
+    if (dup == NULL)
+        DIE("(parse_accept_header) strdup");
+
+    for (token = strtok_r(dup, ",", &save_ptr1); token != NULL;
+         token = strtok_r(NULL, ",", &save_ptr1))
+    {
+        key = token;
+
+        value = strtok_r(key, ";", &save_ptr2);
+        value = strtok_r(NULL, ";", &save_ptr2);
+
+        debug("Accept[%s] = %s\n", key, value);
+        dict_put(headers, key, value == NULL ? "" : value);
+    }
+
+    debug("=== End of Accept header ===\n\n");
+
+    free(dup);
+}
+
 struct route
 http_get_uri_handle(const char *path)
 {
@@ -91,4 +119,30 @@ http_require_header(struct dict *headers, const char *key,
         return ERROR;
 
     return SUCCESS;
+}
+
+struct dict *
+http_require_accept(struct dict *headers)
+{
+    struct dict *accept_store = NULL;
+    char *content_type        = NULL;
+    const char *accept_value  = dict_get(headers, "Accept");
+
+    accept_store = dict_new(NULL, NULL);
+
+    if (accept_store == NULL)
+        DIE("(http_require_accept) dict_new");
+
+    // If accept header is not present, assume the user agent accepts all media
+    // types. This is the default behavior.
+    if (accept_value == NULL)
+    {
+        dict_put(accept_store, "*/*", "");
+        printf("Accept[*/*] = \n");
+        return accept_store;
+    }
+
+    _parse_accept_header(accept_value, accept_store);
+
+    return accept_store;
 }

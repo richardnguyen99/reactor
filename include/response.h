@@ -19,8 +19,10 @@ struct response
 {
     int status;
     int method;
+    int content_type;
 
     struct dict *headers;
+    struct dict *accepts;
     char *body;
     size_t body_len;
 };
@@ -28,10 +30,12 @@ struct response
 struct response *
 response_new();
 
+int
+response_accept(struct response *response, const char *type);
+
 void
 response_construct(struct response *res, int status, int method,
                    const char *filename);
-
 ssize_t
 response_send(struct response *response, int fd);
 

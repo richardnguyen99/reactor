@@ -24,7 +24,7 @@ __set_path(char *path)
 {
     const size_t len = strlen(path);
 
-    char *_path = (char *)malloc(sizeof(char) * len);
+    char *_path = (char *)malloc(sizeof(char) * len + 1);
 
     if (_path == NULL)
         return NULL;

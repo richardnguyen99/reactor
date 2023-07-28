@@ -30,6 +30,7 @@
 #define HTTP_FORBIDDEN              403
 #define HTTP_NOT_FOUND              404
 #define HTTP_METHOD_NOT_ALLOWED     405
+#define HTTP_NOT_ACCEPTABLE         406
 #define HTTP_REQUEST_TIMEOUT        408
 
 #define HTTP_INTERNAL_SERVER_ERROR  500
@@ -48,6 +49,7 @@
 #define HTTP_FORBIDDEN_MSG              "Forbidden"
 #define HTTP_NOT_FOUND_MSG              "Not Found"
 #define HTTP_METHOD_NOT_ALLOWED_MSG     "Method Not Allowed"
+#define HTTP_NOT_ACCEPTABLE_MSG         "Not Acceptable"
 #define HTTP_REQUEST_TIMEOUT_MSG        "Request Timeout"
 
 #define HTTP_INTERNAL_SERVER_ERROR_MSG  "Internal Server Error"
@@ -65,6 +67,7 @@
     : (status == HTTP_FORBIDDEN)             ? HTTP_FORBIDDEN_MSG              \
     : (status == HTTP_NOT_FOUND)             ? HTTP_NOT_FOUND_MSG              \
     : (status == HTTP_METHOD_NOT_ALLOWED)    ? HTTP_METHOD_NOT_ALLOWED_MSG     \
+    : (status == HTTP_NOT_ACCEPTABLE)        ? HTTP_NOT_ACCEPTABLE_MSG         \
     : (status == HTTP_REQUEST_TIMEOUT)       ? HTTP_REQUEST_TIMEOUT_MSG        \
     : (status == HTTP_INTERNAL_SERVER_ERROR) ? HTTP_INTERNAL_SERVER_ERROR_MSG  \
     : (status == HTTP_NOT_IMPLEMENTED)       ? HTTP_NOT_IMPLEMENTED_MSG        \
@@ -135,5 +138,8 @@ typedef int (*http_header_handler)(const char *);
 int
 http_require_header(struct dict *headers, const char *key,
                     http_header_handler func);
+
+struct dict *
+http_require_accept(struct dict *headers);
 
 #endif // _REACTOR_HTTP_H_

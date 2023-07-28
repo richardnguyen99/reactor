@@ -99,7 +99,7 @@ _handle_request(void *arg)
 {
     struct thread_pool *pool = (struct thread_pool *)arg;
     int http_status, ffd;
-    char *buf;
+    char *buf, *content_type;
     struct stat st;
     size_t len;
 
@@ -128,6 +128,9 @@ _handle_request(void *arg)
         if (rev->res == NULL)       
             continue;
 
+        if (rev->req->headers != NULL)
+            rev->res->accepts = http_require_accept(rev->req->headers);
+
         // Resource not found
         if (route.uri == NULL)
         {
@@ -152,6 +155,7 @@ _handle_request(void *arg)
 
             goto send_response;
         }
+
 
         response_construct(rev->res, HTTP_SUCCESS, rev->req->method,
                            route.resource);

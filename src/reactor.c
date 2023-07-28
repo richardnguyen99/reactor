@@ -205,7 +205,7 @@ reactor_run(struct reactor *server)
                 if (revent_destroy(rev) == ERROR)
                     return ERROR;
 
-                evp->data.ptr = NULL;
+                server->events[n].data.ptr = NULL;
 
             wait_to_send:
                 continue;

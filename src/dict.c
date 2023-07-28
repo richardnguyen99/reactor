@@ -137,6 +137,7 @@ dict_put(struct dict *map, const char *key, const char *value)
 char *
 dict_get(struct dict *map, const char *key)
 {
+    printf("hash function: %p\n", map->hash);
     size_t bucket            = map->hash(key) % map->capacity;
     struct dict_entry *entry = map->buckets[bucket];
 
