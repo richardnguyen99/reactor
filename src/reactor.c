@@ -176,16 +176,19 @@ reactor_run(struct reactor *server)
                 nsent      = 0;
                 total_sent = 0;
 
+                printf("Content Type: ");
+                printf("%s\n", GET_HTTP_CONTENT_TYPE(rev->res->content_type));
                 content_length = (size_t)snprintf(
                     msg, BUFSIZ,
                     "HTTP/1.1 %d %s\r\n"
-                    "Content-Type: text/html\r\n"
+                    "Content-Type: %s\r\n"
                     "Content-Length: %ld\r\n"
                     "Connection: close\r\n"
                     "Server: reactor/%s\r\n"
                     "\r\n"
                     "%s",
                     rev->res->status, GET_HTTP_MSG(rev->res->status),
+                    GET_HTTP_CONTENT_TYPE(rev->res->content_type),
                     rev->res->body_len, REACTOR_VERSION, rev->res->body);
 
                 for (; total_sent < content_length;)

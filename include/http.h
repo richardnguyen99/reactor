@@ -90,6 +90,46 @@
     : (method == HTTP_METHOD_DELETE) ? "DELETE"                                \
                                      : NULL
 
+#define HTTP_CONTENT_TYPE_INVALID -1
+#define HTTP_CONTENT_TYPE_ALL     (1 << 0)
+#define HTTP_CONTENT_TYPE_TEXT    (1 << 1)
+#define HTTP_CONTENT_TYPE_HTML    (1 << 2)
+#define HTTP_CONTENT_TYPE_CSS     (1 << 3)
+#define HTTP_CONTENT_TYPE_JS      (1 << 4)
+#define HTTP_CONTENT_TYPE_JSON    (1 << 5)
+#define HTTP_CONTENT_TYPE_JPEG    (1 << 6)
+#define HTTP_CONTENT_TYPE_PNG     (1 << 7)
+#define HTTP_CONTENT_TYPE_WEBP    (1 << 8)
+#define HTTP_CONTENT_TYPE_SVG     (1 << 9)
+#define HTTP_CONTENT_TYPE_ICON    (1 << 10)
+
+#define HTTP_CONTENT_TYPE_INVALID_MSG "Not Acceptable"
+#define HTTP_CONTENT_TYPE_ALL_MSG     "*/*"
+#define HTTP_CONTENT_TYPE_TEXT_MSG    "text/plain"
+#define HTTP_CONTENT_TYPE_HTML_MSG    "text/html"
+#define HTTP_CONTENT_TYPE_CSS_MSG     "text/css"
+#define HTTP_CONTENT_TYPE_JS_MSG      "text/javascript"
+#define HTTP_CONTENT_TYPE_JSON_MSG    "application/json"
+#define HTTP_CONTENT_TYPE_JPEG_MSG    "image/jpeg"
+#define HTTP_CONTENT_TYPE_PNG_MSG     "image/png"
+#define HTTP_CONTENT_TYPE_WEBP_MSG    "image/webp"
+#define HTTP_CONTENT_TYPE_SVG_MSG     "image/svg+xml"
+#define HTTP_CONTENT_TYPE_ICON_MSG    "image/x-icon"
+
+#define GET_HTTP_CONTENT_TYPE(content_type)                                    \
+    (content_type == HTTP_CONTENT_TYPE_ALL)    ? HTTP_CONTENT_TYPE_ALL_MSG     \
+    : (content_type == HTTP_CONTENT_TYPE_TEXT) ? HTTP_CONTENT_TYPE_TEXT_MSG    \
+    : (content_type == HTTP_CONTENT_TYPE_HTML) ? HTTP_CONTENT_TYPE_HTML_MSG    \
+    : (content_type == HTTP_CONTENT_TYPE_CSS)  ? HTTP_CONTENT_TYPE_CSS_MSG     \
+    : (content_type == HTTP_CONTENT_TYPE_JS)   ? HTTP_CONTENT_TYPE_JS_MSG      \
+    : (content_type == HTTP_CONTENT_TYPE_JSON) ? HTTP_CONTENT_TYPE_JSON_MSG    \
+    : (content_type == HTTP_CONTENT_TYPE_JPEG) ? HTTP_CONTENT_TYPE_JPEG_MSG    \
+    : (content_type == HTTP_CONTENT_TYPE_PNG)  ? HTTP_CONTENT_TYPE_PNG_MSG     \
+    : (content_type == HTTP_CONTENT_TYPE_WEBP) ? HTTP_CONTENT_TYPE_WEBP_MSG    \
+    : (content_type == HTTP_CONTENT_TYPE_SVG)  ? HTTP_CONTENT_TYPE_SVG_MSG     \
+    : (content_type == HTTP_CONTENT_TYPE_ICON) ? HTTP_CONTENT_TYPE_ICON_MSG    \
+                                               : NULL
+
 struct route
 {
     /* An endpoint for the server  */

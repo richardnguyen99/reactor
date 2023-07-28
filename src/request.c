@@ -69,7 +69,7 @@ request_parse(struct request *req, int fd)
     debug("\n=== Reading request line: ");
     nread = read_line(fd, buf, BUFSIZ, MSG_DONTWAIT);
 
-    if (errno == EAGAIN)
+    if (nread == -1 && errno == EAGAIN)
         return HTTP_READ_AGAIN;
 
     status = _get_start_line(req, buf);

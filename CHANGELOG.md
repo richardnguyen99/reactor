@@ -36,8 +36,8 @@ this release will focus heavily on the HTTP server itself. This includes
 validating HTTP requests, checking resources, checking methods and headers,
 handling status and messages, and sending responses.
 
-- [ ] Add check host name header.
-- [ ] Add check requested resource.
+- [x] Add check host name header.
+- [x] Add check requested resource.
 - [ ] Add check method header.
 - [ ] Add check content length header for POST method.
 - [ ] Compose HTTP response for event loop to send back to client.

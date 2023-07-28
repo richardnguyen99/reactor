@@ -68,9 +68,11 @@ response_new()
 
     res->accepts = NULL;
 
+    /* Set these fields later. Otherwise, they will yield an error */
+
     res->status       = -1;
     res->method       = -1;
-    res->content_type = -1;
+    res->content_type = HTTP_CONTENT_TYPE_INVALID;
 
     res->body     = NULL;
     res->body_len = 0;
@@ -81,46 +83,54 @@ response_new()
 int
 response_accept(struct response *res, const char *type)
 {
+    bool accept_all = false;
+
     if (res == NULL)
-        return ERROR;
+        return HTTP_CONTENT_TYPE_INVALID;
 
     if (dict_get(res->accepts, "*/*") != NULL)
-        return SUCCESS;
+        accept_all = true;
 
     if (strcmp(type, "html") == 0 &&
-        dict_get(res->accepts, "text/html") != NULL)
-        return SUCCESS;
+        (accept_all || (res->accepts, "text/html") != NULL))
+        return HTTP_CONTENT_TYPE_HTML;
 
-    if (strcmp(type, "css") == 0 && dict_get(res->accepts, "text/css") != NULL)
-        return SUCCESS;
+    if (strcmp(type, "css") == 0 &&
+        (accept_all || dict_get(res->accepts, "text/css") != NULL))
+        return HTTP_CONTENT_TYPE_CSS;
 
     if (strcmp(type, "js") == 0 &&
-        dict_get(res->accepts, "text/javascript") != NULL)
-        return SUCCESS;
+        (accept_all || dict_get(res->accepts, "text/javascript") != NULL))
+        return HTTP_CONTENT_TYPE_JS;
 
-    if (strcmp(type, "png") == 0 && dict_get(res->accepts, "image/png") != NULL)
-        return SUCCESS;
+    if (strcmp(type, "png") == 0 &&
+        (accept_all || dict_get(res->accepts, "image/png") != NULL))
+        return HTTP_CONTENT_TYPE_PNG;
 
     if (strcmp(type, "jpg") == 0 &&
-        dict_get(res->accepts, "image/jpeg") != NULL)
-        return SUCCESS;
+        (accept_all || dict_get(res->accepts, "image/jpeg") != NULL))
+        return HTTP_CONTENT_TYPE_JPEG;
 
     if (strcmp(type, "webp") == 0 &&
-        dict_get(res->accepts, "image/webp") != NULL)
-        return SUCCESS;
+        (accept_all || dict_get(res->accepts, "image/webp") != NULL))
+        return HTTP_CONTENT_TYPE_WEBP;
 
     if (strcmp(type, "svg") == 0 &&
-        dict_get(res->accepts, "image/svg+xml") != NULL)
-        return SUCCESS;
+        (accept_all || dict_get(res->accepts, "image/svg+xml") != NULL))
+        return HTTP_CONTENT_TYPE_SVG;
 
     if (strcmp(type, "icon") == 0 &&
-        (dict_get(res->accepts, "image/x-icon") != NULL ||
+        (accept_all || dict_get(res->accepts, "image/x-icon") != NULL ||
          dict_get(res->accepts, "image/avif") != NULL))
-        return SUCCESS;
+        return HTTP_CONTENT_TYPE_ICON;
 
     if (strcmp(type, "txt") == 0 &&
-        dict_get(res->accepts, "text/plain") != NULL)
-        return SUCCESS;
+        (accept_all || dict_get(res->accepts, "text/plain") != NULL))
+        return HTTP_CONTENT_TYPE_TEXT;
+
+    if (strcmp(type, "json") == 0 &&
+        (accept_all || dict_get(res->accepts, "application/json")))
+        return HTTP_CONTENT_TYPE_JSON;
 
     return FAILURE;
 }
@@ -129,14 +139,16 @@ void
 response_construct(struct response *res, int status, int method,
                    const char *filename)
 {
+    int content_type;
     const char *ext = strrchr(filename, '.');
 
     res->status = status;
     res->method = method;
 
-    if (response_accept(res, ext + 1) == ERROR)
+    content_type = response_accept(res, ext + 1);
+
+    if (content_type == HTTP_CONTENT_TYPE_INVALID)
     {
-        printf("Not accepted\n");
         res->body = __get_body("406.html", &res->body_len, &res->status);
         if (res->body == NULL)
             DIE("(response_construct) mmap");
@@ -144,7 +156,8 @@ response_construct(struct response *res, int status, int method,
         return;
     }
 
-    res->body = __get_body(filename, &res->body_len, &res->status);
+    res->content_type = content_type;
+    res->body         = __get_body(filename, &res->body_len, &res->status);
     if (res->body == NULL)
         DIE("(response_construct) mmap");
 }
