@@ -21,14 +21,28 @@ struct response
     int method;
     int content_type;
 
-    struct dict *headers;
-    struct dict *accepts;
     char *body;
     size_t body_len;
+
+    struct dict *headers;
+    struct dict *accepts;
+};
+
+struct response_json
+{
+    const char *const key;
+    void *value;
+    json_type type;
 };
 
 struct response *
 response_new();
+
+void
+response_status(struct response *res, int status);
+
+void
+response_method(struct response *res, int method);
 
 int
 response_accept(struct response *response, const char *type);
@@ -36,6 +50,13 @@ response_accept(struct response *response, const char *type);
 void
 response_construct(struct response *res, int status, int method,
                    const char *filename);
+
+void
+response_text(struct response *res, const char *str, const size_t len);
+
+void
+response_json(struct response *res, const char *str);
+
 ssize_t
 response_send(struct response *response, int fd);
 

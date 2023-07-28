@@ -58,8 +58,8 @@ _parse_accept_header(const char *string, struct dict *headers)
         value = strtok_r(key, ";", &save_ptr2);
         value = strtok_r(NULL, ";", &save_ptr2);
 
-        debug("Accept[%s] = %s\n", key, value);
-        dict_put(headers, key, value == NULL ? "" : value);
+        if (dict_put(headers, key, value == NULL ? "" : value) == SUCCESS)
+            debug("Accept[%s] = %s\n", key, value);
     }
 
     debug("=== End of Accept header ===\n\n");

@@ -140,15 +140,29 @@ _handle_request(void *arg)
             goto send_response;
         }
 
-        if (rev->req->method & route.methods == 0)
+        if ((rev->req->method & route.methods) == 0)
         {
-            response_construct(rev->res, HTTP_METHOD_NOT_ALLOWED,
-                               rev->req->method, "404.html");
-    
+            char body[BUFSIZ];
+
+            // clang-format off
+            snprintf(body, BUFSIZ, 
+"{\r\n"
+    "\"error\": \"Method not allowed\",\r\n"
+    "\"message\": \"The requested resource %s does not support the HTTP method '%s'\"\r\n"
+"}\n", 
+                rev->req->path,
+                GET_HTTP_METHOD(rev->req->method));
+            // clang-format on
+
+            response_status(rev->res, HTTP_METHOD_NOT_ALLOWED);
+            response_method(rev->res, rev->req->method);
+            response_json(rev->res, body);
+
             goto send_response;
         }
 
-        if (http_require_header(rev->req->headers, "Host", _require_host_header) == ERROR)
+        if (http_require_header(rev->req->headers, "Host",
+                                _require_host_header) == ERROR)
         {
             response_construct(rev->res, HTTP_BAD_REQUEST, rev->req->method,
                                "400.html");
@@ -156,11 +170,10 @@ _handle_request(void *arg)
             goto send_response;
         }
 
-
         response_construct(rev->res, HTTP_SUCCESS, rev->req->method,
                            route.resource);
 
-send_response:
+    send_response:
         if (revent_mod(rev, EPOLLOUT) == ERROR)
             DIE("(handle_request) revent_mod");
     }

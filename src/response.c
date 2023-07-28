@@ -54,6 +54,39 @@ __get_body(const char *filename, size_t *len, int *status)
     return buf;
 }
 
+json_object *
+__set_json(json_type type, void *value, const size_t len)
+{
+    json_object *obj = NULL;
+
+    switch (type)
+    {
+    case json_type_boolean:
+        obj = json_object_new_boolean(*(bool *)value);
+        break;
+    case json_type_double:
+        obj = json_object_new_double(*(double *)value);
+        break;
+    case json_type_int:
+        obj = json_object_new_int(*(int *)value);
+        break;
+    case json_type_string:
+        obj = json_object_new_string((char *)value);
+        break;
+    case json_type_array:
+        obj = json_object_new_array_ext(len);
+
+        for (size_t i = 0; i < len; ++i)
+            json_object_array_put_idx(obj, i, __set_json(type, value, len));
+
+        break;
+    default:
+        break;
+    }
+
+    return obj;
+}
+
 struct response *
 response_new()
 {
@@ -78,6 +111,18 @@ response_new()
     res->body_len = 0;
 
     return res;
+}
+
+void
+response_status(struct response *res, int status)
+{
+    res->status = status;
+}
+
+void
+response_method(struct response *res, int method)
+{
+    res->method = method;
 }
 
 int
@@ -132,7 +177,7 @@ response_accept(struct response *res, const char *type)
         (accept_all || dict_get(res->accepts, "application/json")))
         return HTTP_CONTENT_TYPE_JSON;
 
-    return FAILURE;
+    return accept_all ? HTTP_CONTENT_TYPE_HTML : HTTP_CONTENT_TYPE_INVALID;
 }
 
 void
@@ -149,9 +194,8 @@ response_construct(struct response *res, int status, int method,
 
     if (content_type == HTTP_CONTENT_TYPE_INVALID)
     {
-        res->body = __get_body("406.html", &res->body_len, &res->status);
-        if (res->body == NULL)
-            DIE("(response_construct) mmap");
+        res->status = HTTP_NOT_ACCEPTABLE;
+        response_text(res, "Not acceptable", 14);
 
         return;
     }
@@ -160,6 +204,47 @@ response_construct(struct response *res, int status, int method,
     res->body         = __get_body(filename, &res->body_len, &res->status);
     if (res->body == NULL)
         DIE("(response_construct) mmap");
+}
+
+void
+response_text(struct response *res, const char *str, const size_t len)
+{
+    res->body = strdup(str);
+
+    if (res->body == NULL)
+        DIE("(response_text) strdup");
+
+    res->body_len     = len;
+    res->content_type = HTTP_CONTENT_TYPE_TEXT;
+}
+
+void
+response_json(struct response *res, const char *str)
+{
+    int content_type = response_accept(res, "json");
+    if (content_type == HTTP_CONTENT_TYPE_INVALID)
+    {
+        res->status = HTTP_NOT_ACCEPTABLE;
+        response_text(res, "Not acceptable", 14);
+
+        return;
+    }
+
+    res->content_type = content_type;
+
+    json_object *obj = json_tokener_parse(str);
+    if (obj == NULL)
+        DIE("(response_json) json_tokener_parse");
+
+    res->body =
+        (char *)json_object_to_json_string_ext(obj, JSON_C_TO_STRING_PLAIN);
+
+    if (res->body == NULL)
+        DIE("(response_json) json_object_to_json_string_ext");
+
+    res->body_len = strlen(res->body);
+
+    json_object_put(obj);
 }
 
 ssize_t

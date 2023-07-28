@@ -4,7 +4,6 @@
 
 int _prepare_socket(char *host, const char *service);
 int _set_nonblocking(int fd);
-
 void *_handle_request(void * arg);
 
 // clang-format on

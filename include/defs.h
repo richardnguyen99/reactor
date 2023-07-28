@@ -17,6 +17,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -41,6 +42,9 @@
 #include <sys/mman.h>
 #include <sys/sendfile.h>
 #include <sys/socket.h>
+
+// JSON-C
+#include <json-c/json.h>
 
 #ifdef HAVE_LIMITS_H
 #include <linux/limits.h>
