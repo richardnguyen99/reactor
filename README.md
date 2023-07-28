@@ -6,6 +6,28 @@
 [Reactor Pattern][^2] and tries to solve the [C10k Problem][^1]. It is also
 inspired by the implementation of NodeJS and the [libuv][^3] library.
 
+## Build
+
+### Prerequisites
+
+I develop this projecton Fedora 38. It should work on other Linux distributions
+as long as you have these following packages installed:
+
+- `gcc`: GNU Compiler Collection &mdash; <https://gcc.gnu.org/>
+- `cmake`: Cross-platform build system &mdash; <https://cmake.org/>
+- `make`: GNU Make &mdash; <https://www.gnu.org/software/make/>
+- `json-c`: JSON library in C &mdash; <https://github.com/json-c/json-c>
+
+### Build from CMake
+
+To build the project, run the following commands:
+
+```bash
+
+
+
+```
+
 ## Implementation
 
 The web server contains a main event loop in a single thread. The event loop

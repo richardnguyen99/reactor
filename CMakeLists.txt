@@ -36,6 +36,12 @@ if(NOT HAVE_SOCKET_H)
     message(FATAL_ERROR "sys/socket.h not found")
 endif()
 
+# Check for JSON-C 
+check_include_file(json-c/json.h HAVE_JSON_H)
+if (NOT HAVE_JSON_H)
+    message(FATAL_ERROR "json-c/json.h not found")
+endif()
+
 # Set the C flags
 set(CMAKE_C_FLAGS "")
 
@@ -79,7 +85,7 @@ add_executable(reactor main.c)
 add_subdirectory(src)
 
 # Link the libraries
-target_link_libraries(reactor PRIVATE reactor_source pthread)
+target_link_libraries(reactor PRIVATE reactor_source pthread json-c)
 
 # Copy static folder to build
 file(COPY public DESTINATION ${CMAKE_BINARY_DIR})
