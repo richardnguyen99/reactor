@@ -61,6 +61,9 @@ void
 response_send_file(struct response *res, const char *filename);
 
 void
+response_send_not_found(struct response *res, const char *path);
+
+void
 response_send_method_not_allowed(struct response *res, const int method,
                                  const char *path);
 

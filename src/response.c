@@ -137,7 +137,7 @@ response_accept(struct response *res, const char *type)
         accept_all = true;
 
     if (strcmp(type, "html") == 0 &&
-        (accept_all || (res->accepts, "text/html") != NULL))
+        (accept_all || dict_get(res->accepts, "text/html") != NULL))
         return HTTP_CONTENT_TYPE_HTML;
 
     if (strcmp(type, "css") == 0 &&
@@ -252,6 +252,44 @@ response_json(struct response *res, const char *str)
 }
 
 void
+response_send_not_found(struct response *res, const char *path)
+{
+    res->status = HTTP_NOT_FOUND;
+
+    int content_type = response_accept(res, "html");
+    if (content_type == HTTP_CONTENT_TYPE_ALL ||
+        content_type == HTTP_CONTENT_TYPE_HTML)
+    {
+        res->content_type = content_type;
+        response_send_file(res, "404.html");
+
+        return;
+    }
+
+    printf("Sending json\n");
+    content_type = response_accept(res, "json");
+    if (content_type == HTTP_CONTENT_TYPE_JSON)
+    {
+        char buf[BUFSIZ];
+        res->content_type = content_type;
+
+        snprintf(buf, BUFSIZ,
+                 "{\r\n"
+                 "\"status\": 404,\r\n"
+                 "\"message\": \"Resource '%s' not found\"\r\n"
+                 "}\r\n",
+                 path);
+
+        response_json(res, buf);
+
+        return;
+    }
+
+    res->content_type = HTTP_CONTENT_TYPE_TEXT;
+    response_text(res, "404 Not found", 14);
+}
+
+void
 response_send_method_not_allowed(struct response *res, const int method,
                                  const char *path)
 {
@@ -265,8 +303,9 @@ response_send_method_not_allowed(struct response *res, const int method,
         return;
     }
 
-    res->status = HTTP_METHOD_NOT_ALLOWED;
-    res->method = method;
+    res->status       = HTTP_METHOD_NOT_ALLOWED;
+    res->method       = method;
+    res->content_type = content_type;
 
     snprintf(buf, BUFSIZ,
              "{\r\n"

@@ -128,7 +128,7 @@ _handle_request(void *arg)
         if (rev->req->path == NULL)
             continue;
 
-        struct __route r = route_get_handler(rev->req->path);
+        struct __route route = route_get_handler(rev->req->path);
 
 
         if (rev->res == NULL)
@@ -139,21 +139,30 @@ _handle_request(void *arg)
         if (rev->res == NULL)       
             continue;
 
-        if (rev->req->headers != NULL)
-            rev->res->accepts = http_require_accept(rev->req->headers);
+        rev->res->accepts = http_require_accept(rev->req->headers);
 
-        printf("Method: %s\n", GET_HTTP_METHOD(rev->req->method));
+        // If the route is not found, send 404
+        if (route.status == HTTP_NOT_FOUND)
+        {
+            response_send_not_found(rev->res, rev->req->path);
+            goto send_response;
+        }
 
-        if ((rev->req->method & HTTP_METHOD_GET) == 1 && r.handler.get != NULL)
-            r.handler.get(rev->req, rev->res);
-        else if ((rev->req->method & HTTP_METHOD_POST) == 1 && r.handler.post != NULL)
-            r.handler.post(rev->req, rev->res);
-        else if ((rev->req->method & HTTP_METHOD_HEAD) == 1 && r.handler.head != NULL)
-            r.handler.head(rev->req, rev->res);
-        else if ((rev->req->method & HTTP_METHOD_PUT) == 1 && r.handler.put != NULL)
-            r.handler.put(rev->req, rev->res);
-        else if ((rev->req->method & HTTP_METHOD_DELETE) == 1 && r.handler.delete != NULL)
-            r.handler.delete(rev->req, rev->res);
+        if ((rev->req->method & HTTP_METHOD_GET) == 1 && route.handler.get != NULL)
+            route.handler.get(rev->req, rev->res);
+
+        else if ((rev->req->method & HTTP_METHOD_POST) == 1 && route.handler.post != NULL)
+            route.handler.post(rev->req, rev->res);
+
+        else if ((rev->req->method & HTTP_METHOD_HEAD) == 1 && route.handler.head != NULL)
+            route.handler.head(rev->req, rev->res);
+
+        else if ((rev->req->method & HTTP_METHOD_PUT) == 1 && route.handler.put != NULL)
+            route.handler.put(rev->req, rev->res);
+
+        else if ((rev->req->method & HTTP_METHOD_DELETE) == 1 && route.handler.delete != NULL)
+            route.handler.delete(rev->req, rev->res);
+
         else
             response_send_method_not_allowed(rev->res, rev->req->method, rev->req->path);
 

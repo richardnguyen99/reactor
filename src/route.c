@@ -13,5 +13,5 @@ route_get_handler(const char *endpoint)
                                     .status   = router_table[i].status};
     }
 
-    return (struct __route){NULL, NULL, {0}, -1};
+    return (struct __route){NULL, NULL, {0}, HTTP_NOT_FOUND};
 }

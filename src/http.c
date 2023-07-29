@@ -135,7 +135,8 @@ http_require_accept(struct dict *headers)
 {
     struct dict *accept_store = NULL;
     char *content_type        = NULL;
-    const char *accept_value  = dict_get(headers, "Accept");
+    const char *accept_value =
+        headers != NULL ? dict_get(headers, "Accept") : NULL;
 
     accept_store = dict_new(NULL, NULL);
 
