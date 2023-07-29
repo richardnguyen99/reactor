@@ -138,36 +138,6 @@
     : (content_type == HTTP_CONTENT_TYPE_ICON) ? HTTP_CONTENT_TYPE_ICON_MSG    \
                                                : NULL
 
-struct route
-{
-    /* An endpoint for the server  */
-    const char *const uri;
-
-    /* Resource for this endpoint */
-    const char *const resource;
-
-    /* Supported methods for this endpoint */
-    const int methods;
-
-    /* Returned status */
-    const int status;
-};
-
-/*
- This struct might need to defined dynamically, which means we can append routes
-    to the server at runtime.
-*/
-extern const struct route supported_uris[];
-
-/**
- * @brief Check if a path is valid according to the serer instance
- *
- * @param path
- * @return int
- */
-struct route
-http_get_uri_handle(const char *path);
-
 /**
  * @brief Get string representation of HTTP status code
  *

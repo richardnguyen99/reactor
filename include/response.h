@@ -61,11 +61,17 @@ void
 response_send_file(struct response *res, const char *filename);
 
 void
+response_send_bad_request(struct response *res);
+
+void
 response_send_not_found(struct response *res, const char *path);
 
 void
 response_send_method_not_allowed(struct response *res, const int method,
                                  const char *path);
+
+void
+response_send_internal_server_error(struct response *res);
 
 ssize_t
 response_send(struct response *response, int fd);

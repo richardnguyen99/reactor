@@ -124,12 +124,6 @@ _handle_request(void *arg)
         
         if (rev->req == NULL)
             continue;
-        
-        if (rev->req->path == NULL)
-            continue;
-
-        struct __route route = route_get_handler(rev->req->path);
-
 
         if (rev->res == NULL)
             rev->res = response_new();
@@ -139,6 +133,21 @@ _handle_request(void *arg)
         if (rev->res == NULL)       
             continue;
 
+
+        if (rev->req->status == HTTP_NOT_SET || rev->req->status == HTTP_INTERNAL_SERVER_ERROR)
+        {
+            response_send_internal_server_error(rev->res);
+            goto send_response;
+        }
+
+        if (rev->req->status == HTTP_BAD_REQUEST)
+        {
+            response_send_bad_request(rev->res);
+            goto send_response;
+        }
+        
+
+        struct __route route = route_get_handler(rev->req->path);
         rev->res->accepts = http_require_accept(rev->req->headers);
 
         // If the route is not found, send 404

@@ -19,6 +19,7 @@ request_new()
     request->version = NULL;
     request->path    = NULL;
     request->method  = HTTP_METHOD_INVALID;
+    request->status  = HTTP_NOT_SET;
 
     request->raw = (char *)malloc(sizeof(char) * BUFSIZ);
     request->len = 0;
@@ -76,6 +77,10 @@ request_parse(struct request *req, int fd)
 
     if (status == ERROR)
         return HTTP_ERROR;
+
+    req->status = status;
+    if (req->status != HTTP_SUCCESS)
+        return req->status;
 
     debug("%s %s %s ===\n", GET_HTTP_METHOD(req->method), req->path,
           req->version);

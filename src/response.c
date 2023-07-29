@@ -252,6 +252,28 @@ response_json(struct response *res, const char *str)
 }
 
 void
+response_send_bad_request(struct response *res)
+{
+    printf("Send bad request\n");
+    char buf[BUFSIZ];
+    res->content_type = HTTP_CONTENT_TYPE_JSON;
+    res->status       = HTTP_BAD_REQUEST;
+
+    // clang-format off
+
+    snprintf(buf, BUFSIZ,
+             "{\r\n"
+             "\"status\": 400,\r\n"
+             "\"message\": \"The server cannot process your request at this"
+                            "moment due to an ill-formed request\"\r\n"
+             "}\r\n");
+
+    // clang-format on
+
+    response_json(res, buf);
+}
+
+void
 response_send_not_found(struct response *res, const char *path)
 {
     res->status = HTTP_NOT_FOUND;
@@ -266,7 +288,6 @@ response_send_not_found(struct response *res, const char *path)
         return;
     }
 
-    printf("Sending json\n");
     content_type = response_accept(res, "json");
     if (content_type == HTTP_CONTENT_TYPE_JSON)
     {
@@ -315,6 +336,45 @@ response_send_method_not_allowed(struct response *res, const int method,
              HTTP_METHOD_NOT_ALLOWED, GET_HTTP_METHOD(method), path);
 
     response_json(res, buf);
+}
+
+void
+response_send_internal_server_error(struct response *res)
+{
+    res->status = HTTP_NOT_FOUND;
+
+    int content_type = response_accept(res, "html");
+    if (content_type == HTTP_CONTENT_TYPE_ALL ||
+        content_type == HTTP_CONTENT_TYPE_HTML)
+    {
+        res->content_type = content_type;
+        response_send_file(res, "500.html");
+
+        return;
+    }
+
+    content_type = response_accept(res, "json");
+    if (content_type == HTTP_CONTENT_TYPE_JSON)
+    {
+        char buf[BUFSIZ];
+        res->content_type = content_type;
+
+        snprintf(
+            buf, BUFSIZ,
+            "{\r\n"
+            "\"status\": 500,\r\n"
+            "\"message\": \"It seems that the server has an internal error \
+                            that prevents it from processing your request. \
+                            Please try again later.\"\r\n"
+            "}\r\n");
+
+        response_json(res, buf);
+
+        return;
+    }
+
+    res->content_type = HTTP_CONTENT_TYPE_TEXT;
+    response_text(res, "500 Internal Server Error", 25);
 }
 
 ssize_t

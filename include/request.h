@@ -16,6 +16,7 @@
 struct request
 {
     int method;
+    int status;
     char *path;
     char *version;
 
