@@ -27,7 +27,8 @@
         "ring_buffer.h": "c",
         "response.h": "c",
         "cstdint": "cpp",
-        "route.h": "c"
+        "route.h": "c",
+        "dict.h": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

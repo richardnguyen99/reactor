@@ -175,6 +175,8 @@ reactor_run(struct reactor *server)
                 nsent      = 0;
                 total_sent = 0;
 
+                printf("Response: %s\n", rev->res->body);
+
                 content_length = (size_t)snprintf(
                     msg, BUFSIZ,
                     "HTTP/1.1 %d %s\r\n"

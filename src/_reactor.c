@@ -119,14 +119,17 @@ _handle_request(void *arg)
         if (sem_post(&(pool->empty)) == -1)
             DIE("(handle_request) sem_post");
 
-        struct route route = http_get_uri_handle(rev->req->path);
+        if (rev == NULL)
+            continue;
+        
+        if (rev->req == NULL)
+            continue;
+        
+        if (rev->req->path == NULL)
+            continue;
+
         struct __route r = route_get_handler(rev->req->path);
 
-        if (r.endpoint != NULL)
-        {
-            printf("Endpoint: %s\n", r.endpoint);
-            printf("Handler (GET): %p\n", r.handler.get);
-        }
 
         if (rev->res == NULL)
             rev->res = response_new();
@@ -139,47 +142,21 @@ _handle_request(void *arg)
         if (rev->req->headers != NULL)
             rev->res->accepts = http_require_accept(rev->req->headers);
 
-        // There is something wrong with the requested resource
-        //if (route.uri == NULL)
-        //{
-            //response_construct(rev->res, route.status, rev->req->method,
-                               //GET_HTTP_ERROR_FILE(route.status));
+        printf("Method: %s\n", GET_HTTP_METHOD(rev->req->method));
 
-            //goto send_response;
-        //}
-
-        //if ((rev->req->method & route.methods) == 0)
-        //{
-            //char body[BUFSIZ];
-
-            //// clang-format off
-            //snprintf(body, BUFSIZ, 
-//"{\r\n"
-    //"\"error\": \"Method not allowed\",\r\n"
-    //"\"message\": \"The requested resource %s does not support the HTTP method '%s'\"\r\n"
-//"}\n", 
-                //rev->req->path,
-                //GET_HTTP_METHOD(rev->req->method));
-            //// clang-format on
-
-            //response_status(rev->res, HTTP_METHOD_NOT_ALLOWED);
-            //response_method(rev->res, rev->req->method);
-            //response_json(rev->res, body);
-
-            //goto send_response;
-        //}
-
-        //if (http_require_header(rev->req->headers, "Host",
-                                //_require_host_header) == ERROR)
-        //{
-            //response_construct(rev->res, HTTP_BAD_REQUEST, rev->req->method,
-                               //"400.html");
-
-            //goto send_response;
-        //}
-
-        if ((rev->res->method & HTTP_METHOD_GET) == 1)
+        if ((rev->req->method & HTTP_METHOD_GET) == 1 && r.handler.get != NULL)
             r.handler.get(rev->req, rev->res);
+        else if ((rev->req->method & HTTP_METHOD_POST) == 1 && r.handler.post != NULL)
+            r.handler.post(rev->req, rev->res);
+        else if ((rev->req->method & HTTP_METHOD_HEAD) == 1 && r.handler.head != NULL)
+            r.handler.head(rev->req, rev->res);
+        else if ((rev->req->method & HTTP_METHOD_PUT) == 1 && r.handler.put != NULL)
+            r.handler.put(rev->req, rev->res);
+        else if ((rev->req->method & HTTP_METHOD_DELETE) == 1 && r.handler.delete != NULL)
+            r.handler.delete(rev->req, rev->res);
+        else
+            response_send_method_not_allowed(rev->res, rev->req->method, rev->req->path);
+
 
     send_response:
         if (revent_mod(rev, EPOLLOUT) == ERROR)

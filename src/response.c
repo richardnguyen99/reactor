@@ -229,6 +229,33 @@ response_text(struct response *res, const char *str, const size_t len)
 void
 response_json(struct response *res, const char *str)
 {
+    printf("Create json object\n");
+    json_object *obj = json_tokener_parse(str);
+    if (obj == NULL)
+        DIE("(response_json) json_tokener_parse");
+
+    char *buf = (char *)json_object_to_json_string_ext(
+        obj, JSON_C_TO_STRING_PLAIN | JSON_C_TO_STRING_NOSLASHESCAPE);
+
+    if (buf == NULL)
+        DIE("(response_json) json_object_to_json_string_ext");
+
+    res->body = strdup(buf);
+
+    if (res->body == NULL)
+        DIE("(response_json) strdup");
+
+    res->body_len = strlen(res->body);
+
+    if (json_object_put(obj) != 1)
+        DIE("(response_json) json_object_put");
+}
+
+void
+response_send_method_not_allowed(struct response *res, const int method,
+                                 const char *path)
+{
+    char buf[BUFSIZ];
     int content_type = response_accept(res, "json");
     if (content_type == HTTP_CONTENT_TYPE_INVALID)
     {
@@ -238,22 +265,17 @@ response_json(struct response *res, const char *str)
         return;
     }
 
-    res->content_type = content_type;
+    res->status = HTTP_METHOD_NOT_ALLOWED;
+    res->method = method;
 
-    json_object *obj = json_tokener_parse(str);
-    if (obj == NULL)
-        DIE("(response_json) json_tokener_parse");
+    snprintf(buf, BUFSIZ,
+             "{\r\n"
+             "\"status\": %d,\r\n"
+             "\"message\": \"Method %s is not allowed for '%s'\"\r\n"
+             "}\r\n",
+             HTTP_METHOD_NOT_ALLOWED, GET_HTTP_METHOD(method), path);
 
-    res->body =
-        (char *)json_object_to_json_string_ext(obj, JSON_C_TO_STRING_PLAIN);
-
-    if (res->body == NULL)
-        DIE("(response_json) json_object_to_json_string_ext");
-
-    res->body_len = strlen(res->body);
-    printf("Body: %s\n", res->body);
-
-    json_object_put(obj);
+    response_json(res, buf);
 }
 
 ssize_t
@@ -270,7 +292,16 @@ response_free(struct response *response)
     if (response == NULL)
         return;
 
-    if (response->body != NULL)
+    if (response->body != NULL &&
+        response->content_type == HTTP_CONTENT_TYPE_TEXT)
+        free(response->body);
+    else if (response->body != NULL &&
+             response->content_type == HTTP_CONTENT_TYPE_JSON)
+    {
+        printf("Freeing json object\n");
+        free(response->body);
+    }
+    else if (response->body != NULL)
         munmap(response->body, response->body_len);
 
     if (response->headers != NULL)
