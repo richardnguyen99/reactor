@@ -73,21 +73,27 @@ request_parse(struct request *req, int fd)
     if (nread == -1 && errno == EAGAIN)
         return HTTP_READ_AGAIN;
 
+    if (nread == -1)
+        DIE("(request_parse) read_line");
+
+    if (nread == 0)
+        return HTTP_READ_AGAIN;
+
     status = _get_start_line(req, buf);
 
-    if (status == ERROR)
-        return HTTP_ERROR;
+    if (status == HTTP_BAD_REQUEST || status == HTTP_INTERNAL_SERVER_ERROR)
+        DIE("(request_parse) _get_start_line");
+
+    if (status != HTTP_SUCCESS)
+        return status;
 
     req->status = status;
-    if (req->status != HTTP_SUCCESS)
-        return req->status;
 
     debug("%s %s %s ===\n", GET_HTTP_METHOD(req->method), req->path,
           req->version);
-
     debug("\n=== Reading request headers ===\n");
-read_header:
 
+read_header:
     for (;;)
     {
         nread = read_line(fd, buf, BUFSIZ, MSG_DONTWAIT);

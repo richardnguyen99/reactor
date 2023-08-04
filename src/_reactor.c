@@ -142,13 +142,14 @@ _handle_request(void *arg)
 
         if (rev->req->status == HTTP_BAD_REQUEST)
         {
+            printf("%s\n", rev->req->path);
             response_send_bad_request(rev->res);
             goto send_response;
         }
         
+        rev->res->accepts = http_require_accept(rev->req->headers);
 
         struct __route route = route_get_handler(rev->req->path);
-        rev->res->accepts = http_require_accept(rev->req->headers);
 
         // If the route is not found, send 404
         if (route.status == HTTP_NOT_FOUND)
@@ -177,8 +178,14 @@ _handle_request(void *arg)
 
 
     send_response:
-        if (revent_mod(rev, EPOLLOUT) == ERROR)
-            DIE("(handle_request) revent_mod");
+        int status;
+
+        status = revent_mod(rev, EPOLLOUT);
+
+        if (status == ERROR)
+            revent_destroy(rev);
+
+           
     }
 
     return NULL;

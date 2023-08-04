@@ -26,6 +26,15 @@ struct response
 
     struct dict *headers;
     struct dict *accepts;
+
+    int __chunked_state;
+    size_t __chunked_offset;
+    size_t __chunked_size;
+    size_t __chunked_sent;
+
+#define CHUNKSIZE 10240 // 10KB (original chunk size)
+#define CHUNKHDR  64
+    char __chunked_buf[CHUNKSIZE + CHUNKHDR];
 };
 
 struct response_json
@@ -72,6 +81,9 @@ response_send_method_not_allowed(struct response *res, const int method,
 
 void
 response_send_internal_server_error(struct response *res);
+
+int
+response_send_chunked(struct response *res, int fd);
 
 ssize_t
 response_send(struct response *response, int fd);

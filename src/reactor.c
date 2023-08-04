@@ -90,7 +90,7 @@ reactor_run(struct reactor *server)
         nfds = epoll_wait(server->epollfd, server->events, MAX_EVENTS, -1);
 
         if (nfds == -1)
-            return ERROR;
+            DIE("(reactor_run) epoll_wait");
 
         for (n = 0; n < nfds; ++n)
         {
@@ -99,10 +99,10 @@ reactor_run(struct reactor *server)
                 fd = accept(server->server_fd, NULL, NULL);
 
                 if (fd == -1)
-                    return ERROR;
+                    DIE("(reactor_run) accept");
 
                 if (_set_nonblocking(fd) == ERROR)
-                    return ERROR;
+                    DIE("(reactor_run) _set_nonblocking");
 
                 server->events[n].data.ptr = revent_new(server->epollfd, fd);
 
@@ -115,13 +115,26 @@ reactor_run(struct reactor *server)
                 if (ret == ERROR)
                     DIE("(reactor_run) revent_add");
             }
-            else if (server->events[n].events & EPOLLERR)
+            else if (server->events[n].events & (EPOLLERR | EPOLLHUP))
             {
                 ret = revent_destroy(
                     (struct reactor_event *)server->events[n].data.ptr);
 
                 if (ret == ERROR)
-                    return ERROR;
+                    DIE("(reactor_run) revent_destroy");
+
+                server->events[n].data.ptr = NULL;
+
+                continue;
+            }
+
+            else if (server->events[n].events & EPOLLRDHUP)
+            {
+                ret = revent_destroy(
+                    (struct reactor_event *)server->events[n].data.ptr);
+
+                if (ret == ERROR)
+                    DIE("(reactor_run) revent_destroy");
 
                 server->events[n].data.ptr = NULL;
 
@@ -130,6 +143,7 @@ reactor_run(struct reactor *server)
             // Some sockets have some data and are ready to read
             else if (server->events[n].events & EPOLLIN)
             {
+                printf("epoll in\n");
                 rev = (struct reactor_event *)(server->events[n].data.ptr);
 
                 if (rev->req == NULL)
@@ -151,10 +165,7 @@ reactor_run(struct reactor *server)
                 if (sem_wait(&(server->pool->empty)) == ERROR)
                     DIE("(reactor_run) sem_wait");
                 if (pthread_mutex_lock(&(server->pool->lock)) == ERROR)
-                    return ERROR;
-
-                if (revent_mod(rev, EPOLLHUP) == ERROR)
-                    DIE("(reactor_run) revent_mod");
+                    DIE("(reactor_run) pthread_mutex_lock");
 
                 if (rbuffer_append(server->pool->buffer, rev) == ERROR)
                     DIE("(reactor_run) rbuffer_push");
@@ -171,18 +182,31 @@ reactor_run(struct reactor *server)
             // Some sockets wants to send data out
             else if (server->events[n].events & EPOLLOUT)
             {
+                int status = 0;
                 rev        = (struct reactor_event *)server->events[n].data.ptr;
                 nsent      = 0;
                 total_sent = 0;
 
-                printf("Response: %s\n", rev->res->body);
+                if (rev->res->body_len > BUFSIZ)
+                {
+                    rev->res->__chunked_state = 0;
+                    status = response_send_chunked(rev->res, rev->fd);
+
+                    if (status == EAGAIN)
+                        goto wait_to_send;
+
+                    if (status == EPIPE)
+                        goto destroy_reactor_event;
+
+                    goto reset_reactor_event;
+                }
 
                 content_length = (size_t)snprintf(
                     msg, BUFSIZ,
                     "HTTP/1.1 %d %s\r\n"
                     "Content-Type: %s\r\n"
                     "Content-Length: %ld\r\n"
-                    "Connection: close\r\n"
+                    "Connection: keep-alive\r\n"
                     "Server: reactor/%s\r\n"
                     "\r\n"
                     "%s",
@@ -204,19 +228,40 @@ reactor_run(struct reactor *server)
                     total_sent += (size_t)nsent;
                 }
 
+            reset_reactor_event:
+                printf("To epollin\n");
+
+                if (rev->req != NULL)
+                {
+                    request_free(rev->req);
+                    rev->req = NULL;
+                }
+
+                if (rev->res != NULL)
+                {
+                    response_free(rev->res);
+                    rev->res = NULL;
+                }
+
+                if (revent_mod(rev, EPOLLIN) == ERROR)
+                    DIE("(reactor_run) revent_mod");
+
+            wait_to_send:
+                continue;
+
+            destroy_reactor_event:
                 if (revent_destroy(rev) == ERROR)
-                    return ERROR;
+                    DIE("(reactor_run) revent_destroy");
 
                 server->events[n].data.ptr = NULL;
 
-            wait_to_send:
                 continue;
             }
         }
     }
 
     // Not intended to reach here
-    return SUCCESS;
+    return ERROR;
 }
 
 void

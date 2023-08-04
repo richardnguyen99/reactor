@@ -110,7 +110,7 @@ main(int argc, char *argv[])
         goto safe_exit;
 
     // Main loop
-    reactor_run(server);
+    status = reactor_run(server);
 
     // The server is supposed to run forever. If the main loop exits, there is
     // a fatal error that needs to be handled. Therefore, these codes are solely

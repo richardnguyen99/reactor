@@ -17,6 +17,7 @@ set(SOURCES
     _request.c
     request.c
     response.c
+    response_send_chunked.c
     ring_buffer.c
     threads.c
     route.c

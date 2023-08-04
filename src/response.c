@@ -1,5 +1,7 @@
 #include "response.h"
 
+size_t count = 0;
+
 char *
 __get_internal_server(size_t *len)
 {
@@ -107,6 +109,10 @@ response_new()
     res->method       = -1;
     res->content_type = HTTP_CONTENT_TYPE_INVALID;
 
+    res->__chunked_state  = 0;
+    res->__chunked_offset = 0;
+    res->__chunked_size   = 0;
+
     res->body     = NULL;
     res->body_len = 0;
 
@@ -145,7 +151,8 @@ response_accept(struct response *res, const char *type)
         return HTTP_CONTENT_TYPE_CSS;
 
     if (strcmp(type, "js") == 0 &&
-        (accept_all || dict_get(res->accepts, "text/javascript") != NULL))
+        (accept_all ||
+         dict_get(res->accepts, "application/javascript") != NULL))
         return HTTP_CONTENT_TYPE_JS;
 
     if (strcmp(type, "png") == 0 &&

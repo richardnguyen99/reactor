@@ -116,7 +116,7 @@
 #define HTTP_CONTENT_TYPE_TEXT_MSG    "text/plain"
 #define HTTP_CONTENT_TYPE_HTML_MSG    "text/html"
 #define HTTP_CONTENT_TYPE_CSS_MSG     "text/css"
-#define HTTP_CONTENT_TYPE_JS_MSG      "text/javascript"
+#define HTTP_CONTENT_TYPE_JS_MSG      "application/javascript"
 #define HTTP_CONTENT_TYPE_JSON_MSG    "application/json"
 #define HTTP_CONTENT_TYPE_JPEG_MSG    "image/jpeg"
 #define HTTP_CONTENT_TYPE_PNG_MSG     "image/png"
