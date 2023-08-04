@@ -3,7 +3,8 @@
 struct reactor_event *
 revent_new(int epoll_fd, int fd)
 {
-    struct reactor_event *rev = malloc(sizeof(struct reactor_event));
+    struct reactor_event *rev =
+        (struct reactor_event *)malloc(sizeof(struct reactor_event));
 
     if (rev == NULL)
         return NULL;
@@ -15,6 +16,9 @@ revent_new(int epoll_fd, int fd)
     rev->res = NULL;
 
     rev->raw = (char *)malloc(BUFSIZ);
+
+    pthread_rwlock_init(&(rev->req_lock), NULL);
+    pthread_rwlock_init(&(rev->res_lock), NULL);
 
     return rev;
 }
@@ -62,13 +66,25 @@ revent_destroy(struct reactor_event *rev)
     printf("Closed fd: %d\n", rev->fd);
 
     if (rev->raw != NULL)
+    {
         free(rev->raw);
+        rev->raw = NULL;
+    }
 
     if (rev->req != NULL)
+    {
         request_free(rev->req);
+        rev->req = NULL;
+    }
 
     if (rev->res != NULL)
+    {
         response_free(rev->res);
+        rev->res = NULL;
+    }
+
+    pthread_rwlock_destroy(&(rev->req_lock));
+    pthread_rwlock_destroy(&(rev->res_lock));
 
     free(rev);
 

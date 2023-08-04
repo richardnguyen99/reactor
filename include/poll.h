@@ -24,6 +24,9 @@ struct reactor_event
 
     struct request *req;
     struct response *res;
+
+    pthread_rwlock_t res_lock;
+    pthread_rwlock_t req_lock;
 };
 
 struct reactor_event *

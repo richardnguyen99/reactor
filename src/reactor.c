@@ -105,8 +105,9 @@ reactor_run(struct reactor *server)
                     DIE("(reactor_run) _set_nonblocking");
 
                 server->events[n].data.ptr = revent_new(server->epollfd, fd);
+                printf("New connection: %p\n", server->events[n].data.ptr);
 
-                if (rev == NULL)
+                if (server->events[n].data.ptr == NULL)
                     DIE("(reactor_run) revent_new");
 
                 ret = revent_add(
@@ -198,7 +199,7 @@ reactor_run(struct reactor *server)
                     if (status == EPIPE)
                         goto destroy_reactor_event;
 
-                    goto reset_reactor_event;
+                    goto destroy_reactor_event;
                 }
 
                 content_length = (size_t)snprintf(
@@ -228,33 +229,13 @@ reactor_run(struct reactor *server)
                     total_sent += (size_t)nsent;
                 }
 
-            reset_reactor_event:
-                printf("To epollin\n");
-
-                if (rev->req != NULL)
-                {
-                    request_free(rev->req);
-                    rev->req = NULL;
-                }
-
-                if (rev->res != NULL)
-                {
-                    response_free(rev->res);
-                    rev->res = NULL;
-                }
-
-                if (revent_mod(rev, EPOLLIN) == ERROR)
-                    DIE("(reactor_run) revent_mod");
-
-            wait_to_send:
-                continue;
-
             destroy_reactor_event:
                 if (revent_destroy(rev) == ERROR)
                     DIE("(reactor_run) revent_destroy");
 
                 server->events[n].data.ptr = NULL;
 
+            wait_to_send:
                 continue;
             }
         }

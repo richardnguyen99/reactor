@@ -125,14 +125,15 @@ _handle_request(void *arg)
         if (rev->req == NULL)
             continue;
 
+        pthread_rwlock_wrlock(&(rev->res_lock));
         if (rev->res == NULL)
             rev->res = response_new();
+        pthread_rwlock_unlock(&(rev->res_lock));
 
         // Response cannot be created. Instead of shutting down, just letting
         // the client know that the request is dropped.
         if (rev->res == NULL)       
             continue;
-
 
         if (rev->req->status == HTTP_NOT_SET || rev->req->status == HTTP_INTERNAL_SERVER_ERROR)
         {
@@ -147,7 +148,10 @@ _handle_request(void *arg)
             goto send_response;
         }
         
-        rev->res->accepts = http_require_accept(rev->req->headers);
+        pthread_rwlock_wrlock(&(rev->res->rwlock));
+        if (rev->res->accepts == NULL)
+            rev->res->accepts = http_require_accept(rev->req->headers);
+        pthread_rwlock_unlock(&(rev->res->rwlock));
 
         struct __route route = route_get_handler(rev->req->path);
 
@@ -184,8 +188,6 @@ _handle_request(void *arg)
 
         if (status == ERROR)
             revent_destroy(rev);
-
-           
     }
 
     return NULL;

@@ -116,6 +116,8 @@ response_new()
     res->body     = NULL;
     res->body_len = 0;
 
+    pthread_rwlock_init(&res->rwlock, NULL);
+
     return res;
 }
 
@@ -415,6 +417,8 @@ response_free(struct response *response)
 
     if (response->accepts != NULL)
         dict_delete(response->accepts);
+
+    pthread_rwlock_destroy(&response->rwlock);
 
     free(response);
 }

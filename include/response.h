@@ -35,6 +35,8 @@ struct response
 #define CHUNKSIZE 10240 // 10KB (original chunk size)
 #define CHUNKHDR  64
     char __chunked_buf[CHUNKSIZE + CHUNKHDR];
+
+    pthread_rwlock_t rwlock;
 };
 
 struct response_json
