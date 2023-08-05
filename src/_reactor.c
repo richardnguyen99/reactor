@@ -112,7 +112,7 @@ _handle_request(void *arg)
         if (pthread_mutex_lock(&(pool->lock)) == -1)
             DIE("(handle_request) pthread_mutex_lock");
 
-        struct reactor_event *rev = rbuffer_pop(pool->buffer);
+        struct reactor_socket *rev = rbuffer_pop(pool->buffer);
 
         if (pthread_mutex_unlock(&(pool->lock)) == -1)
             DIE("(handle_request) pthread_mutex_unlock");

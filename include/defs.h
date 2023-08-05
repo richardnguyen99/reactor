@@ -42,6 +42,7 @@
 #include <sys/mman.h>
 #include <sys/sendfile.h>
 #include <sys/socket.h>
+#include <sys/timerfd.h>
 
 // JSON-C
 #include <json-c/json.h>

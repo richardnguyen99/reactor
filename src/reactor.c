@@ -76,14 +76,27 @@ safe_exit:
 int
 reactor_run(struct reactor *server)
 {
-    int fd, nfds, n, http_status, ret;
+    int timer_fd, fd, nfds, n, http_status, ret;
     bool end_of_msg = false;
     ssize_t nread, nsent;
     size_t total_read, total_sent, content_length;
     char buf[BUFSIZ], msg[BUFSIZ];
     struct epoll_event *evp;
-    struct reactor_event *rev;
-    struct reactor_event *pev;
+    struct reactor_socket *rev;
+    struct reactor_socket *pev;
+
+    struct itimerspec its;
+    memset(&its, 0, sizeof(struct itimerspec));
+    its.it_value.tv_sec = 10;
+    timer_fd            = timerfd_create(CLOCK_MONOTONIC, 0);
+    if (timer_fd == -1)
+    {
+        perror("timerfd_create");
+        exit(EXIT_FAILURE);
+    }
+    timerfd_settime(timer_fd, 0, &its, NULL);
+
+    ret = revent_add(revent_new(server->epollfd, timer_fd));
 
     for (;;)
     {
@@ -111,15 +124,24 @@ reactor_run(struct reactor *server)
                     DIE("(reactor_run) revent_new");
 
                 ret = revent_add(
-                    (struct reactor_event *)(server->events[n].data.ptr));
+                    (struct reactor_socket *)(server->events[n].data.ptr));
 
                 if (ret == ERROR)
                     DIE("(reactor_run) revent_add");
             }
+            else if (((struct reactor_socket *)(server->events[n].data.ptr))
+                         ->fd == timer_fd)
+            {
+
+                revent_destroy(
+                    (struct reactor_socket *)server->events[n].data.ptr);
+
+                continue;
+            }
             else if (server->events[n].events & (EPOLLERR | EPOLLHUP))
             {
                 ret = revent_destroy(
-                    (struct reactor_event *)server->events[n].data.ptr);
+                    (struct reactor_socket *)server->events[n].data.ptr);
 
                 if (ret == ERROR)
                     DIE("(reactor_run) revent_destroy");
@@ -132,7 +154,7 @@ reactor_run(struct reactor *server)
             else if (server->events[n].events & EPOLLRDHUP)
             {
                 ret = revent_destroy(
-                    (struct reactor_event *)server->events[n].data.ptr);
+                    (struct reactor_socket *)server->events[n].data.ptr);
 
                 if (ret == ERROR)
                     DIE("(reactor_run) revent_destroy");
@@ -145,7 +167,7 @@ reactor_run(struct reactor *server)
             else if (server->events[n].events & EPOLLIN)
             {
                 printf("epoll in\n");
-                rev = (struct reactor_event *)(server->events[n].data.ptr);
+                rev = (struct reactor_socket *)(server->events[n].data.ptr);
 
                 if (rev->req == NULL)
                     rev->req = request_new();
@@ -184,8 +206,8 @@ reactor_run(struct reactor *server)
             else if (server->events[n].events & EPOLLOUT)
             {
                 int status = 0;
-                rev        = (struct reactor_event *)server->events[n].data.ptr;
-                nsent      = 0;
+                rev   = (struct reactor_socket *)server->events[n].data.ptr;
+                nsent = 0;
                 total_sent = 0;
 
                 if (rev->res->body_len > BUFSIZ)
@@ -197,9 +219,9 @@ reactor_run(struct reactor *server)
                         goto wait_to_send;
 
                     if (status == EPIPE)
-                        goto destroy_reactor_event;
+                        goto destroy_reactor_socket;
 
-                    goto destroy_reactor_event;
+                    goto destroy_reactor_socket;
                 }
 
                 content_length = (size_t)snprintf(
@@ -229,7 +251,7 @@ reactor_run(struct reactor *server)
                     total_sent += (size_t)nsent;
                 }
 
-            destroy_reactor_event:
+            destroy_reactor_socket:
                 if (revent_destroy(rev) == ERROR)
                     DIE("(reactor_run) revent_destroy");
 

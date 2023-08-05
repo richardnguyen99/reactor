@@ -1,10 +1,10 @@
 #include "poll.h"
 
-struct reactor_event *
+struct reactor_socket *
 revent_new(int epoll_fd, int fd)
 {
-    struct reactor_event *rev =
-        (struct reactor_event *)malloc(sizeof(struct reactor_event));
+    struct reactor_socket *rev =
+        (struct reactor_socket *)malloc(sizeof(struct reactor_socket));
 
     if (rev == NULL)
         return NULL;
@@ -14,8 +14,7 @@ revent_new(int epoll_fd, int fd)
 
     rev->req = NULL;
     rev->res = NULL;
-
-    rev->raw = (char *)malloc(BUFSIZ);
+    rev->rtm = NULL;
 
     pthread_rwlock_init(&(rev->req_lock), NULL);
     pthread_rwlock_init(&(rev->res_lock), NULL);
@@ -23,8 +22,24 @@ revent_new(int epoll_fd, int fd)
     return rev;
 }
 
+struct reactor_timer *
+rtimer_new(int epoll_fd, int fd, int timeout)
+{
+    struct reactor_timer *rtm =
+        (struct reactor_timer *)malloc(sizeof(struct reactor_timer));
+
+    if (rtm == NULL)
+        return NULL;
+
+    rtm->fd       = fd;
+    rtm->epoll_fd = epoll_fd;
+    rtm->timeout  = timeout;
+
+    return rtm;
+}
+
 int
-revent_add(struct reactor_event *rev)
+revent_add(struct reactor_socket *rev)
 {
     struct epoll_event ev;
     ev.data.ptr = rev;
@@ -37,7 +52,20 @@ revent_add(struct reactor_event *rev)
 }
 
 int
-revent_mod(struct reactor_event *rev, int flags)
+rtimer_add(struct reactor_timer *rtm)
+{
+    struct epoll_event ev;
+    ev.data.ptr = rtm;
+    ev.events   = EPOLLIN | EPOLLET;
+
+    if (epoll_ctl(rtm->epoll_fd, EPOLL_CTL_ADD, rtm->fd, &ev) == ERROR)
+        return ERROR;
+
+    return SUCCESS;
+}
+
+int
+revent_mod(struct reactor_socket *rev, int flags)
 {
     struct epoll_event ev;
     ev.data.ptr = rev;
@@ -50,7 +78,7 @@ revent_mod(struct reactor_event *rev, int flags)
 }
 
 int
-revent_destroy(struct reactor_event *rev)
+revent_destroy(struct reactor_socket *rev)
 {
     if (rev == NULL)
         return SUCCESS;

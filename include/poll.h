@@ -15,7 +15,7 @@
 #include "request.h"
 #include "response.h"
 
-struct reactor_event
+struct reactor_socket
 {
     int fd;
     int epoll_fd;
@@ -27,18 +27,40 @@ struct reactor_event
 
     pthread_rwlock_t res_lock;
     pthread_rwlock_t req_lock;
+
+    struct reactor_timer *rtm;
 };
 
-struct reactor_event *
+struct reactor_timer
+{
+    int fd;
+    int epoll_fd;
+    int timeout;
+
+    struct reactor_socket *rev;
+};
+
+struct reactor_event
+{
+    int flag;
+
+    union
+    {
+        struct reactor_socket *rev;
+        struct reactor_timer *rtm;
+    };
+};
+
+struct reactor_socket *
 revent_new(int epoll_fd, int fd);
 
 int
-revent_add(struct reactor_event *rev);
+revent_add(struct reactor_socket *rev);
 
 int
-revent_mod(struct reactor_event *rev, int flags);
+revent_mod(struct reactor_socket *rev, int flags);
 
 int
-revent_destroy(struct reactor_event *rev);
+revent_destroy(struct reactor_socket *rev);
 
 #endif // _REACTOR_POLL_H_
