@@ -184,10 +184,10 @@ _handle_request(void *arg)
     send_response:
         int status;
 
-        status = revent_mod(rev, EPOLLOUT);
+        status = rsocket_mod(rev, EPOLLOUT);
 
         if (status == ERROR)
-            revent_destroy(rev);
+            rsocket_destroy(rev);
     }
 
     return NULL;

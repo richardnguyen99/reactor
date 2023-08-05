@@ -1,7 +1,7 @@
 #include "poll.h"
 
 struct reactor_socket *
-revent_new(int epoll_fd, int fd)
+rsocket_new(int epoll_fd, int fd)
 {
     struct reactor_socket *rev =
         (struct reactor_socket *)malloc(sizeof(struct reactor_socket));
@@ -39,7 +39,7 @@ rtimer_new(int epoll_fd, int fd, int timeout)
 }
 
 int
-revent_add(struct reactor_socket *rev)
+rsocket_add(struct reactor_socket *rev)
 {
     struct epoll_event ev;
     ev.data.ptr = rev;
@@ -65,7 +65,7 @@ rtimer_add(struct reactor_timer *rtm)
 }
 
 int
-revent_mod(struct reactor_socket *rev, int flags)
+rsocket_mod(struct reactor_socket *rev, int flags)
 {
     struct epoll_event ev;
     ev.data.ptr = rev;
@@ -78,7 +78,7 @@ revent_mod(struct reactor_socket *rev, int flags)
 }
 
 int
-revent_destroy(struct reactor_socket *rev)
+rsocket_destroy(struct reactor_socket *rev)
 {
     if (rev == NULL)
         return SUCCESS;

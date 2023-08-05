@@ -52,15 +52,15 @@ struct reactor_event
 };
 
 struct reactor_socket *
-revent_new(int epoll_fd, int fd);
+rsocket_new(int epoll_fd, int fd);
 
 int
-revent_add(struct reactor_socket *rev);
+rsocket_add(struct reactor_socket *rev);
 
 int
-revent_mod(struct reactor_socket *rev, int flags);
+rsocket_mod(struct reactor_socket *rev, int flags);
 
 int
-revent_destroy(struct reactor_socket *rev);
+rsocket_destroy(struct reactor_socket *rev);
 
 #endif // _REACTOR_POLL_H_

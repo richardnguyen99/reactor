@@ -96,7 +96,7 @@ reactor_run(struct reactor *server)
     }
     timerfd_settime(timer_fd, 0, &its, NULL);
 
-    ret = revent_add(revent_new(server->epollfd, timer_fd));
+    ret = rsocket_add(rsocket_new(server->epollfd, timer_fd));
 
     for (;;)
     {
@@ -117,34 +117,34 @@ reactor_run(struct reactor *server)
                 if (_set_nonblocking(fd) == ERROR)
                     DIE("(reactor_run) _set_nonblocking");
 
-                server->events[n].data.ptr = revent_new(server->epollfd, fd);
+                server->events[n].data.ptr = rsocket_new(server->epollfd, fd);
                 printf("New connection: %p\n", server->events[n].data.ptr);
 
                 if (server->events[n].data.ptr == NULL)
-                    DIE("(reactor_run) revent_new");
+                    DIE("(reactor_run) rsocket_new");
 
-                ret = revent_add(
+                ret = rsocket_add(
                     (struct reactor_socket *)(server->events[n].data.ptr));
 
                 if (ret == ERROR)
-                    DIE("(reactor_run) revent_add");
+                    DIE("(reactor_run) rsocket_add");
             }
             else if (((struct reactor_socket *)(server->events[n].data.ptr))
                          ->fd == timer_fd)
             {
 
-                revent_destroy(
+                rsocket_destroy(
                     (struct reactor_socket *)server->events[n].data.ptr);
 
                 continue;
             }
             else if (server->events[n].events & (EPOLLERR | EPOLLHUP))
             {
-                ret = revent_destroy(
+                ret = rsocket_destroy(
                     (struct reactor_socket *)server->events[n].data.ptr);
 
                 if (ret == ERROR)
-                    DIE("(reactor_run) revent_destroy");
+                    DIE("(reactor_run) rsocket_destroy");
 
                 server->events[n].data.ptr = NULL;
 
@@ -153,11 +153,11 @@ reactor_run(struct reactor *server)
 
             else if (server->events[n].events & EPOLLRDHUP)
             {
-                ret = revent_destroy(
+                ret = rsocket_destroy(
                     (struct reactor_socket *)server->events[n].data.ptr);
 
                 if (ret == ERROR)
-                    DIE("(reactor_run) revent_destroy");
+                    DIE("(reactor_run) rsocket_destroy");
 
                 server->events[n].data.ptr = NULL;
 
@@ -252,8 +252,8 @@ reactor_run(struct reactor *server)
                 }
 
             destroy_reactor_socket:
-                if (revent_destroy(rev) == ERROR)
-                    DIE("(reactor_run) revent_destroy");
+                if (rsocket_destroy(rev) == ERROR)
+                    DIE("(reactor_run) rsocket_destroy");
 
                 server->events[n].data.ptr = NULL;
 
