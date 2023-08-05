@@ -38,6 +38,12 @@ struct reactor_timer
     struct reactor_socket *rsk;
 };
 
+typedef enum event_flag
+{
+    EVENT_SOCKET = 1,
+    EVENT_TIMER  = 2,
+} evflag_t;
+
 typedef union event_pointer
 {
     struct reactor_socket *rsk;
@@ -70,5 +76,17 @@ rtimer_add(struct reactor_timer *rtm);
 
 int
 rtimer_destroy(struct reactor_timer *rtm);
+
+struct reactor_event *
+revent_new(int epoll_fd, evflag_t flag);
+
+int
+revent_add(struct reactor_event *rev);
+
+int
+revent_mod(struct reactor_event *rev, int flags);
+
+int
+revent_destroy(struct reactor_event *rev);
 
 #endif // _REACTOR_POLL_H_

@@ -1,5 +1,20 @@
 #include "poll.h"
 
+void
+__get_evt_fd(struct reactor_event *rev, int *fd, int *epoll_fd)
+{
+    if (rev->flag == EVENT_SOCKET)
+    {
+        *fd       = rev->data.rsk->fd;
+        *epoll_fd = rev->data.rsk->epoll_fd;
+    }
+    else if (rev->flag == EVENT_TIMER)
+    {
+        *fd       = rev->data.rtm->fd;
+        *epoll_fd = rev->data.rtm->epoll_fd;
+    }
+}
+
 struct reactor_socket *
 rsocket_new(int epoll_fd, int fd)
 {
@@ -146,6 +161,79 @@ rtimer_destroy(struct reactor_timer *rtm)
         return ERROR;
 
     free(rtm);
+
+    return SUCCESS;
+}
+
+struct reactor_event *
+revent_new(int epoll_fd, evflag_t flag)
+{
+    struct reactor_event *rev =
+        (struct reactor_event *)malloc(sizeof(struct reactor_event));
+
+    if (rev == NULL)
+        return NULL;
+
+    rev->flag = flag;
+    memset(&(rev->data), 0, sizeof(evptr_t));
+
+    return rev;
+}
+
+int
+revent_add(struct reactor_event *rev)
+{
+    if (rev == NULL)
+        return ERROR;
+
+    struct epoll_event ev;
+    int epoll_fd, fd;
+
+    ev.data.ptr = rev;
+    ev.events   = EPOLLIN | EPOLLET;
+
+    __get_evt_fd(rev, &fd, &epoll_fd);
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) == ERROR)
+        return ERROR;
+
+    return SUCCESS;
+}
+
+int
+revent_mod(struct reactor_event *rev, int flags)
+{
+    if (rev == NULL)
+        return ERROR;
+
+    struct epoll_event ev;
+    int epoll_fd, fd;
+
+    ev.data.ptr = rev;
+    ev.events   = flags | EPOLLET;
+
+    __get_evt_fd(rev, &fd, &epoll_fd);
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &ev) == ERROR)
+        return ERROR;
+
+    return SUCCESS;
+}
+
+int
+revent_destroy(struct reactor_event *rev)
+{
+    if (rev == NULL)
+        return ERROR;
+
+    int epoll_fd, fd;
+
+    __get_evt_fd(rev, &fd, &epoll_fd);
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL) == ERROR)
+        return ERROR;
+
+    free(rev);
 
     return SUCCESS;
 }
