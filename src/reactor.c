@@ -85,17 +85,6 @@ reactor_run(struct reactor *server)
     struct reactor_socket *rev;
     struct reactor_socket *pev;
 
-    struct itimerspec its;
-    memset(&its, 0, sizeof(struct itimerspec));
-    its.it_value.tv_sec = 10;
-    timer_fd            = timerfd_create(CLOCK_MONOTONIC, 0);
-    if (timer_fd == -1)
-    {
-        perror("timerfd_create");
-        exit(EXIT_FAILURE);
-    }
-    timerfd_settime(timer_fd, 0, &its, NULL);
-
     ret = rsocket_add(rsocket_new(server->epollfd, timer_fd));
 
     for (;;)

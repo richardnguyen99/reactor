@@ -14,28 +14,11 @@ rsocket_new(int epoll_fd, int fd)
 
     rev->req = NULL;
     rev->res = NULL;
-    rev->rtm = NULL;
 
     pthread_rwlock_init(&(rev->req_lock), NULL);
     pthread_rwlock_init(&(rev->res_lock), NULL);
 
     return rev;
-}
-
-struct reactor_timer *
-rtimer_new(int epoll_fd, int fd, int timeout)
-{
-    struct reactor_timer *rtm =
-        (struct reactor_timer *)malloc(sizeof(struct reactor_timer));
-
-    if (rtm == NULL)
-        return NULL;
-
-    rtm->fd       = fd;
-    rtm->epoll_fd = epoll_fd;
-    rtm->timeout  = timeout;
-
-    return rtm;
 }
 
 int
@@ -46,19 +29,6 @@ rsocket_add(struct reactor_socket *rev)
     ev.events   = EPOLLIN | EPOLLET;
 
     if (epoll_ctl(rev->epoll_fd, EPOLL_CTL_ADD, rev->fd, &ev) == ERROR)
-        return ERROR;
-
-    return SUCCESS;
-}
-
-int
-rtimer_add(struct reactor_timer *rtm)
-{
-    struct epoll_event ev;
-    ev.data.ptr = rtm;
-    ev.events   = EPOLLIN | EPOLLET;
-
-    if (epoll_ctl(rtm->epoll_fd, EPOLL_CTL_ADD, rtm->fd, &ev) == ERROR)
         return ERROR;
 
     return SUCCESS;
@@ -115,6 +85,67 @@ rsocket_destroy(struct reactor_socket *rev)
     pthread_rwlock_destroy(&(rev->res_lock));
 
     free(rev);
+
+    return SUCCESS;
+}
+
+struct reactor_timer *
+rtimer_new(int epoll_fd, struct reactor_socket *rsk)
+{
+    int timer_fd;
+    struct itimerspec its;
+    struct reactor_timer *rtm;
+
+    rtm = (struct reactor_timer *)malloc(sizeof(struct reactor_timer));
+
+    if (rtm == NULL)
+        return NULL;
+
+    memset(&its, 0, sizeof(struct itimerspec));
+    its.it_value.tv_sec = 10;
+    timer_fd            = timerfd_create(CLOCK_MONOTONIC, 0);
+    if (timer_fd == -1)
+    {
+        perror("timerfd_create");
+        exit(EXIT_FAILURE);
+    }
+
+    timerfd_settime(timer_fd, 0, &its, NULL);
+
+    rtm->fd       = timer_fd;
+    rtm->epoll_fd = epoll_fd;
+    rtm->timeout  = 10;
+    rtm->rsk      = rsk;
+
+    return rtm;
+}
+
+int
+rimter_add(struct reactor_timer *rtm)
+{
+    struct epoll_event ev;
+    ev.data.ptr = rtm;
+    ev.events   = EPOLLIN | EPOLLET;
+
+    if (epoll_ctl(rtm->epoll_fd, EPOLL_CTL_ADD, rtm->fd, &ev) == ERROR)
+        return ERROR;
+
+    return SUCCESS;
+}
+
+int
+rtimer_destroy(struct reactor_timer *rtm)
+{
+    if (rtm == NULL)
+        return SUCCESS;
+
+    if (epoll_ctl(rtm->epoll_fd, EPOLL_CTL_DEL, rtm->fd, NULL) == ERROR)
+        return ERROR;
+
+    if (close(rtm->fd) == ERROR)
+        return ERROR;
+
+    free(rtm);
 
     return SUCCESS;
 }
