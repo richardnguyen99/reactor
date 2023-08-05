@@ -15,7 +15,7 @@ rbuffer_new(size_t cap)
     buffer->in   = 0;
     buffer->out  = 0;
     buffer->events =
-        (struct reactor_socket **)malloc(sizeof(struct reactor_socket *) * cap);
+        (struct reactor_event **)malloc(sizeof(struct reactor_event *) * cap);
 
     if (buffer->events == NULL)
     {
@@ -30,7 +30,7 @@ rbuffer_new(size_t cap)
 }
 
 size_t
-rbuffer_append(struct ring_buffer *buf, struct reactor_socket *rev)
+rbuffer_append(struct ring_buffer *buf, struct reactor_event *rev)
 {
     size_t i       = buf->in;
     buf->events[i] = rev;
@@ -40,11 +40,11 @@ rbuffer_append(struct ring_buffer *buf, struct reactor_socket *rev)
     return i;
 }
 
-struct reactor_socket *
+struct reactor_event *
 rbuffer_pop(struct ring_buffer *buf)
 {
-    size_t i                   = buf->out;
-    struct reactor_socket *rev = buf->events[i];
+    size_t i                  = buf->out;
+    struct reactor_event *rev = buf->events[i];
 
     buf->events[i] = NULL;
     buf->out       = (i + 1) % buf->cap;

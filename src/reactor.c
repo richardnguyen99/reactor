@@ -6,6 +6,8 @@ int _prepare_socket(char *host, const char *service);
 int _set_nonblocking(int fd);
 void *_handle_request(void * arg);
 
+void __reactor_accept(struct reactor *server, struct reactor_event *rev);
+
 // clang-format on
 
 // =============================================================================
@@ -82,10 +84,9 @@ reactor_run(struct reactor *server)
     size_t total_read, total_sent, content_length;
     char buf[BUFSIZ], msg[BUFSIZ];
     struct epoll_event *evp;
-    struct reactor_socket *rev;
+    struct reactor_event *rev;
     struct reactor_socket *pev;
-
-    ret = rsocket_add(rsocket_new(server->epollfd, timer_fd));
+    struct reactor_socket *rsk;
 
     for (;;)
     {
@@ -98,25 +99,12 @@ reactor_run(struct reactor *server)
         {
             if (server->events[n].data.fd == server->server_fd)
             {
-                fd = accept(server->server_fd, NULL, NULL);
+                server->events[n].data.ptr =
+                    revent_new(server->epollfd, EVENT_SOCKET);
 
-                if (fd == -1)
-                    DIE("(reactor_run) accept");
+                rev = (struct reactor_event *)server->events[n].data.ptr;
 
-                if (_set_nonblocking(fd) == ERROR)
-                    DIE("(reactor_run) _set_nonblocking");
-
-                server->events[n].data.ptr = rsocket_new(server->epollfd, fd);
-                printf("New connection: %p\n", server->events[n].data.ptr);
-
-                if (server->events[n].data.ptr == NULL)
-                    DIE("(reactor_run) rsocket_new");
-
-                ret = rsocket_add(
-                    (struct reactor_socket *)(server->events[n].data.ptr));
-
-                if (ret == ERROR)
-                    DIE("(reactor_run) rsocket_add");
+                __reactor_accept(server, rev);
             }
             else if (((struct reactor_socket *)(server->events[n].data.ptr))
                          ->fd == timer_fd)
@@ -155,16 +143,27 @@ reactor_run(struct reactor *server)
             // Some sockets have some data and are ready to read
             else if (server->events[n].events & EPOLLIN)
             {
-                printf("epoll in\n");
-                rev = (struct reactor_socket *)(server->events[n].data.ptr);
+                printf("epoll in: ");
+                rev = (struct reactor_event *)(server->events[n].data.ptr);
 
-                if (rev->req == NULL)
-                    rev->req = request_new();
+                if (rev->flag == EVENT_TIMER)
+                {
+                    printf("timer\n");
+                    continue;
+                }
 
-                if (rev->req == NULL)
+                printf("socket\n");
+                rsk = rev->data.rsk;
+
+                printf("rsk: %p\n", *rsk);
+
+                if (rsk->req == NULL)
+                    rsk->req = request_new();
+
+                if (rsk->req == NULL)
                     DIE("(reactor_run) request_new");
 
-                http_status = request_parse(rev->req, rev->fd);
+                http_status = request_parse(rsk->req, rsk->fd);
 
                 // Don't continue if the request processing is not ready
                 if (http_status == HTTP_READ_AGAIN)
@@ -194,15 +193,28 @@ reactor_run(struct reactor *server)
             // Some sockets wants to send data out
             else if (server->events[n].events & EPOLLOUT)
             {
+                debug("epoll out: ");
                 int status = 0;
-                rev   = (struct reactor_socket *)server->events[n].data.ptr;
-                nsent = 0;
+                rev = (struct reactor_event *)(server->events[n].data.ptr);
+
+                if (rev->flag == EVENT_TIMER)
+                {
+                    debug("timer\n");
+                    continue;
+                }
+
+                debug("socket\n");
+
+                rsk = rev->data.rsk;
+                printf("rsk: %p\n", rsk);
+
+                nsent      = 0;
                 total_sent = 0;
 
-                if (rev->res->body_len > BUFSIZ)
+                if (rsk->res->body_len > BUFSIZ)
                 {
-                    rev->res->__chunked_state = 0;
-                    status = response_send_chunked(rev->res, rev->fd);
+                    rsk->res->__chunked_state = 0;
+                    status = response_send_chunked(rsk->res, rsk->fd);
 
                     if (status == EAGAIN)
                         goto wait_to_send;
@@ -222,13 +234,13 @@ reactor_run(struct reactor *server)
                     "Server: reactor/%s\r\n"
                     "\r\n"
                     "%s",
-                    rev->res->status, GET_HTTP_MSG(rev->res->status),
-                    GET_HTTP_CONTENT_TYPE(rev->res->content_type),
-                    rev->res->body_len, REACTOR_VERSION, rev->res->body);
+                    rsk->res->status, GET_HTTP_MSG(rsk->res->status),
+                    GET_HTTP_CONTENT_TYPE(rsk->res->content_type),
+                    rsk->res->body_len, REACTOR_VERSION, rsk->res->body);
 
                 for (; total_sent < content_length;)
                 {
-                    nsent = send(rev->fd, msg + total_sent,
+                    nsent = send(rsk->fd, msg + total_sent,
                                  content_length - total_sent, MSG_DONTWAIT);
 
                     if (nsent == -1 && errno == EAGAIN)
@@ -241,7 +253,7 @@ reactor_run(struct reactor *server)
                 }
 
             destroy_reactor_socket:
-                if (rsocket_destroy(rev) == ERROR)
+                if (rsocket_destroy(rsk) == ERROR)
                     DIE("(reactor_run) rsocket_destroy");
 
                 server->events[n].data.ptr = NULL;

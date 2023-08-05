@@ -3,6 +3,7 @@
 void
 __get_evt_fd(struct reactor_event *rev, int *fd, int *epoll_fd)
 {
+
     if (rev->flag == EVENT_SOCKET)
     {
         *fd       = rev->data.rsk->fd;

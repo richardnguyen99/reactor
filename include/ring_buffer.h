@@ -29,16 +29,16 @@ struct ring_buffer
     size_t out;
 
     /* Array of reactor events */
-    struct reactor_socket **events;
+    struct reactor_event **events;
 };
 
 struct ring_buffer *
 rbuffer_new(size_t cap);
 
 size_t
-rbuffer_append(struct ring_buffer *buffer, struct reactor_socket *rev);
+rbuffer_append(struct ring_buffer *buffer, struct reactor_event *rev);
 
-struct reactor_socket *
+struct reactor_event *
 rbuffer_pop(struct ring_buffer *buffer);
 
 void

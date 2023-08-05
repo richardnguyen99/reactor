@@ -112,82 +112,84 @@ _handle_request(void *arg)
         if (pthread_mutex_lock(&(pool->lock)) == -1)
             DIE("(handle_request) pthread_mutex_lock");
 
-        struct reactor_socket *rev = rbuffer_pop(pool->buffer);
+        struct reactor_event *rev = rbuffer_pop(pool->buffer);
 
         if (pthread_mutex_unlock(&(pool->lock)) == -1)
             DIE("(handle_request) pthread_mutex_unlock");
         if (sem_post(&(pool->empty)) == -1)
             DIE("(handle_request) sem_post");
 
-        if (rev == NULL)
+        struct reactor_socket *rsk = rev->data.rsk;
+
+        if (rsk == NULL)
             continue;
         
-        if (rev->req == NULL)
+        if (rsk->req == NULL)
             continue;
 
-        pthread_rwlock_wrlock(&(rev->res_lock));
-        if (rev->res == NULL)
-            rev->res = response_new();
-        pthread_rwlock_unlock(&(rev->res_lock));
+        pthread_rwlock_wrlock(&(rsk->res_lock));
+        if (rsk->res == NULL)
+            rsk->res = response_new();
+        pthread_rwlock_unlock(&(rsk->res_lock));
 
         // Response cannot be created. Instead of shutting down, just letting
         // the client know that the request is dropped.
-        if (rev->res == NULL)       
+        if (rsk->res == NULL)       
             continue;
 
-        if (rev->req->status == HTTP_NOT_SET || rev->req->status == HTTP_INTERNAL_SERVER_ERROR)
+        if (rsk->req->status == HTTP_NOT_SET || rsk->req->status == HTTP_INTERNAL_SERVER_ERROR)
         {
-            response_send_internal_server_error(rev->res);
+            response_send_internal_server_error(rsk->res);
             goto send_response;
         }
 
-        if (rev->req->status == HTTP_BAD_REQUEST)
+        if (rsk->req->status == HTTP_BAD_REQUEST)
         {
-            printf("%s\n", rev->req->path);
-            response_send_bad_request(rev->res);
+            printf("%s\n", rsk->req->path);
+            response_send_bad_request(rsk->res);
             goto send_response;
         }
         
-        pthread_rwlock_wrlock(&(rev->res->rwlock));
-        if (rev->res->accepts == NULL)
-            rev->res->accepts = http_require_accept(rev->req->headers);
-        pthread_rwlock_unlock(&(rev->res->rwlock));
+        pthread_rwlock_wrlock(&(rsk->res->rwlock));
+        if (rsk->res->accepts == NULL)
+            rsk->res->accepts = http_require_accept(rsk->req->headers);
+        pthread_rwlock_unlock(&(rsk->res->rwlock));
 
-        struct __route route = route_get_handler(rev->req->path);
+        struct __route route = route_get_handler(rsk->req->path);
 
         // If the route is not found, send 404
         if (route.status == HTTP_NOT_FOUND)
         {
-            response_send_not_found(rev->res, rev->req->path);
+            response_send_not_found(rsk->res, rsk->req->path);
             goto send_response;
         }
 
-        if ((rev->req->method & HTTP_METHOD_GET) == 1 && route.handler.get != NULL)
-            route.handler.get(rev->req, rev->res);
+        if ((rsk->req->method & HTTP_METHOD_GET) == 1 && route.handler.get != NULL)
+            route.handler.get(rsk->req, rsk->res);
 
-        else if ((rev->req->method & HTTP_METHOD_POST) == 1 && route.handler.post != NULL)
-            route.handler.post(rev->req, rev->res);
+        else if ((rsk->req->method & HTTP_METHOD_POST) == 1 && route.handler.post != NULL)
+            route.handler.post(rsk->req, rsk->res);
 
-        else if ((rev->req->method & HTTP_METHOD_HEAD) == 1 && route.handler.head != NULL)
-            route.handler.head(rev->req, rev->res);
+        else if ((rsk->req->method & HTTP_METHOD_HEAD) == 1 && route.handler.head != NULL)
+            route.handler.head(rsk->req, rsk->res);
 
-        else if ((rev->req->method & HTTP_METHOD_PUT) == 1 && route.handler.put != NULL)
-            route.handler.put(rev->req, rev->res);
+        else if ((rsk->req->method & HTTP_METHOD_PUT) == 1 && route.handler.put != NULL)
+            route.handler.put(rsk->req, rsk->res);
 
-        else if ((rev->req->method & HTTP_METHOD_DELETE) == 1 && route.handler.delete != NULL)
-            route.handler.delete(rev->req, rev->res);
+        else if ((rsk->req->method & HTTP_METHOD_DELETE) == 1 && route.handler.delete != NULL)
+            route.handler.delete(rsk->req, rsk->res);
 
         else
-            response_send_method_not_allowed(rev->res, rev->req->method, rev->req->path);
+            response_send_method_not_allowed(rsk->res, rsk->req->method, rsk->req->path);
 
 
     send_response:
         int status;
 
-        status = rsocket_mod(rev, EPOLLOUT);
+        status = revent_mod(rev, EPOLLOUT);
 
         if (status == ERROR)
-            rsocket_destroy(rev);
+            revent_destroy(rev);
     }
 
     return NULL;
