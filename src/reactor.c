@@ -5,6 +5,7 @@
 int _prepare_socket(char *host, const char *service);
 int _set_nonblocking(int fd);
 void *_handle_request(void * arg);
+void _handle_timer(struct reactor_event *rtm);
 
 void __reactor_accept(struct reactor *server, struct reactor_event *rev);
 
@@ -117,11 +118,22 @@ reactor_run(struct reactor *server)
             }
             else if (server->events[n].events & (EPOLLERR | EPOLLHUP))
             {
-                ret = rsocket_destroy(
-                    (struct reactor_socket *)server->events[n].data.ptr);
+                rev = (struct reactor_event *)(server->events[n].data.ptr);
+                printf("epoll err: ");
+
+                if (rev->flag == EVENT_TIMER)
+                {
+                    printf("timer\n");
+                    continue;
+                }
+
+                printf("socket\n");
+
+                ret = revent_destroy(
+                    (struct reactor_event *)server->events[n].data.ptr);
 
                 if (ret == ERROR)
-                    DIE("(reactor_run) rsocket_destroy");
+                    DIE("(reactor_run) revent_destroy");
 
                 server->events[n].data.ptr = NULL;
 
@@ -149,6 +161,8 @@ reactor_run(struct reactor *server)
                 if (rev->flag == EVENT_TIMER)
                 {
                     printf("timer\n");
+                    _handle_timer(rev);
+                    rev->data.rtm = NULL;
                     continue;
                 }
 

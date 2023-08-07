@@ -106,7 +106,7 @@ rsocket_destroy(struct reactor_socket *rev)
 }
 
 struct reactor_timer *
-rtimer_new(int epoll_fd, struct reactor_socket *rsk)
+rtimer_new(int epoll_fd, struct reactor_event *rsk)
 {
     int timer_fd;
     struct itimerspec its;
@@ -128,10 +128,10 @@ rtimer_new(int epoll_fd, struct reactor_socket *rsk)
 
     timerfd_settime(timer_fd, 0, &its, NULL);
 
-    rtm->fd       = timer_fd;
-    rtm->epoll_fd = epoll_fd;
-    rtm->timeout  = 10;
-    rtm->rsk      = rsk;
+    rtm->fd         = timer_fd;
+    rtm->epoll_fd   = epoll_fd;
+    rtm->timeout    = 10;
+    rtm->rev_socket = rsk;
 
     return rtm;
 }
@@ -227,12 +227,16 @@ revent_destroy(struct reactor_event *rev)
     if (rev == NULL)
         return ERROR;
 
-    int epoll_fd, fd;
-
-    __get_evt_fd(rev, &fd, &epoll_fd);
-
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL) == ERROR)
-        return ERROR;
+    if (rev->flag == EVENT_SOCKET)
+    {
+        rsocket_destroy(rev->data.rsk);
+        debug("destroyed socket\n");
+    }
+    else if (rev->flag == EVENT_TIMER)
+    {
+        rtimer_destroy(rev->data.rtm);
+        printf("destroyed timer\n");
+    }
 
     free(rev);
 

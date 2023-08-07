@@ -35,7 +35,7 @@ struct reactor_timer
     int epoll_fd;
     int timeout;
 
-    struct reactor_socket *rsk;
+    struct reactor_event *rev_socket;
 };
 
 typedef enum event_flag
@@ -69,7 +69,7 @@ int
 rsocket_destroy(struct reactor_socket *rev);
 
 struct reactor_timer *
-rtimer_new(int epoll_fd, struct reactor_socket *rsk);
+rtimer_new(int epoll_fd, struct reactor_event *rev_socket);
 
 int
 rtimer_add(struct reactor_timer *rtm);

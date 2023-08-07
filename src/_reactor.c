@@ -95,6 +95,18 @@ int _require_host_header(const char *value)
     return FAILURE;
 }
 
+void 
+_handle_timer(struct reactor_event *rtm)
+{
+    struct reactor_event *rev_sock = rtm->data.rtm->rev_socket;
+
+    printf("epollfd: %d\n", rev_sock->data.rsk->epoll_fd);
+    printf("fd: %d\n", rev_sock->data.rsk->fd);
+
+    revent_destroy(rev_sock);
+    revent_destroy(rtm);
+}
+
 void *
 _handle_request(void *arg)
 {

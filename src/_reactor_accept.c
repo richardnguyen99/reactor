@@ -16,6 +16,9 @@ __reactor_accept(struct reactor *server, struct reactor_event *rev)
     if (fd == -1)
         DIE("(reactor_run) accept");
 
+    printf("Accepted epollfd: %d\n", server->epollfd);
+    printf("Accepted fd: %d\n", fd);
+
     if (_set_nonblocking(fd) == ERROR)
         DIE("(reactor_run) _set_nonblocking");
 
@@ -26,7 +29,7 @@ __reactor_accept(struct reactor *server, struct reactor_event *rev)
     rev->data.rsk = rsk;
     rev->flag     = EVENT_SOCKET;
 
-    rtm = rtimer_new(server->epollfd, rsk);
+    rtm = rtimer_new(server->epollfd, rev);
     if (rtm == NULL)
         DIE("(reactor_run) rtimer_new");
 
