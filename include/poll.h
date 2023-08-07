@@ -25,6 +25,8 @@ struct reactor_socket
     struct request *req;
     struct response *res;
 
+    struct reactor_event *rev_timer;
+
     pthread_rwlock_t res_lock;
     pthread_rwlock_t req_lock;
 };
@@ -73,6 +75,9 @@ rtimer_new(int epoll_fd, struct reactor_event *rev_socket);
 
 int
 rtimer_add(struct reactor_timer *rtm);
+
+int
+rtimer_mod(struct reactor_timer *rtm, int timeout_sec);
 
 int
 rtimer_destroy(struct reactor_timer *rtm);

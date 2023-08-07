@@ -16,9 +16,6 @@ __reactor_accept(struct reactor *server, struct reactor_event *rev)
     if (fd == -1)
         DIE("(reactor_run) accept");
 
-    printf("Accepted epollfd: %d\n", server->epollfd);
-    printf("Accepted fd: %d\n", fd);
-
     if (_set_nonblocking(fd) == ERROR)
         DIE("(reactor_run) _set_nonblocking");
 
@@ -38,6 +35,7 @@ __reactor_accept(struct reactor *server, struct reactor_event *rev)
         DIE("(__reactor_run) revent_new(rtm)");
 
     rev_timer->data.rtm = rtm;
+    rsk->rev_timer      = rev_timer;
 
     ret = revent_add(rev);
     if (ret == ERROR)

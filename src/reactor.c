@@ -129,9 +129,11 @@ reactor_run(struct reactor *server)
 
                 printf("socket\n");
 
-                ret = revent_destroy(
-                    (struct reactor_event *)server->events[n].data.ptr);
+                ret = revent_destroy(rev);
+                if (ret == ERROR)
+                    DIE("(reactor_run) revent_destroy");
 
+                ret = revent_destroy(rev->data.rsk->rev_timer);
                 if (ret == ERROR)
                     DIE("(reactor_run) revent_destroy");
 
@@ -142,11 +144,20 @@ reactor_run(struct reactor *server)
 
             else if (server->events[n].events & EPOLLRDHUP)
             {
-                ret = rsocket_destroy(
-                    (struct reactor_socket *)server->events[n].data.ptr);
+                rev = (struct reactor_event *)(server->events[n].data.ptr);
+                printf("epoll err: ");
 
+                if (rev->flag == EVENT_TIMER)
+                {
+                    printf("timer\n");
+                    continue;
+                }
+
+                printf("socket\n");
+
+                ret = revent_destroy(rev);
                 if (ret == ERROR)
-                    DIE("(reactor_run) rsocket_destroy");
+                    DIE("(reactor_run) revent_destroy");
 
                 server->events[n].data.ptr = NULL;
 
@@ -166,10 +177,8 @@ reactor_run(struct reactor *server)
                     continue;
                 }
 
-                printf("socket\n");
                 rsk = rev->data.rsk;
-
-                printf("rsk: %p\n", *rsk);
+                printf("socket: %p\n", rsk);
 
                 if (rsk->req == NULL)
                     rsk->req = request_new();
@@ -178,6 +187,18 @@ reactor_run(struct reactor *server)
                     DIE("(reactor_run) request_new");
 
                 http_status = request_parse(rsk->req, rsk->fd);
+
+                // Disarm the timer if the request is parsed successfully
+                if (http_status == HTTP_SUCCESS)
+                {
+                    struct reactor_timer *rtm = rsk->rev_timer->data.rtm;
+                    debug("timer: %d\n", rtm->fd);
+
+                    if (rtimer_mod(rtm, 0) == ERROR)
+                        DIE("(reactor_run) rtimer_mod");
+
+                    debug("Disarmed timer on socket %p\n", rsk);
+                }
 
                 // Don't continue if the request processing is not ready
                 if (http_status == HTTP_READ_AGAIN)

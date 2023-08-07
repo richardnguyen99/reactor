@@ -150,6 +150,20 @@ rimter_add(struct reactor_timer *rtm)
 }
 
 int
+rtimer_mod(struct reactor_timer *rtm, int timeout_sec)
+{
+    struct itimerspec its;
+    memset(&its, 0, sizeof(struct itimerspec));
+    its.it_value.tv_sec  = timeout_sec;
+    its.it_value.tv_nsec = 0;
+
+    if (timerfd_settime(rtm->fd, 0, &its, NULL) == -1)
+        return ERROR;
+
+    return SUCCESS;
+}
+
+int
 rtimer_destroy(struct reactor_timer *rtm)
 {
     if (rtm == NULL)
@@ -230,11 +244,15 @@ revent_destroy(struct reactor_event *rev)
     if (rev->flag == EVENT_SOCKET)
     {
         rsocket_destroy(rev->data.rsk);
+        rev->data.rsk = NULL;
+
         debug("destroyed socket\n");
     }
     else if (rev->flag == EVENT_TIMER)
     {
         rtimer_destroy(rev->data.rtm);
+        rev->data.rtm = NULL;
+
         printf("destroyed timer\n");
     }
 
