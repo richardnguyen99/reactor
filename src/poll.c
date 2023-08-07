@@ -1,6 +1,6 @@
 #include "poll.h"
 
-void
+static inline void
 __get_evt_fd(struct reactor_event *rev, int *fd, int *epoll_fd)
 {
 
@@ -191,6 +191,8 @@ revent_new(int epoll_fd, evflag_t flag)
 
     rev->flag = flag;
     memset(&(rev->data), 0, sizeof(evptr_t));
+
+    rev->__refcnt = 1;
 
     return rev;
 }

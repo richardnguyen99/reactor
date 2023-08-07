@@ -129,6 +129,10 @@ reactor_run(struct reactor *server)
 
                 printf("socket\n");
 
+                printf("refcnt: %ld\n", rev->__refcnt);
+                if (rev->__refcnt > 0)
+                    continue;
+
                 ret = revent_destroy(rev);
                 if (ret == ERROR)
                     DIE("(reactor_run) revent_destroy");
@@ -218,6 +222,8 @@ reactor_run(struct reactor *server)
                 if (sem_post(&(server->pool->full)) == ERROR)
                     DIE("(reactor_run) sem_post");
 
+                rev->__refcnt++;
+
             wait_to_read:
                 continue;
             }
@@ -287,10 +293,16 @@ reactor_run(struct reactor *server)
                 }
 
             destroy_reactor_socket:
-                if (rsocket_destroy(rsk) == ERROR)
-                    DIE("(reactor_run) rsocket_destroy");
+                rev->__refcnt--;
 
-                server->events[n].data.ptr = NULL;
+                if (rev->__refcnt > 0)
+                    revent_mod(rev, EPOLLIN);
+                else
+                {
+                    ret = revent_destroy(rev);
+                    if (ret == ERROR)
+                        DIE("(reactor_run) revent_destroy");
+                }
 
             wait_to_send:
                 continue;
