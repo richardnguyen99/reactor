@@ -188,24 +188,21 @@ reactor_run(struct reactor *server)
 
                 http_status = request_parse(rsk->req, rsk->fd);
 
-                // Disarm the timer if the request is parsed successfully
-                if (http_status == HTTP_SUCCESS)
-                {
-                    struct reactor_timer *rtm = rsk->rev_timer->data.rtm;
-                    debug("timer: %d\n", rtm->fd);
-
-                    if (rtimer_mod(rtm, 0) == ERROR)
-                        DIE("(reactor_run) rtimer_mod");
-
-                    debug("Disarmed timer on socket %p\n", rsk);
-                }
-
                 // Don't continue if the request processing is not ready
                 if (http_status == HTTP_READ_AGAIN)
                     goto wait_to_read;
 
                 if (http_status == HTTP_ERROR)
                     DIE("(reactor_run) http_request");
+
+                // Disarm the timer if the request is parsed successfully
+                struct reactor_timer *rtm = rsk->rev_timer->data.rtm;
+                debug("timer: %d\n", rtm->fd);
+
+                if (rtimer_mod(rtm, 0) == ERROR)
+                    DIE("(reactor_run) rtimer_mod");
+
+                debug("Disarmed timer on socket %p\n", rsk);
 
                 // Start to put the task to the queue for thread pool
                 if (sem_wait(&(server->pool->empty)) == ERROR)
@@ -265,13 +262,15 @@ reactor_run(struct reactor *server)
                     "HTTP/1.1 %d %s\r\n"
                     "Content-Type: %s\r\n"
                     "Content-Length: %ld\r\n"
-                    "Connection: keep-alive\r\n"
+                    "Connection: %s\r\n"
                     "Server: reactor/%s\r\n"
                     "\r\n"
                     "%s",
                     rsk->res->status, GET_HTTP_MSG(rsk->res->status),
                     GET_HTTP_CONTENT_TYPE(rsk->res->content_type),
-                    rsk->res->body_len, REACTOR_VERSION, rsk->res->body);
+                    rsk->res->body_len,
+                    rsk->res->status == 200 ? "keep-alive" : "close",
+                    REACTOR_VERSION, rsk->res->body);
 
                 for (; total_sent < content_length;)
                 {

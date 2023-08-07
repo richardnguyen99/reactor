@@ -98,10 +98,26 @@ int _require_host_header(const char *value)
 void 
 _handle_timer(struct reactor_event *rtm)
 {
+    int ret;
     struct reactor_event *rev_sock = rtm->data.rtm->rev_socket;
+    struct reactor_socket *rsk = rev_sock->data.rsk;
+    struct response *res;
 
-    revent_destroy(rev_sock);
-    revent_destroy(rtm);
+    if (rsk->res == NULL)
+        rsk->res = response_new();
+
+    res = rsk->res;
+
+    response_status(res, HTTP_REQUEST_TIMEOUT);
+    response_text(res, "408: Request timeout\n", 24);
+
+    ret = revent_mod(rev_sock, EPOLLOUT);
+
+    if (ret == ERROR)
+    {
+        revent_destroy(rev_sock);
+        revent_destroy(rtm);
+    }
 }
 
 void *
