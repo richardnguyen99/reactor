@@ -19,8 +19,8 @@ __get_evt_fd(struct reactor_event *rev, int *fd, int *epoll_fd)
 struct reactor_socket *
 rsocket_new(int epoll_fd, int fd)
 {
-    struct reactor_socket *rev =
-        (struct reactor_socket *)malloc(sizeof(struct reactor_socket));
+    struct reactor_socket *rev;
+    rev = (struct reactor_socket *)malloc(sizeof(struct reactor_socket));
 
     if (rev == NULL)
         return NULL;
