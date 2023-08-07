@@ -11,7 +11,7 @@
 #ifndef _REACTOR_REQUEST_H_
 #define _REACTOR_REQUEST_H_ 1
 
-#include "http.h"
+#include "httpdef.h"
 
 struct request
 {

@@ -11,9 +11,7 @@
 #ifndef _REACTOR_RESPONSE_H_
 #define _REACTOR_RESPONSE_H_ 1
 
-#include "defs.h"
-#include "dict.h"
-#include "http.h"
+#include "httpdef.h"
 
 struct response
 {

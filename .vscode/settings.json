@@ -28,7 +28,8 @@
         "response.h": "c",
         "cstdint": "cpp",
         "route.h": "c",
-        "dict.h": "c"
+        "dict.h": "c",
+        "httpdef.h": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
 }

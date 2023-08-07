@@ -225,7 +225,7 @@ reactor_run(struct reactor *server)
 
                 rev->__refcnt++;
 
-                __reactor_in(server, rev);
+                // __reactor_in(server, rev);
 
             wait_to_read:
                 continue;
