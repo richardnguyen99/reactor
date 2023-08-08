@@ -124,11 +124,6 @@ void *
 _handle_request(void *arg)
 {
     struct thread_pool *pool = (struct thread_pool *)arg;
-    int http_status, ffd;
-    char *buf, *content_type;
-    struct stat st;
-    size_t len;
-
 
     for (;;)
     {
@@ -137,84 +132,84 @@ _handle_request(void *arg)
         if (pthread_mutex_lock(&(pool->lock)) == -1)
             DIE("(handle_request) pthread_mutex_lock");
 
-        struct reactor_event *rev = rbuffer_pop(pool->buffer);
+        struct thread_task *task = rbuffer_pop(pool->buffer);
 
         if (pthread_mutex_unlock(&(pool->lock)) == -1)
             DIE("(handle_request) pthread_mutex_unlock");
         if (sem_post(&(pool->empty)) == -1)
             DIE("(handle_request) sem_post");
 
-        struct reactor_socket *rsk = rev->data.rsk;
+        // struct reactor_socket *rsk = rev->data.rsk;
 
-        if (rsk == NULL)
-            continue;
+        // if (rsk == NULL)
+            // continue;
         
-        if (rsk->req == NULL)
-            continue;
+        // if (rsk->req == NULL)
+            // continue;
 
-        pthread_rwlock_wrlock(&(rsk->res_lock));
-        if (rsk->res == NULL)
-            rsk->res = response_new();
-        pthread_rwlock_unlock(&(rsk->res_lock));
+        // pthread_rwlock_wrlock(&(rsk->res_lock));
+        // if (rsk->res == NULL)
+            // rsk->res = response_new();
+        // pthread_rwlock_unlock(&(rsk->res_lock));
 
-        // Response cannot be created. Instead of shutting down, just letting
-        // the client know that the request is dropped.
-        if (rsk->res == NULL)       
-            continue;
+        // // Response cannot be created. Instead of shutting down, just letting
+        // // the client know that the request is dropped.
+        // if (rsk->res == NULL)       
+            // continue;
 
-        if (rsk->req->status == HTTP_NOT_SET || rsk->req->status == HTTP_INTERNAL_SERVER_ERROR)
-        {
-            response_send_internal_server_error(rsk->res);
-            goto send_response;
-        }
+        // if (rsk->req->status == HTTP_NOT_SET || rsk->req->status == HTTP_INTERNAL_SERVER_ERROR)
+        // {
+            // response_send_internal_server_error(rsk->res);
+            // goto send_response;
+        // }
 
-        if (rsk->req->status == HTTP_BAD_REQUEST)
-        {
-            printf("%s\n", rsk->req->path);
-            response_send_bad_request(rsk->res);
-            goto send_response;
-        }
+        // if (rsk->req->status == HTTP_BAD_REQUEST)
+        // {
+            // printf("%s\n", rsk->req->path);
+            // response_send_bad_request(rsk->res);
+            // goto send_response;
+        // }
         
-        pthread_rwlock_wrlock(&(rsk->res->rwlock));
-        if (rsk->res->accepts == NULL)
-            rsk->res->accepts = http_require_accept(rsk->req->headers);
-        pthread_rwlock_unlock(&(rsk->res->rwlock));
+        // pthread_rwlock_wrlock(&(rsk->res->rwlock));
+        // if (rsk->res->accepts == NULL)
+            // rsk->res->accepts = http_require_accept(rsk->req->headers);
+        // pthread_rwlock_unlock(&(rsk->res->rwlock));
 
-        struct __route route = route_get_handler(rsk->req->path);
+        // struct __route route = route_get_handler(rsk->req->path);
 
-        // If the route is not found, send 404
-        if (route.status == HTTP_NOT_FOUND)
-        {
-            response_send_not_found(rsk->res, rsk->req->path);
-            goto send_response;
-        }
+        // // If the route is not found, send 404
+        // if (route.status == HTTP_NOT_FOUND)
+        // {
+            // response_send_not_found(rsk->res, rsk->req->path);
+            // goto send_response;
+        // }
 
-        if ((rsk->req->method & HTTP_METHOD_GET) == 1 && route.handler.get != NULL)
-            route.handler.get(rsk->req, rsk->res);
+        // if ((rsk->req->method & HTTP_METHOD_GET) == 1 && route.handler.get != NULL)
+            // route.handler.get(rsk->req, rsk->res);
 
-        else if ((rsk->req->method & HTTP_METHOD_POST) == 1 && route.handler.post != NULL)
-            route.handler.post(rsk->req, rsk->res);
+        // else if ((rsk->req->method & HTTP_METHOD_POST) == 1 && route.handler.post != NULL)
+            // route.handler.post(rsk->req, rsk->res);
 
-        else if ((rsk->req->method & HTTP_METHOD_HEAD) == 1 && route.handler.head != NULL)
-            route.handler.head(rsk->req, rsk->res);
+        // else if ((rsk->req->method & HTTP_METHOD_HEAD) == 1 && route.handler.head != NULL)
+            // route.handler.head(rsk->req, rsk->res);
 
-        else if ((rsk->req->method & HTTP_METHOD_PUT) == 1 && route.handler.put != NULL)
-            route.handler.put(rsk->req, rsk->res);
+        // else if ((rsk->req->method & HTTP_METHOD_PUT) == 1 && route.handler.put != NULL)
+            // route.handler.put(rsk->req, rsk->res);
 
-        else if ((rsk->req->method & HTTP_METHOD_DELETE) == 1 && route.handler.delete != NULL)
-            route.handler.delete(rsk->req, rsk->res);
+        // else if ((rsk->req->method & HTTP_METHOD_DELETE) == 1 && route.handler.delete != NULL)
+            // route.handler.delete(rsk->req, rsk->res);
 
-        else
-            response_send_method_not_allowed(rsk->res, rsk->req->method, rsk->req->path);
+        // else
+            // response_send_method_not_allowed(rsk->res, rsk->req->method, rsk->req->path);
 
 
-    send_response:
-        int status;
+    // send_response:
+        // int status;
 
-        status = revent_mod(rev, EPOLLOUT);
+        // status = revent_mod(rev, EPOLLOUT);
 
-        if (status == ERROR)
-            revent_destroy(rev);
+        // if (status == ERROR)
+            // revent_destroy(rev);
     }
 
     return NULL;

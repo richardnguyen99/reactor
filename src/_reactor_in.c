@@ -39,7 +39,7 @@ __reactor_in(struct reactor *server, struct reactor_event *rev)
     if (pthread_mutex_lock(&(server->pool->lock)) == ERROR)
         DIE("(reactor_run) pthread_mutex_lock");
 
-    if (rbuffer_append(server->pool->buffer, rev) == ERROR)
+    if (rbuffer_append(server->pool->buffer, task) == ERROR)
         DIE("(reactor_run) rbuffer_push");
 
     if (pthread_mutex_unlock(&(server->pool->lock)) == ERROR)

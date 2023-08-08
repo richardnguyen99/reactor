@@ -13,6 +13,7 @@
 
 #include "defs.h"
 #include "poll.h"
+#include "threads.h"
 
 struct ring_buffer
 {
@@ -28,17 +29,17 @@ struct ring_buffer
     /* Index position to dequeue an existing fd */
     size_t out;
 
-    /* Array of reactor events */
-    struct reactor_event **events;
+    /* Array of http tasks */
+    struct thread_task **tasks;
 };
 
 struct ring_buffer *
 rbuffer_new(size_t cap);
 
 size_t
-rbuffer_append(struct ring_buffer *buffer, struct reactor_event *rev);
+rbuffer_append(struct ring_buffer *buffer, struct thread_task *task);
 
-struct reactor_event *
+struct thread_task *
 rbuffer_pop(struct ring_buffer *buffer);
 
 void
