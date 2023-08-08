@@ -31,6 +31,8 @@ rsocket_new(int epoll_fd, int fd)
     rev->req = NULL;
     rev->res = NULL;
 
+    memset(&(rev->client), 0, sizeof(struct sockaddr_in));
+
     pthread_rwlock_init(&(rev->req_lock), NULL);
     pthread_rwlock_init(&(rev->res_lock), NULL);
 
@@ -191,8 +193,6 @@ revent_new(int epoll_fd, evflag_t flag)
 
     rev->flag = flag;
     memset(&(rev->data), 0, sizeof(evptr_t));
-
-    rev->__refcnt = 1;
 
     return rev;
 }

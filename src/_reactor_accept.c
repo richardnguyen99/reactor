@@ -10,8 +10,10 @@ __reactor_accept(struct reactor *server, struct reactor_event *rev)
     struct reactor_socket *rsk;
     struct reactor_timer *rtm;
     struct reactor_event *rev_timer;
+    struct sockaddr_in addr;
+    socklen_t len = sizeof(addr);
 
-    fd = accept(server->server_fd, NULL, NULL);
+    fd = accept(server->server_fd, (struct sockaddr *)&addr, &len);
 
     if (fd == -1)
         DIE("(reactor_run) accept");
@@ -34,19 +36,19 @@ __reactor_accept(struct reactor *server, struct reactor_event *rev)
     if (rev_timer == NULL)
         DIE("(__reactor_run) revent_new(rtm)");
 
+    rev_timer->data.rtm = rtm;
+
+    rsk->rev_timer = rev_timer;
+    rsk->client    = addr;
+
     rev->data.rsk = rsk;
     rev->flag     = EVENT_SOCKET;
-
-    rev_timer->data.rtm = rtm;
-    rsk->rev_timer      = rev_timer;
 
     ret = revent_add(rev);
     if (ret == ERROR)
         DIE("(__reactor_run) revent_add(rsk)");
-    printf("New connection: %p\n", rev);
 
     ret = revent_add(rev_timer);
     if (ret == ERROR)
         DIE("(__reactor_run) revent_add(rtm)");
-    printf("New timer: %p\n", rev_timer);
 }

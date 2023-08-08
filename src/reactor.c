@@ -109,30 +109,29 @@ reactor_run(struct reactor *server)
                 rev = (struct reactor_event *)server->events[n].data.ptr;
 
                 __reactor_accept(server, rev);
+
+                debug("New connection from %s:%ld\n",
+                      inet_ntoa(rev->data.rsk->client.sin_addr),
+                      ntohs(rev->data.rsk->client.sin_port));
             }
+
             else if (((struct reactor_socket *)(server->events[n].data.ptr))
                          ->fd == timer_fd)
             {
-
                 rsocket_destroy(
                     (struct reactor_socket *)server->events[n].data.ptr);
 
                 continue;
             }
+
             else if (server->events[n].events & (EPOLLERR | EPOLLHUP))
             {
                 rev = (struct reactor_event *)(server->events[n].data.ptr);
-                printf("epoll err: ");
-
                 if (rev->flag == EVENT_TIMER)
                 {
-                    printf("timer\n");
                     continue;
                 }
 
-                printf("socket\n");
-
-                printf("refcnt: %ld\n", rev->__refcnt);
                 if (rev->__refcnt > 0)
                     continue;
 
@@ -170,6 +169,7 @@ reactor_run(struct reactor *server)
 
                 continue;
             }
+
             // Some sockets have some data and are ready to read
             else if (server->events[n].events & EPOLLIN)
             {

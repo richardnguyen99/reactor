@@ -29,7 +29,9 @@
         "cstdint": "cpp",
         "route.h": "c",
         "dict.h": "c",
-        "httpdef.h": "c"
+        "httpdef.h": "c",
+        "in.h": "c",
+        "uintn-identity.h": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
 }

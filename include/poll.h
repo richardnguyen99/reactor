@@ -22,6 +22,8 @@ struct reactor_socket
     char *raw;
     uint64_t len;
 
+    struct sockaddr_in client;
+
     struct request *req;
     struct response *res;
 
