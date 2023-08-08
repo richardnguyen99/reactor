@@ -126,3 +126,95 @@ http_require_accept(struct dict *headers)
 
     return accept_store;
 }
+
+struct http_obj *
+http_new()
+{
+    struct http_obj *http = NULL;
+    http                  = (struct http_obj *)malloc(sizeof(struct http_obj));
+
+    if (http == NULL)
+        return NULL;
+
+    http->req = NULL;
+    http->res = NULL;
+
+    return http;
+}
+
+int
+http_request_line(struct http_obj *http)
+{
+    ssize_t nread;
+    const size_t len = BUFSIZ + 1;
+    char buf[len];
+    int status;
+
+    nread = read_line(http->cfd, buf, len, MSG_DONTWAIT);
+
+    if (nread == -1 && errno == EAGAIN)
+        return HTTP_READ_AGAIN;
+
+    if (nread == -1)
+        return HTTP_INTERNAL_SERVER_ERROR;
+
+    if (nread == 0)
+        return HTTP_BAD_REQUEST;
+
+    // Parse the request line
+    status = request_line(http->req, buf, len);
+
+    debug("%s %s %s\n", GET_HTTP_METHOD(http->req->method), http->req->path,
+          http->req->version);
+
+    return status;
+}
+
+int
+http_request_headers(struct http_obj *http)
+{
+    ssize_t nread;
+    const size_t len = BUFSIZ + 1;
+    char buf[len];
+    int status;
+
+    for (;;)
+    {
+        nread = read_line(http->cfd, buf, BUFSIZ, MSG_DONTWAIT);
+
+        if (nread == -1 && errno == EAGAIN)
+            return HTTP_READ_AGAIN;
+
+        if (nread == -1)
+            return HTTP_INTERNAL_SERVER_ERROR;
+
+        if (nread == 0)
+            break;
+
+        if (request_header(http->req, buf, len) == ERROR)
+            return HTTP_BAD_REQUEST;
+    }
+
+    return HTTP_SUCCESS;
+}
+
+void
+http_response_status(struct http_obj *http, int status)
+{
+    http->res->status = status;
+}
+
+void
+http_free(struct http_obj *http)
+{
+    if (http == NULL)
+        return;
+
+    if (http->req != NULL)
+        request_free(http->req);
+
+    if (http->res != NULL)
+        response_free(http->res);
+
+    free(http);
+}

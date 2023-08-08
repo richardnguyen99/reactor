@@ -28,9 +28,6 @@ rsocket_new(int epoll_fd, int fd)
     rev->fd       = fd;
     rev->epoll_fd = epoll_fd;
 
-    rev->req = NULL;
-    rev->res = NULL;
-
     memset(&(rev->client), 0, sizeof(struct sockaddr_in));
 
     pthread_rwlock_init(&(rev->req_lock), NULL);
@@ -81,23 +78,23 @@ rsocket_destroy(struct reactor_socket *rev)
 
     printf("Closed fd: %d\n", rev->fd);
 
-    if (rev->raw != NULL)
-    {
-        free(rev->raw);
-        rev->raw = NULL;
-    }
+    // if (rev->raw != NULL)
+    // {
+    // free(rev->raw);
+    // rev->raw = NULL;
+    // }
 
-    if (rev->req != NULL)
-    {
-        request_free(rev->req);
-        rev->req = NULL;
-    }
+    // if (rev->req != NULL)
+    // {
+    // request_free(rev->req);
+    // rev->req = NULL;
+    // }
 
-    if (rev->res != NULL)
-    {
-        response_free(rev->res);
-        rev->res = NULL;
-    }
+    // if (rev->res != NULL)
+    // {
+    // response_free(rev->res);
+    // rev->res = NULL;
+    // }
 
     pthread_rwlock_destroy(&(rev->req_lock));
     pthread_rwlock_destroy(&(rev->res_lock));

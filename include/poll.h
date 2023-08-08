@@ -19,13 +19,9 @@ struct reactor_socket
 {
     int fd;
     int epoll_fd;
-    char *raw;
     uint64_t len;
 
     struct sockaddr_in client;
-
-    struct request *req;
-    struct response *res;
 
     struct reactor_event *rev_timer;
     struct reactor_event *rev_cnnct;

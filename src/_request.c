@@ -46,8 +46,6 @@ __set_version(char *version)
 int
 _get_start_line(struct request *req, char *buf)
 {
-    printf("_get_start_line: %s\n", buf);
-
     if (buf == NULL)
         return HTTP_BAD_REQUEST;
 

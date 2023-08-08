@@ -39,6 +39,12 @@ request_new();
 int
 request_parse(struct request *req, int fd);
 
+int
+request_line(struct request *req, const char *buf, const size_t len);
+
+int
+request_header(struct request *req, const char *buf, const size_t len);
+
 void
 request_free(struct request *request);
 

@@ -103,7 +103,7 @@ main(int argc, char *argv[])
     // Load the server configuration into the server instance
     reactor_load(server);
 
-    debug("Listening on %s:%d\n", server->ip, server->port.number);
+    debug("Listening on %s:%d\n\n", server->ip, server->port.number);
 
     // Boot the server instance
     if ((status = reactor_boot(server)) != SUCCESS)

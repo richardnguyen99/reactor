@@ -103,6 +103,8 @@ reactor_run(struct reactor *server)
         {
             if (server->events[n].data.fd == server->server_fd)
             {
+
+                debug("Accept new connection\n");
                 server->events[n].data.ptr =
                     revent_new(server->epollfd, EVENT_SOCKET);
 
@@ -110,7 +112,7 @@ reactor_run(struct reactor *server)
 
                 __reactor_accept(server, rev);
 
-                debug("New connection from %s:%ld\n",
+                debug("New connection from %s:%ld\n\n",
                       inet_ntoa(rev->data.rsk->client.sin_addr),
                       ntohs(rev->data.rsk->client.sin_port));
             }
@@ -128,9 +130,7 @@ reactor_run(struct reactor *server)
             {
                 rev = (struct reactor_event *)(server->events[n].data.ptr);
                 if (rev->flag == EVENT_TIMER)
-                {
                     continue;
-                }
 
                 if (rev->__refcnt > 0)
                     continue;
@@ -151,15 +151,9 @@ reactor_run(struct reactor *server)
             else if (server->events[n].events & EPOLLRDHUP)
             {
                 rev = (struct reactor_event *)(server->events[n].data.ptr);
-                printf("epoll err: ");
 
                 if (rev->flag == EVENT_TIMER)
-                {
-                    printf("timer\n");
                     continue;
-                }
-
-                printf("socket\n");
 
                 ret = revent_destroy(rev);
                 if (ret == ERROR)
@@ -173,104 +167,92 @@ reactor_run(struct reactor *server)
             // Some sockets have some data and are ready to read
             else if (server->events[n].events & EPOLLIN)
             {
-                printf("epoll in: ");
                 rev = (struct reactor_event *)(server->events[n].data.ptr);
 
                 if (rev->flag == EVENT_TIMER)
                 {
-                    printf("timer\n");
                     _handle_timer(rev);
                     rev->data.rtm = NULL;
                     continue;
                 }
 
-                rsk = rev->data.rsk;
-                printf("socket: %p\n", rsk);
-
                 __reactor_in(server, rev);
 
-            wait_to_read:
-                continue;
-            }
+                // wait_to_read:
+                // continue;
+                // }
 
-            // Some sockets wants to send data out
-            else if (server->events[n].events & EPOLLOUT)
-            {
-                debug("epoll out: ");
-                int status = 0;
-                rev = (struct reactor_event *)(server->events[n].data.ptr);
+                // // Some sockets wants to send data out
+                // else if (server->events[n].events & EPOLLOUT)
+                // {
+                // int status = 0;
+                // rev = (struct reactor_event *)(server->events[n].data.ptr);
 
-                if (rev->flag == EVENT_TIMER)
-                {
-                    debug("timer\n");
-                    continue;
-                }
+                // if (rev->flag == EVENT_TIMER)
+                // continue;
 
-                debug("socket\n");
+                // rsk = rev->data.rsk;
 
-                rsk = rev->data.rsk;
-                printf("rsk: %p\n", rsk);
+                // nsent      = 0;
+                // total_sent = 0;
 
-                nsent      = 0;
-                total_sent = 0;
+                // if (rsk->res->body_len > BUFSIZ)
+                // {
+                // rsk->res->__chunked_state = 0;
+                // status = response_send_chunked(rsk->res, rsk->fd);
 
-                if (rsk->res->body_len > BUFSIZ)
-                {
-                    rsk->res->__chunked_state = 0;
-                    status = response_send_chunked(rsk->res, rsk->fd);
+                // if (status == EAGAIN)
+                // goto wait_to_send;
 
-                    if (status == EAGAIN)
-                        goto wait_to_send;
+                // if (status == EPIPE)
+                // goto destroy_reactor_socket;
 
-                    if (status == EPIPE)
-                        goto destroy_reactor_socket;
+                // goto destroy_reactor_socket;
+                // }
 
-                    goto destroy_reactor_socket;
-                }
+                // content_length = (size_t)snprintf(
+                // msg, BUFSIZ,
+                // "HTTP/1.1 %d %s\r\n"
+                // "Content-Type: %s\r\n"
+                // "Content-Length: %ld\r\n"
+                // "Connection: %s\r\n"
+                // "Server: reactor/%s\r\n"
+                // "\r\n"
+                // "%s",
+                // rsk->res->status, GET_HTTP_MSG(rsk->res->status),
+                // GET_HTTP_CONTENT_TYPE(rsk->res->content_type),
+                // rsk->res->body_len,
+                // rsk->res->status == 200 ? "keep-alive" : "close",
+                // REACTOR_VERSION, rsk->res->body);
 
-                content_length = (size_t)snprintf(
-                    msg, BUFSIZ,
-                    "HTTP/1.1 %d %s\r\n"
-                    "Content-Type: %s\r\n"
-                    "Content-Length: %ld\r\n"
-                    "Connection: %s\r\n"
-                    "Server: reactor/%s\r\n"
-                    "\r\n"
-                    "%s",
-                    rsk->res->status, GET_HTTP_MSG(rsk->res->status),
-                    GET_HTTP_CONTENT_TYPE(rsk->res->content_type),
-                    rsk->res->body_len,
-                    rsk->res->status == 200 ? "keep-alive" : "close",
-                    REACTOR_VERSION, rsk->res->body);
+                // for (; total_sent < content_length;)
+                // {
+                // nsent = send(rsk->fd, msg + total_sent,
+                // content_length - total_sent, MSG_DONTWAIT);
 
-                for (; total_sent < content_length;)
-                {
-                    nsent = send(rsk->fd, msg + total_sent,
-                                 content_length - total_sent, MSG_DONTWAIT);
+                // if (nsent == -1 && errno == EAGAIN)
+                // goto wait_to_send;
 
-                    if (nsent == -1 && errno == EAGAIN)
-                        goto wait_to_send;
+                // if (nsent == -1)
+                // DIE("(reactor_run) send");
 
-                    if (nsent == -1)
-                        DIE("(reactor_run) send");
+                // total_sent += (size_t)nsent;
+                // }
 
-                    total_sent += (size_t)nsent;
-                }
+                // destroy_reactor_socket:
+                // rev->__refcnt--;
 
-            destroy_reactor_socket:
-                rev->__refcnt--;
+                // if (rev->__refcnt > 0)
+                // revent_mod(rev, EPOLLIN);
+                // else
+                // {
+                // ret = revent_destroy(rev);
+                // if (ret == ERROR)
+                // DIE("(reactor_run) revent_destroy");
+                // }
 
-                if (rev->__refcnt > 0)
-                    revent_mod(rev, EPOLLIN);
-                else
-                {
-                    ret = revent_destroy(rev);
-                    if (ret == ERROR)
-                        DIE("(reactor_run) revent_destroy");
-                }
-
-            wait_to_send:
-                continue;
+                // wait_to_send:
+                // continue;
             }
         }
     }

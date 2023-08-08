@@ -103,13 +103,13 @@ _handle_timer(struct reactor_event *rtm)
     struct reactor_socket *rsk = rev_sock->data.rsk;
     struct response *res;
 
-    if (rsk->res == NULL)
-        rsk->res = response_new();
+    //if (rsk->res == NULL)
+        //rsk->res = response_new();
 
-    res = rsk->res;
+    //res = rsk->res;
 
-    response_status(res, HTTP_REQUEST_TIMEOUT);
-    response_text(res, "408: Request timeout\n", 24);
+    //response_status(res, HTTP_REQUEST_TIMEOUT);
+    //response_text(res, "408: Request timeout\n", 24);
 
     ret = revent_mod(rev_sock, EPOLLOUT);
 
@@ -124,6 +124,13 @@ void *
 _handle_request(void *arg)
 {
     struct thread_pool *pool = (struct thread_pool *)arg;
+    struct thread_task *task;
+    struct reactor_sock *rsk;
+    struct request *req;
+    struct response *res;
+    struct http_obj *http;
+
+    int status;
 
     for (;;)
     {
@@ -132,14 +139,37 @@ _handle_request(void *arg)
         if (pthread_mutex_lock(&(pool->lock)) == -1)
             DIE("(handle_request) pthread_mutex_lock");
 
-        struct thread_task *task = rbuffer_pop(pool->buffer);
+        task = rbuffer_pop(pool->buffer);
 
         if (pthread_mutex_unlock(&(pool->lock)) == -1)
             DIE("(handle_request) pthread_mutex_unlock");
         if (sem_post(&(pool->empty)) == -1)
             DIE("(handle_request) sem_post");
 
-        // struct reactor_socket *rsk = rev->data.rsk;
+        task->http = http_new(task->rev, task->server);
+        req = request_new();
+        res = response_new();
+
+        if (http == NULL || req == NULL || res == NULL)
+        {
+            status = HTTP_INTERNAL_SERVER_ERROR;
+            goto send_response;
+        }
+
+        http = task->http;
+        http->req = req;
+        http->res = res;
+        http->cfd = task->rev->data.rsk->fd;
+
+        // Parse the request line
+        status = http_request_line(http);
+        if (status != HTTP_SUCCESS)
+            goto send_response;
+
+        // Parse the request headers
+        status = http_request_headers(http);
+        if (status != HTTP_SUCCESS)
+            goto send_response;
 
         // if (rsk == NULL)
             // continue;
@@ -202,6 +232,17 @@ _handle_request(void *arg)
         // else
             // response_send_method_not_allowed(rsk->res, rsk->req->method, rsk->req->path);
 
+    send_response:
+        http_response_status(http, status);
+
+    free_http:
+        if (http != NULL)
+            http_free(http);
+
+        req = NULL;
+        res = NULL;
+
+    
 
     // send_response:
         // int status;

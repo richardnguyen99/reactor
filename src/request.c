@@ -118,6 +118,18 @@ read_header:
     return HTTP_SUCCESS;
 }
 
+int
+request_line(struct request *req, const char *buf, const size_t len)
+{
+    return _get_start_line(req, (char *)buf);
+}
+
+int
+request_header(struct request *req, const char *buf, const size_t len)
+{
+    return _get_header(req->headers, (char *)buf);
+}
+
 void
 request_free(struct request *request)
 {

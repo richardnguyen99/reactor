@@ -24,7 +24,13 @@
 void
 __reactor_in(struct reactor *server, struct reactor_event *rev)
 {
-    debug("epollin socket\n");
+    debug("\
+===================================EPOLLIN======================================\n\
+Client: %s:%d\n\
+Socket: %d\n\
+\n",
+          inet_ntoa(rev->data.rsk->client.sin_addr),
+          ntohs(rev->data.rsk->client.sin_port), rev->data.rsk->fd);
 
     int s;
     struct thread_task *task;
@@ -46,8 +52,6 @@ __reactor_in(struct reactor *server, struct reactor_event *rev)
         DIE("(reactor_run) pthread_mutex_unlock");
     if (sem_post(&(server->pool->full)) == ERROR)
         DIE("(reactor_run) sem_post");
-
-    // rev->__refcnt++;
 
     return;
 }

@@ -14,8 +14,6 @@
 #include "defs.h"
 #include "http.h"
 #include "poll.h"
-#include "request.h"
-#include "response.h"
 #include "threads.h"
 #include "util.h"
 
