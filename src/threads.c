@@ -1,5 +1,20 @@
 #include "threads.h"
 
+struct thread_task *
+thread_task_new(struct reactor *server, struct reactor_event *rev)
+{
+    struct thread_task *task =
+        (struct thread_task *)malloc(sizeof(struct thread_task));
+
+    if (task == NULL)
+        return NULL;
+
+    task->server = server;
+    task->rev    = rev;
+
+    return task;
+}
+
 struct thread_pool *
 pool_new(size_t no_threads, size_t buf_size, thread_func func)
 {

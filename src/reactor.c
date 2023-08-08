@@ -8,7 +8,9 @@ void *_handle_request(void * arg);
 void _handle_timer(struct reactor_event *rtm);
 
 void __reactor_accept(struct reactor *server, struct reactor_event *rev);
-extern inline void __reactor_in(struct reactor *server, struct reactor_event *rev);
+
+extern inline 
+void __reactor_in(struct reactor *server, struct reactor_event *rev);
 
 // clang-format on
 

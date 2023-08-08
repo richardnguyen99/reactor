@@ -13,6 +13,9 @@
 
 #include "httpdef.h"
 
+struct reactor;
+struct reactor_event;
+
 struct request
 {
     int method;
@@ -25,6 +28,9 @@ struct request
     size_t cap;
 
     struct dict *headers;
+
+    struct reactor *__server;
+    struct reactor_event *__rev;
 };
 
 struct request *

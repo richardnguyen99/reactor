@@ -17,6 +17,10 @@
 
 typedef void *(*thread_func)(void *arg);
 
+struct http_obj;
+struct reactor_event;
+struct reactor;
+
 struct thread_pool
 {
     /* Number of threads in this thread pool */
@@ -42,6 +46,26 @@ struct thread_pool
     /* Function pointer to the thread function */
     thread_func func;
 };
+
+/* Task object used by the main thread (event loop) to produce a task for worker
+ * threads to work. A task object must be pushed into a blocking queue. */
+struct thread_task
+{
+    /* Reference to the server instance. Information about server can be found
+     * here */
+    struct reactor *server;
+
+    /* Reference to the event and the client instance. Information about the
+     * server can be found here */
+    struct reactor_event *rev;
+
+    /* The HTTP object containing request and response, both of which is handled
+     * by one of the worker thread in the thread pool */
+    struct http_obj *http;
+};
+
+struct thread_task *
+thread_task_new(struct reactor *server, struct reactor_event *rev);
 
 struct thread_pool *
 pool_new(size_t no_threads, size_t buf_size, thread_func func);

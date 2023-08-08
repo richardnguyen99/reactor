@@ -13,6 +13,7 @@
 
 #include "defs.h"
 #include "dict.h"
+#include "util.h"
 
 // clang-format off
 #define HTTP_ERROR                 -1
