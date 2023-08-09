@@ -42,6 +42,9 @@ void
 http_response_status(struct http_obj *http, int status);
 
 void
+http_response_send(struct http_obj *http);
+
+void
 http_free(struct http_obj *http);
 
 char *

@@ -146,9 +146,12 @@ _handle_request(void *arg)
         if (sem_post(&(pool->empty)) == -1)
             DIE("(handle_request) sem_post");
 
+
         task->http = http_new(task->rev, task->server);
+        http = task->http;
         req = request_new();
         res = response_new();
+
 
         if (http == NULL || req == NULL || res == NULL)
         {
@@ -156,7 +159,6 @@ _handle_request(void *arg)
             goto send_response;
         }
 
-        http = task->http;
         http->req = req;
         http->res = res;
         http->cfd = task->rev->data.rsk->fd;
@@ -201,39 +203,43 @@ _handle_request(void *arg)
         // }
         
         // pthread_rwlock_wrlock(&(rsk->res->rwlock));
-        // if (rsk->res->accepts == NULL)
-            // rsk->res->accepts = http_require_accept(rsk->req->headers);
+        if (res->accepts == NULL)
+            res->accepts = http_require_accept(req->headers);
         // pthread_rwlock_unlock(&(rsk->res->rwlock));
 
-        // struct __route route = route_get_handler(rsk->req->path);
+        struct __route route = route_get_handler(req->path);
 
-        // // If the route is not found, send 404
-        // if (route.status == HTTP_NOT_FOUND)
-        // {
-            // response_send_not_found(rsk->res, rsk->req->path);
-            // goto send_response;
-        // }
+        // If the route is not found, send 404
+        status = route.status;
+        if (status == HTTP_NOT_FOUND)
+            goto send_response;
 
-        // if ((rsk->req->method & HTTP_METHOD_GET) == 1 && route.handler.get != NULL)
-            // route.handler.get(rsk->req, rsk->res);
+        if ((req->method & HTTP_METHOD_GET) == 1 && route.handler.get != NULL)
+            route.handler.get(req, res);
 
-        // else if ((rsk->req->method & HTTP_METHOD_POST) == 1 && route.handler.post != NULL)
-            // route.handler.post(rsk->req, rsk->res);
+        else if ((req->method & HTTP_METHOD_POST) == 1 && route.handler.post != NULL)
+            route.handler.post(req, res);
 
-        // else if ((rsk->req->method & HTTP_METHOD_HEAD) == 1 && route.handler.head != NULL)
-            // route.handler.head(rsk->req, rsk->res);
+        else if ((req->method & HTTP_METHOD_HEAD) == 1 && route.handler.head != NULL)
+            route.handler.head(req, res);
 
-        // else if ((rsk->req->method & HTTP_METHOD_PUT) == 1 && route.handler.put != NULL)
-            // route.handler.put(rsk->req, rsk->res);
+        else if ((req->method & HTTP_METHOD_PUT) == 1 && route.handler.put != NULL)
+            route.handler.put(req, res);
 
-        // else if ((rsk->req->method & HTTP_METHOD_DELETE) == 1 && route.handler.delete != NULL)
-            // route.handler.delete(rsk->req, rsk->res);
+        else if ((req->method & HTTP_METHOD_DELETE) == 1 && route.handler.delete != NULL)
+            route.handler.delete(req, res);
 
-        // else
-            // response_send_method_not_allowed(rsk->res, rsk->req->method, rsk->req->path);
+        else
+            status = HTTP_METHOD_NOT_ALLOWED;
 
     send_response:
         http_response_status(http, status);
+
+        debug("Status: %d\n", http->res->status);
+        debug("Method: %s\n", GET_HTTP_METHOD(req->method));
+        debug("Path: %s\n", req->path);
+
+        http_response_send(http);
 
     free_http:
         if (http != NULL)
@@ -241,8 +247,6 @@ _handle_request(void *arg)
 
         req = NULL;
         res = NULL;
-
-    
 
     // send_response:
         // int status;

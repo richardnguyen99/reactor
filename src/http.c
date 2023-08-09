@@ -194,6 +194,7 @@ http_request_headers(struct http_obj *http)
         if (request_header(http->req, buf, len) == ERROR)
             return HTTP_BAD_REQUEST;
     }
+    debug("\n");
 
     return HTTP_SUCCESS;
 }
@@ -202,6 +203,33 @@ void
 http_response_status(struct http_obj *http, int status)
 {
     http->res->status = status;
+}
+
+void
+http_response_send(struct http_obj *http)
+{
+    struct request *req  = http->req;
+    struct response *res = http->res;
+
+    switch (res->status)
+    {
+    case HTTP_NOT_FOUND:
+        response_send_not_found(res, req->path);
+        break;
+
+    case HTTP_METHOD_NOT_ALLOWED:
+        response_send_method_not_allowed(res, req->method, req->path);
+        break;
+
+    case HTTP_INTERNAL_SERVER_ERROR:
+        response_send_internal_server_error(res);
+        break;
+
+    case HTTP_SUCCESS:
+    default:
+        response_send(res, http->cfd);
+        break;
+    }
 }
 
 void
