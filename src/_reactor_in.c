@@ -1,8 +1,6 @@
 #include "reactor.h"
 #include "threads.h"
 
-size_t i = 0;
-
 /*
     >>> Function to handle EPOLLIN events, specifically for the server socket
 
@@ -26,14 +24,16 @@ size_t i = 0;
 void
 __reactor_in(struct reactor *server, struct reactor_event *rev)
 {
+    if (rev->state == 1)
+        return;
+
     debug("\
 ===================================EPOLLIN======================================\n\
 Client: %s:%d\n\
 Socket: %d\n\
-Event: %d\n\
 \n",
           inet_ntoa(rev->data.rsk->client.sin_addr),
-          ntohs(rev->data.rsk->client.sin_port), rev->data.rsk->fd, (++i));
+          ntohs(rev->data.rsk->client.sin_port), rev->data.rsk->fd);
 
     struct thread_task *task;
 
@@ -47,6 +47,7 @@ Event: %d\n\
     if (pthread_mutex_lock(&(server->pool->lock)) == ERROR)
         DIE("(reactor_run) pthread_mutex_lock");
 
+    task->rev->refcnt++;
     if (rbuffer_append(server->pool->buffer, task) == ERROR)
         DIE("(reactor_run) rbuffer_push");
 

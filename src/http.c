@@ -163,6 +163,8 @@ http_request_line(struct http_obj *http)
 
     // Parse the request line
     status = request_line(http->req, buf, len);
+    if (status != HTTP_SUCCESS)
+        return status;
 
     debug("%s %s %s\n", GET_HTTP_METHOD(http->req->method), http->req->path,
           http->req->version);
@@ -180,7 +182,7 @@ http_request_headers(struct http_obj *http)
 
     for (;;)
     {
-        nread = read_line(http->cfd, buf, BUFSIZ, MSG_DONTWAIT);
+        nread = read_line(http->cfd, buf, BUFSIZ, MSG_DONTWAIT | MSG_NOSIGNAL);
 
         if (nread == -1 && errno == EAGAIN)
             return HTTP_READ_AGAIN;
@@ -208,6 +210,7 @@ http_response_status(struct http_obj *http, int status)
 void
 http_response_send(struct http_obj *http)
 {
+    int status;
     struct request *req  = http->req;
     struct response *res = http->res;
 
@@ -253,6 +256,9 @@ http_free(struct http_obj *http)
 
     if (http->res != NULL)
         response_free(http->res);
+
+    http->req = NULL;
+    http->res = NULL;
 
     free(http);
 }

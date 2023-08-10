@@ -78,24 +78,6 @@ rsocket_destroy(struct reactor_socket *rev)
 
     printf("Closed fd: %d\n", rev->fd);
 
-    // if (rev->raw != NULL)
-    // {
-    // free(rev->raw);
-    // rev->raw = NULL;
-    // }
-
-    // if (rev->req != NULL)
-    // {
-    // request_free(rev->req);
-    // rev->req = NULL;
-    // }
-
-    // if (rev->res != NULL)
-    // {
-    // response_free(rev->res);
-    // rev->res = NULL;
-    // }
-
     pthread_rwlock_destroy(&(rev->req_lock));
     pthread_rwlock_destroy(&(rev->res_lock));
 
@@ -188,8 +170,14 @@ revent_new(int epoll_fd, evflag_t flag)
     if (rev == NULL)
         return NULL;
 
-    rev->flag = flag;
+    rev->flag   = flag;
+    rev->refcnt = 0;
     memset(&(rev->data), 0, sizeof(evptr_t));
+
+    if (flag == EVENT_SOCKET)
+        rev->data.rsk = NULL;
+    else if (flag == EVENT_TIMER)
+        rev->data.rtm = NULL;
 
     return rev;
 }
@@ -240,6 +228,8 @@ revent_destroy(struct reactor_event *rev)
 {
     if (rev == NULL)
         return ERROR;
+
+    struct reactor_socket *rsk = rev->data.rsk;
 
     if (rev->flag == EVENT_SOCKET)
     {

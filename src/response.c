@@ -393,6 +393,7 @@ response_send(struct response *res, int fd)
     const size_t cap = MAX_HDR_LEN + MAX_CHK_LEN;
     size_t msg_len, total_sent;
     char msg[cap];
+    int send_flag = MSG_DONTWAIT | MSG_NOSIGNAL;
 
     msg_len = (size_t)snprintf(msg, BUFSIZ,
                                "HTTP/1.1 %d %s\r\n"
@@ -409,10 +410,14 @@ response_send(struct response *res, int fd)
 
     for (total_sent = 0; total_sent < msg_len; total_sent += (size_t)nsent)
     {
-        nsent = send(fd, msg + total_sent, msg_len - total_sent, MSG_DONTWAIT);
+
+        nsent = send(fd, msg + total_sent, msg_len - total_sent, send_flag);
 
         if (nsent == -1 && errno == EAGAIN)
             goto wait_to_send;
+
+        if (nsent == -1 && (errno == EPIPE || errno == EBADF))
+            return EPIPE;
 
         if (nsent == -1)
             DIE("(reactor_run) send");

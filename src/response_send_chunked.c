@@ -1,5 +1,7 @@
 #include "response.h"
 
+const int sflag = MSG_DONTWAIT | MSG_NOSIGNAL;
+
 int
 __send_chunk_headers(struct response *res, int fd)
 {
@@ -13,7 +15,6 @@ __send_chunk_headers(struct response *res, int fd)
                      "Content-Type: %s\r\n"
                      "Connection: keep-alive\r\n"
                      "Transfer-Encoding: chunked\r\n"
-                     "Keep-Alive: timeout=5, max=1000\r\n"
                      "Server: reactor/%s\r\n"
                      "\r\n",
                      res->status, GET_HTTP_MSG(res->status),
@@ -23,12 +24,12 @@ __send_chunk_headers(struct response *res, int fd)
     for (; res->__chunked_offset < res->__chunked_size;)
     {
         nsent = send(fd, res->__chunked_buf + res->__chunked_offset,
-                     res->__chunked_size - res->__chunked_offset, MSG_DONTWAIT);
+                     res->__chunked_size - res->__chunked_offset, sflag);
 
         if (nsent == -1 && errno == EAGAIN)
             return EAGAIN;
 
-        if (nsent == -1 && errno == EPIPE)
+        if (nsent == -1 && (errno == EPIPE || errno == EBADF))
             return EPIPE;
 
         if (nsent == -1)
@@ -80,8 +81,7 @@ __send_chunks(struct response *res, int fd)
         for (; res->__chunked_sent < res->__chunked_size;)
         {
             nsent = send(fd, res->__chunked_buf + res->__chunked_sent,
-                         res->__chunked_size - res->__chunked_sent,
-                         MSG_DONTWAIT | MSG_NOSIGNAL);
+                         res->__chunked_size - res->__chunked_sent, sflag);
 
             if (nsent == -1 && errno == EAGAIN)
                 return EAGAIN;
@@ -118,7 +118,7 @@ __send_terminal_chunk(struct response *res, int fd)
 
     for (; res->__chunked_sent < 5;)
     {
-        nsent = send(fd, "0\r\n\r\n", 5, MSG_DONTWAIT | MSG_NOSIGNAL);
+        nsent = send(fd, "0\r\n\r\n", 5, sflag);
 
         if (nsent == -1 && errno == EAGAIN)
             return EAGAIN;
@@ -142,29 +142,13 @@ response_send_chunked(struct response *res, int fd)
 {
     int status = SUCCESS;
 
-    if (res->__chunked_state == 0)
-    {
-        status = __send_chunk_headers(res, fd);
+    status = __send_chunk_headers(res, fd);
 
-        if (status == EAGAIN || status == EPIPE)
-            return status;
-    }
+    status = __send_chunks(res, fd);
 
-    if (res->__chunked_state == 1)
-    {
-        status = __send_chunks(res, fd);
-
-        if (status == EAGAIN || status == EPIPE)
-            return status;
-    }
-
-    if (res->__chunked_state == 2)
-    {
-        status = __send_terminal_chunk(res, fd);
-
-        if (status == EAGAIN || status == EPIPE)
-            return status;
-    }
+    status = __send_terminal_chunk(res, fd);
 
     return SUCCESS;
+
+response_internal_error:
 }

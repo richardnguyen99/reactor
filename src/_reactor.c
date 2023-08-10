@@ -145,13 +145,11 @@ _handle_request(void *arg)
             DIE("(handle_request) pthread_mutex_unlock");
         if (sem_post(&(pool->empty)) == -1)
             DIE("(handle_request) sem_post");
-
-
-        task->http = http_new(task->rev, task->server);
+        
+        task->http = http_new();
         http = task->http;
         req = request_new();
         res = response_new();
-
 
         if (http == NULL || req == NULL || res == NULL)
         {
@@ -165,11 +163,9 @@ _handle_request(void *arg)
 
         // Parse the request line
         status = http_request_line(http);
-
         if (status == 0)
         {
-            printf("Client closed connection: %p\n", task->rev);
-            revent_mod(task->rev, EPOLLOUT);
+            revent_destroy(task->rev);
             goto end_request;
         }
 
@@ -252,28 +248,25 @@ _handle_request(void *arg)
         debug("Response sent: %ld\n", http->res->body_len);
         debug("\n");
 
+
     free_http:
+        task->rev->refcnt--;
+
         if (http != NULL)
             http_free(http);
 
         req = NULL;
         res = NULL;
+        http = NULL;
+
+        task->http = NULL;
+
+        free(task);
 
     end_request:
         debug("\
 =================================EPOLLOUT=======================================\n\
 ");
-
-
-        //revent_mod(task->rev, EPOLLOUT);
-
-    // send_response:
-        // int status;
-
-        // status = revent_mod(rev, EPOLLOUT);
-
-        // if (status == ERROR)
-            // revent_destroy(rev);
     }
 
     return NULL;

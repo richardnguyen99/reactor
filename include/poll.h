@@ -71,7 +71,9 @@ struct reactor_event
     int flag;
     evptr_t data;
 
-    size_t __refcnt;
+    size_t refcnt;
+
+    int state;
 };
 
 struct reactor_socket *

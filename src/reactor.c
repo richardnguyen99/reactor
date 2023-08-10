@@ -133,16 +133,16 @@ reactor_run(struct reactor *server)
                 if (rev->flag == EVENT_TIMER)
                     continue;
 
-                if (rev->__refcnt > 0)
+                debug("ref count: %d\n", rev->refcnt);
+                if (rev->refcnt > 0)
+                {
+                    rev->state = 1;
                     continue;
+                }
 
                 ret = revent_destroy(rev);
                 if (ret == ERROR)
                     DIE("(reactor_run) revent_destroy");
-
-                // ret = revent_destroy(rev->data.rsk->rev_timer);
-                // if (ret == ERROR)
-                // DIE("(reactor_run) revent_destroy");
 
                 server->events[n].data.ptr = NULL;
 
@@ -155,6 +155,12 @@ reactor_run(struct reactor *server)
 
                 if (rev->flag == EVENT_TIMER)
                     continue;
+
+                if (rev->refcnt > 0)
+                {
+                    rev->state = 1;
+                    continue;
+                }
 
                 ret = revent_destroy(rev);
                 if (ret == ERROR)
@@ -181,8 +187,15 @@ reactor_run(struct reactor *server)
             else if (server->events[n].events & EPOLLOUT)
             {
                 printf("EPOLLOUT\n");
-                revent_destroy(
-                    (struct reactor_event *)(server->events[n].data.ptr));
+
+                rev = (struct reactor_event *)(server->events[n].data.ptr);
+
+                if (rev->flag == EVENT_TIMER)
+                    continue;
+
+                debug("ref count: %d\n", rev->refcnt);
+                if (rev->refcnt == 0)
+                    revent_destroy(rev);
             }
         }
     }
