@@ -165,6 +165,10 @@ _handle_request(void *arg)
 
         // Parse the request line
         status = http_request_line(http);
+
+        if (status == HTTP_READ_AGAIN)
+            goto free_http;
+
         if (status != HTTP_SUCCESS)
             goto send_response;
 
@@ -241,12 +245,18 @@ _handle_request(void *arg)
 
         http_response_send(http);
 
+        debug("Response sent: %ld\n", http->res->body_len);
+        debug("\n");
+
     free_http:
         if (http != NULL)
             http_free(http);
 
         req = NULL;
         res = NULL;
+
+
+        //revent_mod(task->rev, EPOLLOUT);
 
     // send_response:
         // int status;

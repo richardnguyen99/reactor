@@ -1,6 +1,8 @@
 #include "reactor.h"
 #include "threads.h"
 
+size_t i = 0;
+
 /*
     >>> Function to handle EPOLLIN events, specifically for the server socket
 
@@ -28,9 +30,10 @@ __reactor_in(struct reactor *server, struct reactor_event *rev)
 ===================================EPOLLIN======================================\n\
 Client: %s:%d\n\
 Socket: %d\n\
+Event: %d\n\
 \n",
           inet_ntoa(rev->data.rsk->client.sin_addr),
-          ntohs(rev->data.rsk->client.sin_port), rev->data.rsk->fd);
+          ntohs(rev->data.rsk->client.sin_port), rev->data.rsk->fd, (++i));
 
     int s;
     struct thread_task *task;

@@ -204,7 +204,8 @@ revent_add(struct reactor_event *rev)
     int epoll_fd, fd;
 
     ev.data.ptr = rev;
-    ev.events   = EPOLLIN | EPOLLET;
+
+    ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
 
     __get_evt_fd(rev, &fd, &epoll_fd);
 

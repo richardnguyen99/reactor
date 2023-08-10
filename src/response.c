@@ -283,7 +283,7 @@ response_send_bad_request(struct response *res)
 }
 
 void
-response_send_not_found(struct response *res, const char *path)
+response_not_found(struct response *res, const char *path)
 {
     res->status = HTTP_NOT_FOUND;
 
@@ -387,9 +387,40 @@ response_send_internal_server_error(struct response *res)
 }
 
 ssize_t
-response_send(struct response *response, int fd)
+response_send(struct response *res, int fd)
 {
-    ssize_t nsent = 0;
+    ssize_t nsent    = 0;
+    const size_t cap = MAX_HDR_LEN + MAX_CHK_LEN;
+    size_t msg_len, total_sent;
+    char msg[cap];
+
+    msg_len = (size_t)snprintf(msg, BUFSIZ,
+                               "HTTP/1.1 %d %s\r\n"
+                               "Content-Type: %s\r\n"
+                               "Content-Length: %ld\r\n"
+                               "Connection: %s\r\n"
+                               "Server: reactor/%s\r\n"
+                               "\r\n"
+                               "%s",
+                               res->status, GET_HTTP_MSG(res->status),
+                               GET_HTTP_CONTENT_TYPE(res->content_type),
+                               res->body_len, "keep-alive", REACTOR_VERSION,
+                               res->body);
+
+    for (total_sent = 0; total_sent < msg_len; total_sent += (size_t)nsent)
+    {
+        nsent = send(fd, msg + total_sent, msg_len - total_sent, MSG_DONTWAIT);
+
+        if (nsent == -1 && errno == EAGAIN)
+            goto wait_to_send;
+
+        if (nsent == -1)
+            DIE("(reactor_run) send");
+
+        total_sent += (size_t)nsent;
+    }
+
+wait_to_send:
 
     return nsent;
 }

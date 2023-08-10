@@ -138,4 +138,8 @@
     : (content_type == HTTP_CONTENT_TYPE_ICON) ? HTTP_CONTENT_TYPE_ICON_MSG    \
                                                : NULL
 
+#define MAX_RQL_LEN 1024  /* Maximum request line length (1 KiB) */
+#define MAX_HDR_LEN 2048  /* Maxium header length (2 KiB) */
+#define MAX_CHK_LEN 65536 /* Maximum chunk length (64 KiB) */
+
 #endif // _REACTOR_HTTPDEF_H_

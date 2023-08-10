@@ -73,7 +73,7 @@ void
 response_send_bad_request(struct response *res);
 
 void
-response_send_not_found(struct response *res, const char *path);
+response_not_found(struct response *res, const char *path);
 
 void
 response_send_method_not_allowed(struct response *res, const int method,

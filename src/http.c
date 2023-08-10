@@ -159,7 +159,7 @@ http_request_line(struct http_obj *http)
         return HTTP_INTERNAL_SERVER_ERROR;
 
     if (nread == 0)
-        return HTTP_BAD_REQUEST;
+        return HTTP_READ_AGAIN;
 
     // Parse the request line
     status = request_line(http->req, buf, len);
@@ -214,7 +214,7 @@ http_response_send(struct http_obj *http)
     switch (res->status)
     {
     case HTTP_NOT_FOUND:
-        response_send_not_found(res, req->path);
+        response_not_found(res, req->path);
         break;
 
     case HTTP_METHOD_NOT_ALLOWED:
@@ -227,9 +227,10 @@ http_response_send(struct http_obj *http)
 
     case HTTP_SUCCESS:
     default:
-        response_send(res, http->cfd);
         break;
     }
+
+    response_send(res, http->cfd);
 }
 
 void

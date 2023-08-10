@@ -128,6 +128,7 @@ reactor_run(struct reactor *server)
 
             else if (server->events[n].events & (EPOLLERR | EPOLLHUP))
             {
+                debug("EPOLLERR | EPOLLHUP\n");
                 rev = (struct reactor_event *)(server->events[n].data.ptr);
                 if (rev->flag == EVENT_TIMER)
                     continue;
@@ -253,6 +254,9 @@ reactor_run(struct reactor *server)
 
                 // wait_to_send:
                 // continue;
+            }
+            else if (server->events[n].events & EPOLLOUT)
+            {
             }
         }
     }
