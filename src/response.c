@@ -173,7 +173,7 @@ response_accept(struct response *res, const char *type)
         (accept_all || dict_get(res->accepts, "image/svg+xml") != NULL))
         return HTTP_CONTENT_TYPE_SVG;
 
-    if (strcmp(type, "icon") == 0 &&
+    if (strcmp(type, "ico") == 0 &&
         (accept_all || dict_get(res->accepts, "image/x-icon") != NULL ||
          dict_get(res->accepts, "image/avif") != NULL))
         return HTTP_CONTENT_TYPE_ICON;

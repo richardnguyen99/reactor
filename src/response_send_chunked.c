@@ -8,7 +8,7 @@ __send_chunk_headers(struct response *res, int fd)
     if (res->__chunked_buf[0] == '\0')
     {
         res->__chunked_size =
-            snprintf(res->__chunked_buf, CHUNKSIZE,
+            snprintf(res->__chunked_buf, MAX_HDR_LEN,
                      "HTTP/1.1 %d %s\r\n"
                      "Content-Type: %s\r\n"
                      "Connection: keep-alive\r\n"
@@ -40,7 +40,6 @@ __send_chunk_headers(struct response *res, int fd)
     res->__chunked_offset = 0;    // Reset the offset
     res->__chunked_buf[0] = '\0'; // Clear the buffer
     res->__chunked_state  = 1;    // Ready to send chunks
-    printf("Go to send chunks\n");
 
     return SUCCESS;
 }
@@ -56,15 +55,14 @@ __send_chunks(struct response *res, int fd)
         {
             size_t __n;
             res->__chunked_size =
-                res->body_len - res->__chunked_offset > CHUNKSIZE
-                    ? CHUNKSIZE                              // Max chunk
+                res->body_len - res->__chunked_offset > MAX_CHK_LEN
+                    ? MAX_CHK_LEN                            // Max chunk
                     : res->body_len - res->__chunked_offset; // Left chunk
 
-            snprintf(res->__chunked_buf, CHUNKHDR, "%lx\r\n",
+            snprintf(res->__chunked_buf, MAX_CHK_LEN, "%lx\r\n",
                      res->__chunked_size);
 
             __n = strlen(res->__chunked_buf);
-            printf("\nChunk size (%ld): %s", __n, res->__chunked_buf);
 
             snprintf(res->__chunked_buf + __n, res->__chunked_size + 1, "%s",
                      res->body + res->__chunked_offset);
@@ -72,17 +70,13 @@ __send_chunks(struct response *res, int fd)
             __n += res->__chunked_size;
             res->__chunked_offset += res->__chunked_size;
 
-            snprintf(res->__chunked_buf + __n, CHUNKSIZE, "\r\n");
+            snprintf(res->__chunked_buf + __n, MAX_CHK_LEN, "\r\n");
             __n += 2;
-
-            printf("Chunk offset: %ld\n", res->__chunked_offset);
 
             res->__chunked_size = __n;
             res->__chunked_sent = 0;
-            printf("End chunk\n");
         }
 
-        printf("Sending chunk\n");
         for (; res->__chunked_sent < res->__chunked_size;)
         {
             nsent = send(fd, res->__chunked_buf + res->__chunked_sent,
@@ -106,7 +100,6 @@ __send_chunks(struct response *res, int fd)
             if (res->__chunked_sent == res->__chunked_size)
                 break;
         }
-        printf("Sent chunk\n");
 
         res->__chunked_buf[0] = '\0'; // clear buffer & send a new chunk
         res->__chunked_sent   = 0;
@@ -138,7 +131,6 @@ __send_terminal_chunk(struct response *res, int fd)
 
         res->__chunked_sent += (size_t)nsent;
     }
-    printf("Sent terminal chunk\n");
 
     res->__chunked_state = 3;
 
@@ -152,7 +144,6 @@ response_send_chunked(struct response *res, int fd)
 
     if (res->__chunked_state == 0)
     {
-        printf("Sending chunk headers\n");
         status = __send_chunk_headers(res, fd);
 
         if (status == EAGAIN || status == EPIPE)
@@ -161,7 +152,6 @@ response_send_chunked(struct response *res, int fd)
 
     if (res->__chunked_state == 1)
     {
-        printf("Sending chunks\n");
         status = __send_chunks(res, fd);
 
         if (status == EAGAIN || status == EPIPE)
@@ -170,13 +160,11 @@ response_send_chunked(struct response *res, int fd)
 
     if (res->__chunked_state == 2)
     {
-        printf("Sending terminal chunk\n");
         status = __send_terminal_chunk(res, fd);
 
         if (status == EAGAIN || status == EPIPE)
             return status;
     }
 
-    printf("Finished sending chunks\n");
     return SUCCESS;
 }

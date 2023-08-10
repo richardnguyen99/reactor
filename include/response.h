@@ -32,7 +32,7 @@ struct response
 
 #define CHUNKSIZE 10240 // 10KB (original chunk size)
 #define CHUNKHDR  64
-    char __chunked_buf[CHUNKSIZE + CHUNKHDR];
+    char __chunked_buf[MAX_HDR_LEN + MAX_CHK_LEN];
 
     pthread_rwlock_t rwlock;
 };

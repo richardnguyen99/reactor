@@ -26,6 +26,8 @@ __reactor_accept(struct reactor *server, struct reactor_event *rev)
     if (rsk == NULL)
         DIE("(reactor_run) rsocket_new");
 
+    rsk->client = addr;
+
     // Create a timer event
     rtm = rtimer_new(server->epollfd, rev);
     if (rtm == NULL)
@@ -37,9 +39,7 @@ __reactor_accept(struct reactor *server, struct reactor_event *rev)
         DIE("(__reactor_run) revent_new(rtm)");
 
     rev_timer->data.rtm = rtm;
-
-    rsk->rev_timer = rev_timer;
-    rsk->client    = addr;
+    rsk->rev_timer      = rev_timer;
 
     rev->data.rsk = rsk;
     rev->flag     = EVENT_SOCKET;

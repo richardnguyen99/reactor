@@ -111,13 +111,13 @@ _handle_timer(struct reactor_event *rtm)
     //response_status(res, HTTP_REQUEST_TIMEOUT);
     //response_text(res, "408: Request timeout\n", 24);
 
-    ret = revent_mod(rev_sock, EPOLLOUT);
+    // ret = revent_mod(rev_sock, EPOLLOUT);
 
-    if (ret == ERROR)
-    {
-        revent_destroy(rev_sock);
-        revent_destroy(rtm);
-    }
+    // if (ret == ERROR)
+    // {
+        // revent_destroy(rev_sock);
+        // revent_destroy(rtm);
+    // }
 }
 
 void *
@@ -166,8 +166,12 @@ _handle_request(void *arg)
         // Parse the request line
         status = http_request_line(http);
 
-        if (status == HTTP_READ_AGAIN)
-            goto free_http;
+        if (status == 0)
+        {
+            printf("Client closed connection: %p\n", task->rev);
+            revent_mod(task->rev, EPOLLOUT);
+            goto end_request;
+        }
 
         if (status != HTTP_SUCCESS)
             goto send_response;
@@ -206,10 +210,10 @@ _handle_request(void *arg)
             // goto send_response;
         // }
         
-        // pthread_rwlock_wrlock(&(rsk->res->rwlock));
+        //pthread_rwlock_wrlock(&(res->rwlock));
         if (res->accepts == NULL)
             res->accepts = http_require_accept(req->headers);
-        // pthread_rwlock_unlock(&(rsk->res->rwlock));
+        //pthread_rwlock_unlock(&(res->rwlock));
 
         struct __route route = route_get_handler(req->path);
 
@@ -254,6 +258,11 @@ _handle_request(void *arg)
 
         req = NULL;
         res = NULL;
+
+    end_request:
+        debug("\
+=================================EPOLLOUT=======================================\n\
+");
 
 
         //revent_mod(task->rev, EPOLLOUT);

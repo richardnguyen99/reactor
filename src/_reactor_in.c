@@ -35,7 +35,6 @@ Event: %d\n\
           inet_ntoa(rev->data.rsk->client.sin_addr),
           ntohs(rev->data.rsk->client.sin_port), rev->data.rsk->fd, (++i));
 
-    int s;
     struct thread_task *task;
 
     task = thread_task_new(server, rev);

@@ -159,7 +159,7 @@ http_request_line(struct http_obj *http)
         return HTTP_INTERNAL_SERVER_ERROR;
 
     if (nread == 0)
-        return HTTP_READ_AGAIN;
+        return 0;
 
     // Parse the request line
     status = request_line(http->req, buf, len);
@@ -211,6 +211,9 @@ http_response_send(struct http_obj *http)
     struct request *req  = http->req;
     struct response *res = http->res;
 
+    if (res->accepts == NULL)
+        res->accepts = http_require_accept(req->headers);
+
     switch (res->status)
     {
     case HTTP_NOT_FOUND:
@@ -228,6 +231,12 @@ http_response_send(struct http_obj *http)
     case HTTP_SUCCESS:
     default:
         break;
+    }
+
+    if (res->body_len > CHUNKHDR)
+    {
+        response_send_chunked(res, http->cfd);
+        return;
     }
 
     response_send(res, http->cfd);

@@ -108,7 +108,7 @@ reactor_run(struct reactor *server)
                 server->events[n].data.ptr =
                     revent_new(server->epollfd, EVENT_SOCKET);
 
-                rev = (struct reactor_event *)server->events[n].data.ptr;
+                rev = (struct reactor_event *)(server->events[n].data.ptr);
 
                 __reactor_accept(server, rev);
 
@@ -140,9 +140,9 @@ reactor_run(struct reactor *server)
                 if (ret == ERROR)
                     DIE("(reactor_run) revent_destroy");
 
-                ret = revent_destroy(rev->data.rsk->rev_timer);
-                if (ret == ERROR)
-                    DIE("(reactor_run) revent_destroy");
+                // ret = revent_destroy(rev->data.rsk->rev_timer);
+                // if (ret == ERROR)
+                // DIE("(reactor_run) revent_destroy");
 
                 server->events[n].data.ptr = NULL;
 
@@ -173,90 +173,16 @@ reactor_run(struct reactor *server)
                 if (rev->flag == EVENT_TIMER)
                 {
                     _handle_timer(rev);
-                    rev->data.rtm = NULL;
                     continue;
                 }
 
                 __reactor_in(server, rev);
-
-                // wait_to_read:
-                // continue;
-                // }
-
-                // // Some sockets wants to send data out
-                // else if (server->events[n].events & EPOLLOUT)
-                // {
-                // int status = 0;
-                // rev = (struct reactor_event *)(server->events[n].data.ptr);
-
-                // if (rev->flag == EVENT_TIMER)
-                // continue;
-
-                // rsk = rev->data.rsk;
-
-                // nsent      = 0;
-                // total_sent = 0;
-
-                // if (rsk->res->body_len > BUFSIZ)
-                // {
-                // rsk->res->__chunked_state = 0;
-                // status = response_send_chunked(rsk->res, rsk->fd);
-
-                // if (status == EAGAIN)
-                // goto wait_to_send;
-
-                // if (status == EPIPE)
-                // goto destroy_reactor_socket;
-
-                // goto destroy_reactor_socket;
-                // }
-
-                // content_length = (size_t)snprintf(
-                // msg, BUFSIZ,
-                // "HTTP/1.1 %d %s\r\n"
-                // "Content-Type: %s\r\n"
-                // "Content-Length: %ld\r\n"
-                // "Connection: %s\r\n"
-                // "Server: reactor/%s\r\n"
-                // "\r\n"
-                // "%s",
-                // rsk->res->status, GET_HTTP_MSG(rsk->res->status),
-                // GET_HTTP_CONTENT_TYPE(rsk->res->content_type),
-                // rsk->res->body_len,
-                // rsk->res->status == 200 ? "keep-alive" : "close",
-                // REACTOR_VERSION, rsk->res->body);
-
-                // for (; total_sent < content_length;)
-                // {
-                // nsent = send(rsk->fd, msg + total_sent,
-                // content_length - total_sent, MSG_DONTWAIT);
-
-                // if (nsent == -1 && errno == EAGAIN)
-                // goto wait_to_send;
-
-                // if (nsent == -1)
-                // DIE("(reactor_run) send");
-
-                // total_sent += (size_t)nsent;
-                // }
-
-                // destroy_reactor_socket:
-                // rev->__refcnt--;
-
-                // if (rev->__refcnt > 0)
-                // revent_mod(rev, EPOLLIN);
-                // else
-                // {
-                // ret = revent_destroy(rev);
-                // if (ret == ERROR)
-                // DIE("(reactor_run) revent_destroy");
-                // }
-
-                // wait_to_send:
-                // continue;
             }
             else if (server->events[n].events & EPOLLOUT)
             {
+                printf("EPOLLOUT\n");
+                revent_destroy(
+                    (struct reactor_event *)(server->events[n].data.ptr));
             }
         }
     }
