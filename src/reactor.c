@@ -33,7 +33,7 @@ reactor_init(struct reactor **server, int argc, char *argv[])
     (*server)->port.number = 9999;
     (*server)->server_fd   = -1;
 
-    (*server)->pool = pool_new(8, 8, _handle_request);
+    (*server)->pool = pool_new(16, 64, _handle_request);
     if ((*server)->pool == NULL)
         DIE("(reactor_init) pool_new");
 

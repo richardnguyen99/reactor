@@ -97,10 +97,11 @@ response_new()
     if (res == NULL)
         DIE("(response_new) malloc");
 
-    res->headers = dict_new(NULL, NULL);
-    if (res->headers == NULL)
-        DIE("(response_new) dict_new");
+    // res->headers = dict_new(NULL, NULL);
+    // if (res->headers == NULL)
+    // DIE("(response_new) dict_new");
 
+    res->headers = NULL;
     res->accepts = NULL;
 
     /* Set these fields later. Otherwise, they will yield an error */

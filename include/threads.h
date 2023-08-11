@@ -58,10 +58,6 @@ struct thread_task
     /* Reference to the event and the client instance. Information about the
      * server can be found here */
     struct reactor_event *rev;
-
-    /* The HTTP object containing request and response, both of which is handled
-     * by one of the worker thread in the thread pool */
-    struct http_obj *http;
 };
 
 struct thread_task *

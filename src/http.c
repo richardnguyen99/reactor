@@ -1,26 +1,6 @@
 #include "http.h"
 
 static int
-_check_with_static_folder(const char *path)
-{
-    // Prevent malicious path
-    if (strcmp(path, ".") == 0 || strcmp(path, "..") == 0)
-        return HTTP_BAD_REQUEST;
-
-    struct stat st;
-
-    // Check if a file is found
-    if (stat(path, &st) == -1)
-        return HTTP_NOT_FOUND;
-
-    // Check if the path is a regular file
-    if (!S_ISREG(st.st_mode))
-        return HTTP_FORBIDDEN; // This could Not Found to hide 403 in practice
-
-    return SUCCESS;
-}
-
-static int
 _default_method_handler(const char *value)
 {
     if (value == NULL)
@@ -182,6 +162,7 @@ http_request_headers(struct http_obj *http)
 
     for (;;)
     {
+        memset(buf, 0, len);
         nread = read_line(http->cfd, buf, BUFSIZ, MSG_DONTWAIT | MSG_NOSIGNAL);
 
         if (nread == -1 && errno == EAGAIN)
@@ -192,6 +173,8 @@ http_request_headers(struct http_obj *http)
 
         if (nread == 0)
             break;
+
+        buf[nread + 1] = '\0';
 
         if (request_header(http->req, buf, len) == ERROR)
             return HTTP_BAD_REQUEST;

@@ -19,30 +19,16 @@ struct reactor_socket
 {
     int fd;
     int epoll_fd;
-    uint64_t len;
 
     struct sockaddr_in client;
 
-    struct reactor_event *rev_timer;
-    struct reactor_event *rev_cnnct;
-
     /* Write lock since response is accessed by multiple threads */
     pthread_rwlock_t res_lock;
-
     pthread_rwlock_t req_lock; /* Not sure if this is needed since only one
                   thread (the main thread) is writing to the request */
 };
 
 struct reactor_timer
-{
-    int fd;
-    int epoll_fd;
-    int timeout;
-
-    struct reactor_event *rev_socket;
-};
-
-struct reactor_connection
 {
     int fd;
     int epoll_fd;
@@ -74,6 +60,31 @@ struct reactor_event
     size_t refcnt;
 
     int state;
+};
+
+enum connection_state
+{
+    CONN_STATE_INIT,
+    CONN_STATE_CONNECTING,
+    CONN_STATE_CONNECTED,
+    CONN_STATE_PROCESSING,
+    CONN_STATE_PROCESSED,
+    CONN_STATE_DISCONNECTED,
+    CONN_STATE_ERROR,
+};
+
+typedef enum connection_state conn_state_t;
+
+struct reactor_connection
+{
+    int epfd;
+    int cfd;
+    int sfd;
+
+    struct sockaddr_in clientinfo;
+
+    size_t refcnt;
+    conn_state_t state;
 };
 
 struct reactor_socket *
@@ -111,5 +122,11 @@ revent_mod(struct reactor_event *rev, int flags);
 
 int
 revent_destroy(struct reactor_event *rev);
+
+int
+rconn_new();
+
+void
+rconn_free(struct reactor_connection *rcn);
 
 #endif // _REACTOR_POLL_H_

@@ -4,7 +4,7 @@ int
 _get_start_line(struct request *req, char *buf);
 
 int
-_get_header(struct dict *headers, char *buf);
+_get_header(struct dict *headers, const char *buf, const size_t len);
 
 // =============================================================================
 
@@ -107,7 +107,7 @@ read_header:
         if (nread == 0)
             break;
 
-        if (_get_header(req->headers, buf) == ERROR)
+        if (_get_header(req->headers, buf, (size_t)nread) == ERROR)
             return HTTP_ERROR;
     }
 
@@ -127,7 +127,7 @@ request_line(struct request *req, const char *buf, const size_t len)
 int
 request_header(struct request *req, const char *buf, const size_t len)
 {
-    return _get_header(req->headers, (char *)buf);
+    return _get_header(req->headers, (char *)buf, len);
 }
 
 void

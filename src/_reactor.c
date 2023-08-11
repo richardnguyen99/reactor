@@ -146,8 +146,7 @@ _handle_request(void *arg)
         if (sem_post(&(pool->empty)) == -1)
             DIE("(handle_request) sem_post");
         
-        task->http = http_new();
-        http = task->http;
+        http = http_new();
         req = request_new();
         res = response_new();
 
@@ -165,6 +164,7 @@ _handle_request(void *arg)
         status = http_request_line(http);
         if (status == 0)
         {
+            task->rev->refcnt--;
             revent_destroy(task->rev);
             goto end_request;
         }
@@ -177,35 +177,6 @@ _handle_request(void *arg)
         if (status != HTTP_SUCCESS)
             goto send_response;
 
-        // if (rsk == NULL)
-            // continue;
-        
-        // if (rsk->req == NULL)
-            // continue;
-
-        // pthread_rwlock_wrlock(&(rsk->res_lock));
-        // if (rsk->res == NULL)
-            // rsk->res = response_new();
-        // pthread_rwlock_unlock(&(rsk->res_lock));
-
-        // // Response cannot be created. Instead of shutting down, just letting
-        // // the client know that the request is dropped.
-        // if (rsk->res == NULL)       
-            // continue;
-
-        // if (rsk->req->status == HTTP_NOT_SET || rsk->req->status == HTTP_INTERNAL_SERVER_ERROR)
-        // {
-            // response_send_internal_server_error(rsk->res);
-            // goto send_response;
-        // }
-
-        // if (rsk->req->status == HTTP_BAD_REQUEST)
-        // {
-            // printf("%s\n", rsk->req->path);
-            // response_send_bad_request(rsk->res);
-            // goto send_response;
-        // }
-        
         //pthread_rwlock_wrlock(&(res->rwlock));
         if (res->accepts == NULL)
             res->accepts = http_require_accept(req->headers);
@@ -252,18 +223,17 @@ _handle_request(void *arg)
     free_http:
         task->rev->refcnt--;
 
-        if (http != NULL)
-            http_free(http);
+        http_free(http);
 
         req = NULL;
         res = NULL;
         http = NULL;
 
-        task->http = NULL;
-
         free(task);
 
     end_request:
+        revent_mod(task->rev, EPOLLOUT);
+
         debug("\
 =================================EPOLLOUT=======================================\n\
 ");

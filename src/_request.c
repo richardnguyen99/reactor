@@ -80,16 +80,12 @@ _get_start_line(struct request *req, char *buf)
 }
 
 int
-_get_header(struct dict *header, const char *buf)
+_get_header(struct dict *header, const char *buf, const size_t len)
 {
     if (buf == NULL)
         return HTTP_BAD_REQUEST;
 
-    char *token, *start, *key, *value;
-    char *string = strdup(buf);
-
-    if (string == NULL)
-        DIE("(get_header) strdup");
+    char *token, *key_start, *key_end, *value_start, *value_end;
 
     //        key   value = token + 2
     //        |     |
@@ -97,21 +93,28 @@ _get_header(struct dict *header, const char *buf)
     //            |
     //            token
 
-    start = strcasestr(buf, ": ");
-    token = strtok(string, ": ");
-
+    token = strcasestr(buf, ": ");
     if (token == NULL)
         return HTTP_BAD_REQUEST;
 
-    key   = token;
-    value = start + 2;
+    key_start   = (char *)buf;
+    key_end     = token;
+    value_start = token + 2;
+    value_end   = (char *)buf + len;
+
+    char key[key_end - key_start + 1];
+    char value[value_end - value_start + 1];
+
+    memcpy(key, key_start, key_end - key_start);
+    memcpy(value, value_start, value_end - value_start);
+
+    key[key_end - key_start]       = '\0';
+    value[value_end - value_start] = '\0';
 
     if (dict_put(header, key, value) == ERROR)
         return HTTP_INTERNAL_SERVER_ERROR;
 
     debug("headers[%s] = %s\n", key, value);
-
-    free(string);
 
     return HTTP_SUCCESS;
 }

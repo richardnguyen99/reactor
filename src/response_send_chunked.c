@@ -86,7 +86,7 @@ __send_chunks(struct response *res, int fd)
             if (nsent == -1 && errno == EAGAIN)
                 return EAGAIN;
 
-            if (nsent == -1 && errno == EPIPE)
+            if (nsent == -1 && (errno == EPIPE || errno == EBADF))
                 return EPIPE;
 
             if (nsent < 0 && errno == ECONNRESET)
@@ -123,7 +123,7 @@ __send_terminal_chunk(struct response *res, int fd)
         if (nsent == -1 && errno == EAGAIN)
             return EAGAIN;
 
-        if (nsent == -1 && errno == EPIPE)
+        if (nsent == -1 && (errno == EPIPE || errno == EBADF))
             return EPIPE;
 
         if (nsent == -1)

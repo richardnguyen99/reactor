@@ -28,27 +28,10 @@ __reactor_accept(struct reactor *server, struct reactor_event *rev)
 
     rsk->client = addr;
 
-    // Create a timer event
-    rtm = rtimer_new(server->epollfd, rev);
-    if (rtm == NULL)
-        DIE("(reactor_run) rtimer_new");
-
-    // Create a generic event for the timer
-    rev_timer = revent_new(server->epollfd, EVENT_TIMER);
-    if (rev_timer == NULL)
-        DIE("(__reactor_run) revent_new(rtm)");
-
-    rev_timer->data.rtm = rtm;
-    rsk->rev_timer      = rev_timer;
-
     rev->data.rsk = rsk;
     rev->flag     = EVENT_SOCKET;
 
     ret = revent_add(rev);
     if (ret == ERROR)
         DIE("(__reactor_run) revent_add(rsk)");
-
-    ret = revent_add(rev_timer);
-    if (ret == ERROR)
-        DIE("(__reactor_run) revent_add(rtm)");
 }
