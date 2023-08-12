@@ -42,6 +42,16 @@ if (NOT HAVE_JSON_H)
     message(FATAL_ERROR "json-c/json.h not found")
 endif()
 
+check_include_file(limits.h linux/limits.h RX_HAS_LIMITS_H)
+if (RX_HAS_LIMITS_H)
+    add_definitions(-DRS_HAS_LIMITS_H)
+endif()
+
+check_include_file(math.h RX_HAS_MATH_H)
+if (RX_HAS_MATH_H)
+    add_definitions(-DRS_HAS_MATH_H)
+endif()
+
 # Set the C flags
 set(CMAKE_C_FLAGS "")
 
@@ -69,10 +79,6 @@ add_compile_options(${CMAKE_C_FLAGS})
 add_definitions(-D_GNU_SOURCE)              # For GNU and Linux extensions
 add_definitions(-D_POSIX_C_SOURCE=200809L)  # For POSIX extensions
 
-check_include_file(limits.h HAVE_LIMITS_H)
-if (HAVE_LIMITS_H)
-    add_definitions(-DHAVE_LIMITS_H)
-endif()
 
 # Add the include directory
 include_directories(include)

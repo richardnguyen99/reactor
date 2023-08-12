@@ -8,6 +8,8 @@
             ],
             "defines": [
                 "HAVE_LIMITS_H",
+                "RX_HAS_LIMITS_H",
+                "RX_HAS_MATH_H",
                 "_GNU_SOURCE"
             ],
             "compilerPath": "/usr/bin/gcc",
