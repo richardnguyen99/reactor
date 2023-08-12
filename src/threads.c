@@ -1,4 +1,4 @@
-#include "threads.h"
+#include <threads.h>
 
 struct thread_pool *
 pool_new(size_t no_threads, size_t buf_size, thread_func func)
