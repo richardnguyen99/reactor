@@ -10,6 +10,7 @@
                 "HAVE_LIMITS_H",
                 "RX_HAS_LIMITS_H",
                 "RX_HAS_MATH_H",
+                "RX_HAS_POSIX_MEMALIGN",
                 "_GNU_SOURCE"
             ],
             "compilerPath": "/usr/bin/gcc",

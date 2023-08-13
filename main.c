@@ -8,6 +8,9 @@
  * @copyright Copyright (c) 2023
  */
 
+#include <rx_defs.h>
+#include <rx_core.h>
+
 #include "reactor.h"
 #include "route.h"
 
@@ -92,32 +95,12 @@ const struct __route router_table[] = {
 };
 
 int
-main(int argc, char *argv[])
+main(int argc, char *const *argv)
 {
-    int status = SUCCESS;
+    struct rx_daemon daemon;
+    memset(&daemon, 0, sizeof(struct rx_daemon));
 
-    // Load server configuration from command line arguments
-    struct reactor *server = NULL;
-    reactor_init(&server, argc, argv);
+    (void)rx_daemon_init(&daemon, argc, argv);
 
-    // Load the server configuration into the server instance
-    reactor_load(server);
-
-    debug("Listening on %s:%d\n", server->ip, server->port.number);
-
-    // Boot the server instance
-    if ((status = reactor_boot(server)) != SUCCESS)
-        goto safe_exit;
-
-    // Main loop
-    status = reactor_run(server);
-
-    // The server is supposed to run forever. If the main loop exits, there is
-    // a fatal error that needs to be handled. Therefore, these codes are solely
-    // for "best practices".
-
-safe_exit:
-    reactor_destroy(server);
-
-    return status;
+    return 0;
 }

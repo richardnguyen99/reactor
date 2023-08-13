@@ -5,6 +5,7 @@ project(reactor VERSION 0.1.0 LANGUAGES C)
 # Cmake modules for checking libraries and packages
 include(CTest)
 include(CheckIncludeFile)
+include(CheckFunctionExists)
 enable_testing()
 
 # Cmake set up for the project
@@ -50,6 +51,12 @@ endif()
 check_include_file(math.h RX_HAS_MATH_H)
 if (RX_HAS_MATH_H)
     add_definitions(-DRS_HAS_MATH_H)
+endif()
+
+# Check if posix_memalign is available
+check_function_exists(posix_memalign RX_HAS_POSIX_MEMALIGN)
+if (RX_HAS_POSIX_MEMALIGN)
+    add_definitions(-DRS_HAS_POSIX_MEMALIGN)
 endif()
 
 # Set the C flags

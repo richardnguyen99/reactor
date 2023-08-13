@@ -21,6 +21,9 @@ set(SOURCES
     ring_buffer.c
     threads.c
     route.c
+
+    rx_alloc.c
+    rx_daemon.c
 )
 
 add_library(reactor_source ${SOURCES})# Cmake basic configuration

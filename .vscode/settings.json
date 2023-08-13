@@ -31,5 +31,8 @@
         "dict.h": "c",
         "cmath": "cpp"
     },
-    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "C_Cpp.default.includePath": [
+        "${workspaceRoot}/include"
+    ]
 }

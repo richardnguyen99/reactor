@@ -71,7 +71,12 @@
 
 #if defined(RX_HAS_MATH_H)
 #include <math.h>
-#else
+#endif
+
+/* Global macros */
+
+#define rx_noop(x) ((void)(x))
+
 #define rx_max(a, b)                                                           \
     ({                                                                         \
         __typeof__(a) _a = (a);                                                \
@@ -97,6 +102,5 @@
         __typeof__(a) _a = (a);                                                \
         sizeof(_a) / sizeof(_a[0]);                                            \
     })
-#endif
 
 #endif /* _RX_DEFS_H_ */
