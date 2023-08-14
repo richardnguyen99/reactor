@@ -102,5 +102,11 @@ main(int argc, char *const *argv)
 
     (void)rx_daemon_init(&daemon, argc, argv);
 
+    if (rx_daemon_bootstrap(&daemon) != RX_OK)
+    {
+        fprintf(stderr, "reactor: [error] rx_daemon_bootstrap() failed\n");
+        return 1;
+    }
+
     return 0;
 }

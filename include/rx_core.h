@@ -13,9 +13,22 @@
 
 #include <rx_defs.h>
 
+/* Global structures */
+
 struct rx_daemon;
 struct rx_event;
 struct rx_thread_pool;
+struct rx_socket;
+struct rx_string;
+struct rx_kv_pair;
+
+/* Type aliases */
+
+/* Status value performed by rx functions */
+typedef int rx_status_t;
+
+/* Utility string used by reactor engine */
+typedef struct rx_string rx_str_t;
 
 #define RX_OK    0
 #define RX_ERROR -1
@@ -41,9 +54,9 @@ struct rx_thread_pool;
 
 /* Type aliases */
 
-typedef int rx_status_t;
-
 #include <rx_alloc.h>
 #include <rx_daemon.h>
+#include <rx_socket.h>
+#include <rx_string.h>
 
 #endif /* _RX_CORE_H_ */

@@ -11,13 +11,57 @@
 #include <rx_defs.h>
 #include <rx_core.h>
 
-static struct rx_daemon *
-rx_daemon_create(void);
+static rx_status_t
+rx_daemon_init_socket(struct rx_daemon *d)
+{
+    rx_status_t       status;
+    struct rx_socket *s;
+
+    status = RX_OK;
+
+    s = rx_socket_create();
+
+    if (s == NULL)
+    {
+        fprintf(stderr, "\
+reactor: [error] rx_daemon_init_socket: rx_socket_create() failed\n\
+");
+
+        return RX_ERROR;
+    }
+
+    status = rx_socket_prepare_listening(s);
+
+    if (status != RX_OK)
+    {
+        fprintf(stderr, "\
+reactor: [error] rx_daemon_init_socket: rx_socket_prepare_listening() failed\n\
+");
+
+        return RX_ERROR;
+    }
+
+    status = rx_socket_listen(s);
+    if (status != RX_OK)
+    {
+        fprintf(stderr, "\
+reactor: [error] rx_daemon_init_socket: rx_socket_listen() failed\n\
+");
+
+        return RX_ERROR;
+    }
+
+    d->sock = s;
+
+    return status;
+}
 
 rx_status_t
 rx_daemon_init(struct rx_daemon *d, int argc, char *const *argv)
 {
-    rx_status_t status = RX_OK;
+    rx_status_t status;
+
+    status = RX_OK;
 
     /* TODO: Add configuration from argc and argv */
 
@@ -32,7 +76,27 @@ rx_daemon_init(struct rx_daemon *d, int argc, char *const *argv)
     return status;
 }
 
-static struct rx_daemon *
-rx_daemon_create(void)
+rx_status_t
+rx_daemon_bootstrap(struct rx_daemon *d)
 {
+    rx_status_t status;
+    u_char     *reason;
+
+    status = rx_daemon_init_socket(d);
+
+    if (status != RX_OK)
+    {
+        reason = "rx_daemon_init_socket() failed";
+        goto error;
+    }
+
+    return status;
+
+error:
+    fprintf(stderr, "\
+reactor: [error] rx_daemon_bootstrap: %s\n\
+",
+            reason);
+
+    return status;
 }

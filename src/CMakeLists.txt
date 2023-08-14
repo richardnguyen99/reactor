@@ -24,6 +24,8 @@ set(SOURCES
 
     rx_alloc.c
     rx_daemon.c
+    rx_socket.c
+    rx_string.c
 )
 
 add_library(reactor_source ${SOURCES})# Cmake basic configuration

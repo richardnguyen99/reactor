@@ -29,7 +29,16 @@
         "cstdint": "cpp",
         "route.h": "c",
         "dict.h": "c",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "rx_daemon.h": "c",
+        "rx_alloc.h": "c",
+        "array": "c",
+        "bitset": "c",
+        "string_view": "c",
+        "format": "c",
+        "initializer_list": "c",
+        "span": "c",
+        "functional": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "C_Cpp.default.includePath": [

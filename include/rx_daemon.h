@@ -28,10 +28,14 @@ struct rx_daemon
     size_t                 connections;        /* current connections */
 
     struct epoll_event     evs[RX_MAX_EVENTS]; /* epoll event structure */
+    struct rx_socket      *sock;               /* socket instance */
     struct rx_thread_pool *pool;               /* thread pools */
 };
 
 rx_status_t
 rx_daemon_init(struct rx_daemon *d, int argc, char *const *argv);
+
+rx_status_t
+rx_daemon_bootstrap(struct rx_daemon *d);
 
 #endif /* _RX_DAEMON_H_ */
