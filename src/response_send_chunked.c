@@ -13,7 +13,7 @@ __send_chunk_headers(struct response *res, int fd)
             snprintf(res->__chunked_buf, MAX_HDR_LEN,
                      "HTTP/1.1 %d %s\r\n"
                      "Content-Type: %s\r\n"
-                     "Connection: keep-alive\r\n"
+                     "Connection: close\r\n"
                      "Transfer-Encoding: chunked\r\n"
                      "Server: reactor/%s\r\n"
                      "\r\n",

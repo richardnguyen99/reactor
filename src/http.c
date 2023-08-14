@@ -219,7 +219,7 @@ http_response_send(struct http_obj *http)
         break;
     }
 
-    if (res->body_len > CHUNKHDR)
+    if (res->body_len > CHUNKSIZE)
     {
         response_send_chunked(res, http->cfd);
         return;

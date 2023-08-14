@@ -7,21 +7,13 @@ __reactor_in(struct reactor *server, struct reactor_event *rev)
     if (rev->state == 1)
         return;
 
-    u_char
-
-        debug("\
+    debug("\
 ===================================EPOLLIN======================================\n\
 Client: %s:%d\n\
 Socket: %d\n\
 \n",
-              inet_ntoa(rev->data.rsk->client.sin_addr),
-              ntohs(rev->data.rsk->client.sin_port), rev->data.rsk->fd);
-
-    if (rev->refcnt > 5)
-    {
-        debug("(__reactor_in) refcnt > 5\n");
-        return;
-    }
+          inet_ntoa(rev->data.rsk->client.sin_addr),
+          ntohs(rev->data.rsk->client.sin_port), rev->data.rsk->fd);
 
     struct thread_task *task;
 

@@ -163,11 +163,7 @@ _handle_request(void *arg)
         // Parse the request line
         status = http_request_line(http);
         if (status == 0)
-        {
-            task->rev->refcnt--;
-            revent_destroy(task->rev);
             goto end_request;
-        }
 
         if (status != HTTP_SUCCESS)
             goto send_response;
@@ -216,13 +212,12 @@ _handle_request(void *arg)
 
         http_response_send(http);
 
-        debug("Response sent: %ld\n", http->res->body_len);
+        debug("Response sent(%s: %ld\n", (http->res->body_len > CHUNKSIZE ? "chunked message" : "message"), http->res->body_len);
         debug("\n");
 
 
     free_http:
-        task->rev->refcnt--;
-
+    end_request:
         http_free(http);
 
         req = NULL;
@@ -231,7 +226,7 @@ _handle_request(void *arg)
 
         free(task);
 
-    end_request:
+        task->rev->refcnt--;
         revent_mod(task->rev, EPOLLOUT);
 
         debug("\

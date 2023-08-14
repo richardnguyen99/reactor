@@ -396,18 +396,18 @@ response_send(struct response *res, int fd)
     char msg[cap];
     int send_flag = MSG_DONTWAIT | MSG_NOSIGNAL;
 
-    msg_len = (size_t)snprintf(msg, BUFSIZ,
-                               "HTTP/1.1 %d %s\r\n"
-                               "Content-Type: %s\r\n"
-                               "Content-Length: %ld\r\n"
-                               "Connection: %s\r\n"
-                               "Server: reactor/%s\r\n"
-                               "\r\n"
-                               "%s",
-                               res->status, GET_HTTP_MSG(res->status),
-                               GET_HTTP_CONTENT_TYPE(res->content_type),
-                               res->body_len, "keep-alive", REACTOR_VERSION,
-                               res->body);
+    msg_len =
+        (size_t)snprintf(msg, BUFSIZ,
+                         "HTTP/1.1 %d %s\r\n"
+                         "Content-Type: %s\r\n"
+                         "Content-Length: %ld\r\n"
+                         "Connection: %s\r\n"
+                         "Server: reactor/%s\r\n"
+                         "\r\n"
+                         "%s",
+                         res->status, GET_HTTP_MSG(res->status),
+                         GET_HTTP_CONTENT_TYPE(res->content_type),
+                         res->body_len, "close", REACTOR_VERSION, res->body);
 
     for (total_sent = 0; total_sent < msg_len; total_sent += (size_t)nsent)
     {
@@ -454,6 +454,9 @@ response_free(struct response *response)
 
     if (response->accepts != NULL)
         dict_delete(response->accepts);
+
+    response->body     = NULL;
+    response->body_len = 0;
 
     pthread_rwlock_destroy(&response->rwlock);
 

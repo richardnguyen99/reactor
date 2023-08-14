@@ -193,7 +193,7 @@ revent_add(struct reactor_event *rev)
 
     ev.data.ptr = rev;
 
-    ev.events = EPOLLIN | EPOLLET;
+    ev.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
 
     __get_evt_fd(rev, &fd, &epoll_fd);
 
@@ -233,20 +233,30 @@ revent_destroy(struct reactor_event *rev)
 
     if (rev->flag == EVENT_SOCKET)
     {
+        if (rsk == NULL)
+            goto timer_destroy;
+
         rsocket_destroy(rev->data.rsk);
         rev->data.rsk = NULL;
 
         debug("destroyed socket\n");
     }
-    else if (rev->flag == EVENT_TIMER)
+
+timer_destroy:
+    if (rev->flag == EVENT_TIMER)
     {
+        if (rev->data.rtm == NULL)
+            goto free_rev;
+
         rtimer_destroy(rev->data.rtm);
         rev->data.rtm = NULL;
 
         printf("destroyed timer\n");
     }
 
-    free(rev);
+free_rev:
+    if (rev != NULL)
+        free(rev);
 
     return SUCCESS;
 }
