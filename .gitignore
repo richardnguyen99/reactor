@@ -58,7 +58,6 @@ CMakeCache.txt
 CMakeFiles
 CMakeScripts
 Testing
-Makefile
 cmake_install.cmake
 install_manifest.txt
 compile_commands.json
@@ -68,5 +67,20 @@ _deps
 # VSCode
 .vscode/tasks.json
 
-# Dev files
-test.c
+# Built binaries
+main
+reactor
+reactor-dev
+rx_main
+
+# Autotool generated files
+compile
+config.guess
+compile
+depcomp
+install-sh
+missing
+autom4te.cache/
+.deps/
+config.sub
+

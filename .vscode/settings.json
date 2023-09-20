@@ -1,5 +1,4 @@
 {
-    "cmake.sourceDirectory": "${workspaceRoot}",
     "files.associations": {
         "defs.h": "c",
         "util.h": "c",
@@ -24,7 +23,17 @@
         "*.inc": "c",
         "threads.h": "c",
         "poll.h": "c",
-        "ring_buffer.h": "c"
+        "ring_buffer.h": "c",
+        "stdarg.h": "c",
+        "stdbool.h": "c",
+        "rx_config.h": "c",
+        "rx_core.h": "c",
+        "rx_server.h": "c",
+        "rx_file.h": "c",
+        "rx_log.h": "c",
+        "rx_string.h": "c",
+        "types.h": "c",
+        "sendfile.h": "c"
     },
-    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
 }

@@ -3,17 +3,14 @@
         {
             "name": "Linux",
             "includePath": [
-                "${default}",
+                "${workspaceFolder}/**",
                 "${workspaceFolder}/include"
             ],
-            "defines": [
-                "HAVE_LIMITS_H",
-                "_GNU_SOURCE"
-            ],
+            "defines": [],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c17",
             "cppStandard": "c++17",
-            "intelliSenseMode": "linux-clang-x64"
+            "intelliSenseMode": "linux-gcc-x64"
         }
     ],
     "version": 4
