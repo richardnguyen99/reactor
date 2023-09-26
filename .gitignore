@@ -72,7 +72,8 @@ main
 reactor
 reactor-dev
 rx_main
-rx_test*
+rx_test
+rx_test.o
 
 # Autotool generated files
 compile
