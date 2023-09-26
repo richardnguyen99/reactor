@@ -54,10 +54,17 @@ rx_request_init(struct rx_request *request)
 int
 rx_request_proccess_method(rx_request_method_t *method, const char *buffer)
 {
+    if (buffer == NULL)
+    {
+        *method = RX_REQUEST_METHOD_INVALID;
+        return RX_ERROR;
+    }
+
     size_t len = strlen(buffer);
 
-    if (buffer == NULL || len == 0)
+    if (len == 0)
     {
+        *method = RX_REQUEST_METHOD_INVALID;
         return RX_ERROR;
     }
 
