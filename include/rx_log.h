@@ -21,50 +21,39 @@
  * SOFTWARE.
  */
 
-#define _GNU_SOURCE 1
+#ifndef __RX_LOG_H__
+#define __RX_LOG_H__ 1
 
-#ifndef __RX_CONFIG_H__
-#define __RX_CONFIG_H__ 1
+#include <rx_config.h>
+#include <rx_core.h>
 
-/* ISO C standard libraries */
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
+// ANSI escape codes for text color
+#define ANSI_COLOR_RED    "\x1b[31m"
+#define ANSI_COLOR_GREEN  "\x1b[32m"
+#define ANSI_COLOR_YELLOW "\x1b[33m"
+#define ANSI_COLOR_BLUE   "\x1b[34m"
+#define ANSI_COLOR_RESET  "\x1b[0m"
 
-/* POSIX standard libraries */
-#include <errno.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <signal.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
+#define LOG_TYPE_INFO  0
+#define LOG_TYPE_WARN  1
+#define LOG_TYPE_ERROR 2
+#define LOG_TYPE_DEBUG 3
 
-/* POSIX socket libraries */
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
+#define LOG_LEVEL_0 0
+#define LOG_LEVEL_1 1
+#define LOG_LEVEL_2 2
+#define LOG_LEVEL_3 3
 
-/* Linux-specific libraries */
-#include <sys/epoll.h>
-#include <sys/mman.h>
-#include <sys/sendfile.h>
+void
+rx_log_debug(const char *fmt, ...);
 
-#define NOOP(x) (void)x
+void
+rx_log_error(const char *fmt, ...);
 
-#ifndef u_char
-typedef unsigned char u_char;
-#endif
+void
+rx_log_warn(const char *fmt, ...);
 
-#define RX_LISTEN_BACKLOG 512
+void
+rx_log(int level, int type, const char *fmt, ...);
 
-#define RX_MAX_EVENTS 1024
-
-#define RX_BUF_SIZE 8192
-
-#endif /* __RX_CONFIG_H__ */
+#endif /* __RX_LOG_H__ */

@@ -21,50 +21,18 @@
  * SOFTWARE.
  */
 
-#define _GNU_SOURCE 1
+#include <rx_config.h>
+#include <rx_core.h>
 
-#ifndef __RX_CONFIG_H__
-#define __RX_CONFIG_H__ 1
+int
+rx_response_init(struct rx_response *res)
+{
+    res->version        = (struct rx_http_version){.major = 1, .minor = 1};
+    res->status_code    = RX_HTTP_STATUS_CODE_UNSET;
+    res->status_message = NULL;
 
-/* ISO C standard libraries */
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
+    res->buffer       = NULL;
+    res->content_type = 0;
 
-/* POSIX standard libraries */
-#include <errno.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <signal.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-/* POSIX socket libraries */
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-
-/* Linux-specific libraries */
-#include <sys/epoll.h>
-#include <sys/mman.h>
-#include <sys/sendfile.h>
-
-#define NOOP(x) (void)x
-
-#ifndef u_char
-typedef unsigned char u_char;
-#endif
-
-#define RX_LISTEN_BACKLOG 512
-
-#define RX_MAX_EVENTS 1024
-
-#define RX_BUF_SIZE 8192
-
-#endif /* __RX_CONFIG_H__ */
+    return RX_OK;
+}

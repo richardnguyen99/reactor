@@ -32,12 +32,53 @@ struct rx_server;
 struct rx_client;
 struct rx_request;
 struct rx_response;
+struct rx_connection;
 struct rx_string;
+struct rx_file;
+struct rx_request_uri;
 
 typedef struct rx_string rx_str_t;
 
-#define RX_OK    0
-#define RX_ERROR -1
-#define RX_AGAIN -2
+#define RX_OK               0
+#define RX_ERROR            -1
+#define RX_FATAL_WITH_ERROR -2
+#define RX_ALLOC_FAILED     -3
+#define RX_AGAIN            -4
+
+#define RX_OK_PTR           ((void *)RX_OK)
+#define RX_ERROR_PTR        ((void *)RX_ERROR)
+#define RX_FATAL_PTR        ((void *)RX_FATAL_WITH_ERROR)
+#define RX_ALLOC_FAILED_PTR ((void *)RX_ALLOC_FAILED)
+#define RX_AGAIN_PTR        ((void *)RX_AGAIN)
+
+struct rx_http_version
+{
+    int major;
+    int minor;
+};
+
+enum rx_http_status_enum
+{
+    RX_HTTP_STATUS_CODE_UNSET                 = 0,
+    RX_HTTP_STATUS_CODE_OK                    = 200,
+    RX_HTTP_STATUS_CODE_BAD_REQUEST           = 400,
+    RX_HTTP_STATUS_CODE_NOT_FOUND             = 404,
+    RX_HTTP_STATUS_CODE_INTERNAL_SERVER_ERROR = 500,
+};
+
+#define RX_HTTP_STATUS_MSG_OK                    "OK"
+#define RX_HTTP_STATUS_MSG_BAD_REQUEST           "Bad Request"
+#define RX_HTTP_STATUS_MSG_NOT_FOUND             "Not Found"
+#define RX_HTTP_STATUS_MSG_INTERNAL_SERVER_ERROR "Internal Server Error"
+
+#define RX_MAX_URI_LENGTH 2048
+
+typedef enum rx_http_status_enum rx_http_status_t;
+
+#include <rx_connection.h>
+#include <rx_file.h>
+#include <rx_log.h>
+#include <rx_request.h>
+#include <rx_response.h>
 
 #endif /* __RX_CORE_H__ */

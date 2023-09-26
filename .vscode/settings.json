@@ -32,8 +32,21 @@
         "rx_file.h": "c",
         "rx_log.h": "c",
         "rx_string.h": "c",
+        "rx_response.h": "c",
+        "rx_connection.h": "c",
+        "rx_task.h": "c",
+        "rx_ring.h": "c",
         "types.h": "c",
-        "sendfile.h": "c"
+        "sendfile.h": "c",
+        "vector": "c",
+        "rx_hash.h": "c",
+        "time.h": "c",
+        "unity/unity_config.h": "c",
+        "unity/unity_internals.h": "c",
+        "unity/unity_fixture.h": "c",
+        "unity/unity_memory.h": "c",
+        "unity/unity_fixture_internals.h": "c",
+        "unity/unity.h": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
 }
