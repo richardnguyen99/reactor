@@ -31,6 +31,7 @@
 
 enum rx_request_uri_result
 {
+    RX_REQUEST_URI_RESULT_NONE,
     RX_REQUEST_URI_RESULT_OK,
     RX_REQUEST_URI_RESULT_INVALID,
     RX_REQUEST_URI_RESULT_TOO_LONG,
@@ -98,6 +99,7 @@ struct rx_request_uri
     /* Result of the URI processing
 
         Valid results:
+            - `RX_REQUEST_URI_RESULT_NONE`: The URI is not processed yet
             - `RX_REQUEST_URI_RESULT_OK`: The URI is valid
             - `RX_REQUEST_URI_RESULT_INVALID`: The URI is invalid
             - `RX_REQUEST_URI_RESULT_TOO_LONG`: The URI is too long

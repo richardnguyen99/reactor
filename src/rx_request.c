@@ -97,27 +97,50 @@ rx_request_process_uri(struct rx_request_uri *uri, const char *buffer)
         return RX_ERROR;
     }
 
+    char *path_ptr;
     char *query_string_ptr;
     size_t len;
 
     len              = strlen(buffer);
+    path_ptr         = NULL;
     query_string_ptr = NULL;
+
+    if (len == 0)
+    {
+        uri->result = RX_REQUEST_URI_RESULT_INVALID;
+        return RX_ERROR;
+    }
 
     if (len > RX_MAX_URI_LENGTH)
     {
+        uri->result = RX_REQUEST_URI_RESULT_TOO_LONG;
         return RX_ERROR;
     }
 
     memcpy(uri->raw_uri, buffer, len);
+    uri->length       = len;
+    uri->raw_uri[len] = '\0';
 
-    uri->path        = uri->raw_uri;
+    path_ptr = strchr(uri->raw_uri, '/');
+
+    if (path_ptr == NULL)
+    {
+        path_ptr = uri->raw_uri;
+    }
+
     query_string_ptr = strchr(uri->raw_uri, '?');
 
     if (query_string_ptr != NULL)
     {
-        uri->path_end     = query_string_ptr;
-        uri->query_string = query_string_ptr + 1;
+        uri->path_end         = query_string_ptr;
+        uri->query_string     = query_string_ptr + 1;
+        uri->query_string_end = uri->raw_uri + len;
     }
+    else
+        uri->path_end = uri->raw_uri + len;
+
+    uri->path   = path_ptr;
+    uri->result = RX_REQUEST_URI_RESULT_OK;
 
     return RX_OK;
 }
