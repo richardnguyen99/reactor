@@ -523,7 +523,7 @@ main(int argc, const char *argv[])
 
                 free(buf);
 
-                rx_log(LOG_LEVEL_1, LOG_TYPE_DEBUG, "Sent %ld bytes to fd %d\n",
+                rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "Sent %ld bytes to fd %d\n",
                        nsend, fd);
 
                 ret = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
@@ -539,7 +539,7 @@ main(int argc, const char *argv[])
                 free(conn);
                 events[i].data.ptr = NULL;
 
-                rx_log(LOG_LEVEL_1, LOG_TYPE_DEBUG,
+                rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
                        "Connection closed on fd %d\n", fd);
             }
             else if (events[i].events & (EPOLLERR | EPOLLRDHUP))

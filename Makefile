@@ -86,7 +86,7 @@ $(OBJDIR)/%-dev.o: $(SRCDIR)/%.c
 		mkdir -p $(OBJDIR); \
 	fi
 
-	$(CC) $(DEV_FLAGS) -c $< -o $@
+	$(CC) $(DEV_FLAGS) -Iinclude -c $< -o $@
 
 rx_main-dev.o: rx_main.c
 	$(CC) $(DEV_FLAGS) -Iinclude -c $^ -o $@
