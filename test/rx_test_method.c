@@ -43,7 +43,7 @@ TEST_TEAR_DOWN(RX_REQUEST_METHOD)
 TEST(RX_REQUEST_METHOD, GetMethodTest)
 {
     const char *buffer = "GET";
-    int result         = rx_request_proccess_method(&method, buffer);
+    int result = rx_request_proccess_method(&method, buffer, strlen(buffer));
 
     TEST_ASSERT_EQUAL_INT(RX_OK, result);
     TEST_ASSERT_EQUAL_INT(RX_REQUEST_METHOD_GET, method);
@@ -54,7 +54,7 @@ TEST(RX_REQUEST_METHOD, GetMethodTest)
 TEST(RX_REQUEST_METHOD, PostMethodTest)
 {
     const char *buffer = "POST";
-    int result         = rx_request_proccess_method(&method, buffer);
+    int result = rx_request_proccess_method(&method, buffer, strlen(buffer));
 
     TEST_ASSERT_EQUAL_INT(RX_OK, result);
     TEST_ASSERT_EQUAL_INT(RX_REQUEST_METHOD_POST, method);
@@ -65,7 +65,7 @@ TEST(RX_REQUEST_METHOD, PostMethodTest)
 TEST(RX_REQUEST_METHOD, PutMethodTest)
 {
     const char *buffer = "PUT";
-    int result         = rx_request_proccess_method(&method, buffer);
+    int result = rx_request_proccess_method(&method, buffer, strlen(buffer));
 
     TEST_ASSERT_EQUAL_INT(RX_OK, result);
     TEST_ASSERT_EQUAL_INT(RX_REQUEST_METHOD_PUT, method);
@@ -76,7 +76,7 @@ TEST(RX_REQUEST_METHOD, PutMethodTest)
 TEST(RX_REQUEST_METHOD, HeadMethodTest)
 {
     const char *buffer = "HEAD";
-    int result         = rx_request_proccess_method(&method, buffer);
+    int result = rx_request_proccess_method(&method, buffer, strlen(buffer));
 
     TEST_ASSERT_EQUAL_INT(RX_OK, result);
     TEST_ASSERT_EQUAL_INT(RX_REQUEST_METHOD_HEAD, method);
@@ -87,7 +87,7 @@ TEST(RX_REQUEST_METHOD, HeadMethodTest)
 TEST(RX_REQUEST_METHOD, DeleteMethodTest)
 {
     const char *buffer = "DELETE";
-    int result         = rx_request_proccess_method(&method, buffer);
+    int result = rx_request_proccess_method(&method, buffer, strlen(buffer));
 
     TEST_ASSERT_EQUAL_INT(RX_OK, result);
     TEST_ASSERT_EQUAL_INT(RX_REQUEST_METHOD_DELETE, method);
@@ -98,7 +98,7 @@ TEST(RX_REQUEST_METHOD, DeleteMethodTest)
 TEST(RX_REQUEST_METHOD, NullMethodTest)
 {
     const char *buffer = NULL;
-    int result         = rx_request_proccess_method(&method, buffer);
+    int result         = rx_request_proccess_method(&method, buffer, 0);
 
     TEST_ASSERT_EQUAL_INT(RX_ERROR, result);
     TEST_ASSERT_EQUAL_INT(RX_REQUEST_METHOD_INVALID, method);
@@ -109,7 +109,7 @@ TEST(RX_REQUEST_METHOD, NullMethodTest)
 TEST(RX_REQUEST_METHOD, EmptyMethodTest)
 {
     const char *buffer = "";
-    int result         = rx_request_proccess_method(&method, buffer);
+    int result = rx_request_proccess_method(&method, buffer, strlen(buffer));
 
     TEST_ASSERT_EQUAL_INT(RX_ERROR, result);
     TEST_ASSERT_EQUAL_INT(RX_REQUEST_METHOD_INVALID, method);
@@ -120,7 +120,7 @@ TEST(RX_REQUEST_METHOD, EmptyMethodTest)
 TEST(RX_REQUEST_METHOD, UnsupportedMethodTest)
 {
     const char *buffer = "CONNECT";
-    int result         = rx_request_proccess_method(&method, buffer);
+    int result = rx_request_proccess_method(&method, buffer, strlen(buffer));
 
     TEST_ASSERT_EQUAL_INT(RX_OK, result);
     TEST_ASSERT_EQUAL_INT(RX_REQUEST_METHOD_INVALID, method);

@@ -57,7 +57,7 @@ TEST_TEAR_DOWN(RX_REQUEST_URI)
 TEST(RX_REQUEST_URI, EmptyUriTest)
 {
     const char *raw_uri = "";
-    rx_request_process_uri(&uri, raw_uri);
+    rx_request_process_uri(&uri, raw_uri, 0);
 
     TEST_ASSERT_EQUAL_STRING("", uri.raw_uri);
     TEST_ASSERT_EQUAL(0, uri.length);
@@ -73,7 +73,7 @@ TEST(RX_REQUEST_URI, EmptyUriTest)
 TEST(RX_REQUEST_URI, IndexUriTest)
 {
     const char *raw_uri = "/";
-    rx_request_process_uri(&uri, raw_uri);
+    rx_request_process_uri(&uri, raw_uri, 1);
 
     TEST_ASSERT_EQUAL_STRING("/", uri.raw_uri);
     TEST_ASSERT_EQUAL(1, uri.length);
@@ -94,7 +94,7 @@ TEST(RX_REQUEST_URI, UriWithNoSlashTest)
 {
     const char *raw_uri = "index.html";
     const size_t len    = strlen(raw_uri);
-    rx_request_process_uri(&uri, raw_uri);
+    rx_request_process_uri(&uri, raw_uri, len);
 
     TEST_ASSERT_EQUAL_STRING("index.html", uri.raw_uri);
     TEST_ASSERT_EQUAL(len, uri.length);
@@ -116,7 +116,7 @@ TEST(RX_REQUEST_URI, MultiPathUriTest)
     const char *raw_uri = "/questions/1024/what-is-the-difference-between"
                           "-a-uri-a-url-and-a-urn";
     const size_t len    = strlen(raw_uri);
-    rx_request_process_uri(&uri, raw_uri);
+    rx_request_process_uri(&uri, raw_uri, len);
 
     TEST_ASSERT_EQUAL_STRING(raw_uri, uri.raw_uri);
     TEST_ASSERT_EQUAL(len, uri.length);
@@ -137,7 +137,7 @@ TEST(RX_REQUEST_URI, QueryStringUriTest)
 {
     const char *raw_uri = "/index.html?foo=bar&baz=waldo";
     const size_t len    = strlen(raw_uri);
-    rx_request_process_uri(&uri, raw_uri);
+    rx_request_process_uri(&uri, raw_uri, len);
 
     TEST_ASSERT_EQUAL_STRING(raw_uri, uri.raw_uri);
     TEST_ASSERT_EQUAL(len, uri.length);
@@ -209,7 +209,8 @@ TEST(RX_REQUEST_URI, TooLongUriTest)
                           "/01234567890123456789012345678901234567890123456789"
                           "/01234567890123456789012345678901234567890123456789"
                           "/01234567890123456789012345678901234567890123456789";
-    rx_request_process_uri(&uri, raw_uri);
+    size_t len          = strlen(raw_uri);
+    rx_request_process_uri(&uri, raw_uri, len);
 
     TEST_ASSERT_EQUAL_STRING("\0", uri.raw_uri);
     TEST_ASSERT_EQUAL(0, uri.length);

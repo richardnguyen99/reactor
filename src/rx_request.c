@@ -52,17 +52,89 @@ rx_request_init(struct rx_request *request)
 }
 
 int
-rx_request_proccess_method(rx_request_method_t *method, const char *buffer)
+rx_request_process_start_line(struct rx_request *request, const char *buffer,
+                              size_t len)
 {
-    if (buffer == NULL)
+#if RX_DEBUG
+    pthread_t tid = pthread_self();
+
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+           "[Thread %ld]%4.sProcessing starting line: %.*s\n", tid, "", len,
+           buffer);
+#endif
+
+    if (buffer == NULL || len == 0)
     {
-        *method = RX_REQUEST_METHOD_INVALID;
         return RX_ERROR;
     }
 
-    size_t len = strlen(buffer);
+    int ret;
+    const char *begin, *end;
+    size_t i;
 
-    if (len == 0)
+    i     = 0;
+    begin = end = buffer;
+    ret         = RX_OK;
+
+    for (; i < len && buffer[i] != ' ' && buffer[i] != '\0'; ++i)
+    {
+        end = end + 1;
+    }
+
+    if (i == len || buffer[i] == '\0')
+    {
+        request->state = RX_REQUEST_STATE_DONE;
+        return RX_ERROR;
+    }
+
+    ret = rx_request_proccess_method(&request->method, begin, end - begin);
+
+    if (ret != RX_OK)
+    {
+        return RX_ERROR;
+    }
+
+    begin = end + 1;
+    end   = end + 1;
+    i     = i + 1;
+
+    for (; i < len && buffer[i] != ' ' && buffer[i] != '\0'; ++i)
+    {
+        end = end + 1;
+    }
+
+    if (i == len || buffer[i] == '\0')
+    {
+        request->state = RX_REQUEST_STATE_DONE;
+        return RX_ERROR;
+    }
+
+    ret = rx_request_process_uri(&request->uri, begin, end - begin);
+
+    if (ret != RX_OK)
+    {
+        return RX_ERROR;
+    }
+
+    begin = end + 1;
+    end   = buffer + len;
+
+    ret = rx_request_process_version(&request->version, begin, end - begin);
+
+    return RX_OK;
+}
+
+int
+rx_request_proccess_method(rx_request_method_t *method, const char *buffer,
+                           size_t len)
+{
+#if RX_DEBUG
+    pthread_t tid = pthread_self();
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+           "[Thread %ld]%8.sProcessing method: %.*s\n", tid, "", len, buffer);
+#endif
+
+    if (buffer == NULL || len == 0)
     {
         *method = RX_REQUEST_METHOD_INVALID;
         return RX_ERROR;
@@ -97,8 +169,15 @@ rx_request_proccess_method(rx_request_method_t *method, const char *buffer)
 }
 
 int
-rx_request_process_uri(struct rx_request_uri *uri, const char *buffer)
+rx_request_process_uri(struct rx_request_uri *uri, const char *buffer,
+                       size_t len)
 {
+#if RX_DEBUG
+    pthread_t tid = pthread_self();
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+           "[Thread %ld]%8.sProcessing URI: %.*s\n", tid, "", len, buffer);
+#endif
+
     if (buffer == NULL)
     {
         return RX_ERROR;
@@ -106,9 +185,7 @@ rx_request_process_uri(struct rx_request_uri *uri, const char *buffer)
 
     char *path_ptr;
     char *query_string_ptr;
-    size_t len;
 
-    len              = strlen(buffer);
     path_ptr         = NULL;
     query_string_ptr = NULL;
 
@@ -153,12 +230,67 @@ rx_request_process_uri(struct rx_request_uri *uri, const char *buffer)
 }
 
 int
-rx_request_process_version(struct rx_request_version *version, char *buffer)
+rx_request_process_version(struct rx_request_version *version,
+                           const char *buffer, size_t len)
 {
-    NOOP(version);
-    NOOP(buffer);
+#if defined(RX_DEBUG)
+    pthread_t tid = pthread_self();
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+           "[Thread %ld]%8.sProcessing version: %.*s\n", tid, "", len, buffer);
+#endif
+    if (buffer == NULL || len == 0)
+    {
+        version->result = RX_REQUEST_VERSION_RESULT_INVALID;
+        return RX_ERROR;
+    }
 
-    return 0;
+    const char *slash, *dot, *end, *major, *minor;
+
+    slash = dot = end = buffer;
+
+    slash = strchr(buffer, '/');
+
+    if (slash == NULL)
+    {
+        version->result = RX_REQUEST_VERSION_RESULT_INVALID;
+        return RX_ERROR;
+    }
+
+    if (strncmp("HTTP", buffer, slash - buffer) != 0)
+    {
+        version->result = RX_REQUEST_VERSION_RESULT_INVALID;
+        return RX_ERROR;
+    }
+
+    major = slash + 1;
+    dot   = strchr(slash, '.');
+
+    if (dot == NULL)
+    {
+        version->result = RX_REQUEST_VERSION_RESULT_INVALID;
+        return RX_ERROR;
+    }
+
+    minor = dot + 1;
+    end   = buffer + len;
+
+    if (dot - major != 1 || end - minor != 1)
+    {
+        version->result = RX_REQUEST_VERSION_RESULT_INVALID;
+        return RX_ERROR;
+    }
+
+    if (*major != '1' || *minor != '1')
+    {
+        version->result = RX_REQUEST_VERSION_RESULT_UNSUPPORTED;
+        return RX_ERROR;
+    }
+
+    version->result = RX_REQUEST_VERSION_RESULT_OK;
+    version->major  = *major - '0';
+    version->minor  = *minor - '0';
+
+    return RX_OK;
 }
 
 int
@@ -185,8 +317,9 @@ rx_memset_uri(struct rx_request_uri *uri)
 static void
 rx_memset_version(struct rx_request_version *version)
 {
-    version->major = 1;
-    version->minor = 1;
+    version->result = RX_REQUEST_VERSION_RESULT_NONE;
+    version->major  = 0;
+    version->minor  = 0;
 }
 
 static void

@@ -58,9 +58,18 @@ enum rx_request_method
     RX_REQUEST_METHOD_HEAD,
 };
 
+enum rx_request_version_result
+{
+    RX_REQUEST_VERSION_RESULT_NONE,
+    RX_REQUEST_VERSION_RESULT_OK,
+    RX_REQUEST_VERSION_RESULT_INVALID,
+    RX_REQUEST_VERSION_RESULT_UNSUPPORTED,
+};
+
 typedef enum rx_request_state rx_request_state_t;
 typedef enum rx_request_method rx_request_method_t;
 typedef enum rx_request_uri_result rx_request_uri_result_t;
+typedef enum rx_request_version_result rx_request_version_result_t;
 
 /* Structure to store the URI of an HTTP request
 
@@ -154,6 +163,7 @@ struct rx_request_uri
 
 struct rx_request_version
 {
+    rx_request_version_result_t result;
     uint8_t major;
     uint8_t minor;
 };
@@ -193,13 +203,20 @@ int
 rx_request_init(struct rx_request *request);
 
 int
-rx_request_proccess_method(rx_request_method_t *method, const char *buffer);
+rx_request_process_start_line(struct rx_request *request, const char *buffer,
+                              size_t len);
 
 int
-rx_request_process_uri(struct rx_request_uri *uri, const char *buffer);
+rx_request_proccess_method(rx_request_method_t *method, const char *buffer,
+                           size_t len);
 
 int
-rx_request_process_version(struct rx_request_version *version, char *buffer);
+rx_request_process_uri(struct rx_request_uri *uri, const char *buffer,
+                       size_t len);
+
+int
+rx_request_process_version(struct rx_request_version *version,
+                           const char *buffer, size_t len);
 
 int
 rx_request_process_header_host(struct rx_header_host *host, char *buffer);

@@ -804,12 +804,18 @@ rx_request_process(struct rx_connection *conn)
            tid, "", conn->header_end - conn->buffer_start);
 
     endl = strstr(startl, "\r\n");
-    // ret = rx_request_starting_line(conn->request, conn->response, startl,
-    // endl);
 
+    ret = rx_request_process_start_line(conn->request, startl, endl - startl);
     if (ret != RX_OK)
     {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR,
+               "[Thread %ld]%4.sFailed to process request start line\n", tid,
+               "");
+        return RX_ERROR_PTR;
     }
+
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.sMethod: %d\n", tid, "",
+           conn->request->method);
 
     i += endl - startl;
     startl = endl + 2;
