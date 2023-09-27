@@ -27,7 +27,6 @@
 int
 rx_response_init(struct rx_response *res)
 {
-    res->version        = (struct rx_http_version){.major = 1, .minor = 1};
     res->status_code    = RX_HTTP_STATUS_CODE_UNSET;
     res->status_message = NULL;
 

@@ -21,23 +21,18 @@
  * SOFTWARE.
  */
 
-#ifndef __RX_RESPONSE_H__
-#define __RX_RESPONSE_H__ 1
+#ifndef __RX_TASK_H__
+#define __RX_TASK_H__ 1
 
 #include <rx_config.h>
 #include <rx_core.h>
 
-struct rx_response
+struct rx_task
 {
-    // struct rx_http_version version;
-    rx_http_status_t status_code;
-    char *status_message;
+    void *(*handle)(void *);
+    void *arg;
 
-    char *buffer;
-    size_t content_type;
+    int task_type;
 };
 
-int
-rx_response_init(struct rx_response *response);
-
-#endif /* __RX_RESPONSE_H__ */
+#endif /* __RX_TASK_H__ */

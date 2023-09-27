@@ -36,6 +36,8 @@ struct rx_connection;
 struct rx_string;
 struct rx_file;
 struct rx_request_uri;
+struct rx_task;
+struct rx_ring;
 
 typedef struct rx_string rx_str_t;
 
@@ -50,12 +52,6 @@ typedef struct rx_string rx_str_t;
 #define RX_FATAL_PTR        ((void *)RX_FATAL_WITH_ERROR)
 #define RX_ALLOC_FAILED_PTR ((void *)RX_ALLOC_FAILED)
 #define RX_AGAIN_PTR        ((void *)RX_AGAIN)
-
-struct rx_http_version
-{
-    int major;
-    int minor;
-};
 
 enum rx_http_status_enum
 {
@@ -80,5 +76,7 @@ typedef enum rx_http_status_enum rx_http_status_t;
 #include <rx_log.h>
 #include <rx_request.h>
 #include <rx_response.h>
+#include <rx_ring.h>
+#include <rx_task.h>
 
 #endif /* __RX_CORE_H__ */

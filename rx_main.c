@@ -27,25 +27,6 @@
 #define RX_TASK_TYPE_PROCESS_REQUEST  1
 #define RX_TASK_TYPE_PROCESS_RESPONSE 2
 
-struct rx_task
-{
-    void *(*handle)(void *);
-    void *arg;
-
-    int task_type;
-};
-
-struct rx_ring
-{
-    size_t size;
-    size_t cap;
-
-    size_t in;
-    size_t out;
-
-    struct rx_task *tasks[256];
-};
-
 struct rx_thread_pool
 {
     pthread_t threads[8];
@@ -57,15 +38,6 @@ struct rx_thread_pool
 
     struct rx_ring *ring;
 };
-
-void
-rx_ring_init(struct rx_ring *ring);
-
-void
-rx_ring_push(struct rx_ring *ring, struct rx_task *task);
-
-struct rx_task *
-rx_ring_pop(struct rx_ring *ring);
 
 void *
 rx_thread_pool_worker(void *arg);
@@ -427,6 +399,12 @@ main(int argc, const char *argv[])
 
                     struct rx_task *task = malloc(sizeof(*task));
 
+                    if (task == NULL)
+                    {
+                        sprintf(msg, "malloc: %s\n", strerror(errno));
+                        goto err_loop;
+                    }
+
                     rx_log(LOG_LEVEL_2, LOG_TYPE_DEBUG, "Header Length: %ld\n",
                            conn->header_end - conn->buffer_start);
                     rx_log(LOG_LEVEL_2, LOG_TYPE_DEBUG, "Body Length: %ld\n",
@@ -475,7 +453,8 @@ main(int argc, const char *argv[])
                                        "Date: %s\r\n"
                                        "Connection: close\r\n"
                                        "\r\n"
-                                       "Hello, World!";
+                                       "Hello, World!"
+                                       "\r\n";
 
                 int fd = conn->fd;
 
@@ -607,48 +586,6 @@ err_loop:
     exit_with_grace:
         return ret;
     }
-}
-
-void
-rx_ring_init(struct rx_ring *ring)
-{
-    ring->size = 0;
-    ring->cap  = 256;
-    ring->in   = 0;
-    ring->out  = 0;
-
-    for (size_t i = 0; i < ring->cap; i++)
-    {
-        ring->tasks[i] = NULL;
-    }
-}
-
-void
-rx_ring_push(struct rx_ring *ring, struct rx_task *task)
-{
-    if (ring->size == ring->cap)
-    {
-        return;
-    }
-
-    ring->tasks[ring->in] = task;
-    ring->in              = (ring->in + 1) % ring->cap;
-    ring->size++;
-}
-
-struct rx_task *
-rx_ring_pop(struct rx_ring *ring)
-{
-    if (ring->size == 0)
-    {
-        return NULL;
-    }
-
-    struct rx_task *task = ring->tasks[ring->out];
-    ring->out            = (ring->out + 1) % ring->cap;
-    ring->size--;
-
-    return task;
 }
 
 void *

@@ -21,23 +21,32 @@
  * SOFTWARE.
  */
 
-#ifndef __RX_RESPONSE_H__
-#define __RX_RESPONSE_H__ 1
+#ifndef __RX_RING_H__
+#define __RX_RING_H__ 1
 
 #include <rx_config.h>
 #include <rx_core.h>
 
-struct rx_response
-{
-    // struct rx_http_version version;
-    rx_http_status_t status_code;
-    char *status_message;
+#define RX_RING_CAPACITY 256
 
-    char *buffer;
-    size_t content_type;
+struct rx_ring
+{
+    size_t size;
+    size_t cap;
+
+    size_t in;
+    size_t out;
+
+    struct rx_task *tasks[RX_RING_CAPACITY];
 };
 
-int
-rx_response_init(struct rx_response *response);
+void
+rx_ring_init(struct rx_ring *ring);
 
-#endif /* __RX_RESPONSE_H__ */
+void
+rx_ring_push(struct rx_ring *ring, struct rx_task *task);
+
+struct rx_task *
+rx_ring_pop(struct rx_ring *ring);
+
+#endif /* __RX_RING_H__ */
