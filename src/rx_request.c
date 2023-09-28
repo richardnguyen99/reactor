@@ -59,7 +59,7 @@ rx_request_process_start_line(struct rx_request *request, const char *buffer,
     pthread_t tid = pthread_self();
 
     rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%4.sProcessing starting line: %.*s\n", tid, "", len,
+           "[Thread %ld]%4.s. Processing starting line: %.*s\n", tid, "", len,
            buffer);
 #endif
 
@@ -125,13 +125,186 @@ rx_request_process_start_line(struct rx_request *request, const char *buffer,
 }
 
 int
+rx_request_process_headers(struct rx_request *request, const char *buffer,
+                           size_t len)
+{
+#if defined(RX_DEBUG)
+    const char *last;
+    size_t cnt    = 0;
+    pthread_t tid = pthread_self();
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+           "[Thread %ld]%4.s. Processing headers\n", tid, "");
+#endif
+    NOOP(request);
+
+    int ret;
+    const char *key_begin, *key_end, *value_begin, *value_end;
+
+    ret       = RX_OK;
+    key_begin = key_end = value_begin = value_end = buffer;
+
+    if (buffer == NULL || len == 0)
+    {
+        ret = RX_ERROR;
+        goto end;
+    }
+
+    value_end = strstr(key_begin, "\r\n");
+
+    while (value_end != NULL && value_end - key_begin > 0)
+    {
+#if defined(RX_DEBUG)
+        last = value_end + 2;
+        last = (*last == '\r' && *(last + 1) == '\n') ? NULL : last;
+
+        ret = rx_request_parse_header(key_begin, value_end - key_begin, last,
+                                      &key_begin, &key_end, &value_begin,
+                                      &value_end);
+#else
+        ret = rx_request_parse_header(key_begin, value_end - key_begin,
+                                      &key_begin, &key_end, &value_begin,
+                                      &value_end);
+#endif
+
+        if (ret != RX_OK)
+        {
+            goto end;
+        }
+
+#if defined(RX_DEBUG)
+        cnt++;
+#endif
+        key_begin = value_end + 2;
+        value_end = strstr(key_begin, "\r\n");
+    }
+
+end:
+#if defined(RX_DEBUG)
+
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+           "[Thread %ld]%4.sProcessed %u headers successfully\n", tid, "", cnt);
+#endif
+
+    return ret;
+}
+
+#if defined(RX_DEBUG)
+int
+rx_request_parse_header(const char *buffer, size_t len, const char *last,
+                        const char **key, const char **key_end,
+                        const char **value, const char **value_end)
+#else // !defined(RX_DEBUG)
+int
+rx_request_parse_header(const char *buffer, size_t len, const char **key,
+                        const char **key_end, const char **value,
+                        const char **value_end)
+#endif
+{
+#if defined(RX_DEBUG)
+    pthread_t tid = pthread_self();
+
+    if (last == NULL)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+               "[Thread %ld]%4.s└── Parsing header buffer: \"%.*s%s\"", tid, "",
+               len > 80 ? 80 : len, buffer, len > 80 ? "..." : "");
+    }
+    else
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+               "[Thread %ld]%4.s├── Parsing header buffer: \"%.*s%s\"", tid, "",
+               len > 80 ? 80 : len, buffer, len > 80 ? "..." : "");
+    }
+
+#endif
+
+    int ret;
+    const char *colon, *end;
+
+    ret = RX_OK;
+
+    if (buffer == NULL || len == 0)
+    {
+        ret = RX_ERROR;
+        goto end;
+    }
+
+    if (key == NULL || key_end == NULL || value == NULL || value_end == NULL)
+    {
+        ret = RX_ERROR;
+        goto end;
+    }
+
+    colon = strchr(buffer, ':');
+    end   = buffer + len;
+
+    if (colon == NULL || end == NULL)
+    {
+        ret = RX_ERROR;
+        goto end;
+    }
+
+    if (colon == buffer || colon == end - 1)
+    {
+        ret = RX_ERROR;
+        goto end;
+    }
+
+    if (colon - end >= 2)
+    {
+        ret = RX_ERROR;
+        goto end;
+    }
+
+    *key       = buffer;
+    *key_end   = colon;
+    *value     = colon + 2;
+    *value_end = end;
+
+end:
+#if defined(RX_DEBUG)
+    if (ret == RX_OK)
+    {
+        int size = *value_end - *value;
+        printf(" -> OK ✅\n");
+
+        if (last == NULL)
+        {
+            rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+                   "[Thread %ld]%8.s├── Key: \"%.*s\"\n", tid, "",
+                   (int)(*key_end - *key), *key);
+            rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+                   "[Thread %ld]%8.s└── Value: \"%.*s%s\"\n", tid, "",
+                   size > 80 ? 80 : size, *value, size > 80 ? "..." : "");
+        }
+        else
+        {
+            rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+                   "[Thread %ld]%4.s│%3.s├── Key: \"%.*s\"\n", tid, "", "",
+                   (int)(*key_end - *key), *key);
+            rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+                   "[Thread %ld]%4.s│%3.s└── Value: \"%.*s%s\"\n", tid, "", "",
+                   size > 80 ? 80 : size, *value, size > 80 ? "..." : "");
+        }
+    }
+
+    else
+        printf(" -> ERROR ❌ (Result: %s)\n",
+               ret == RX_ERROR ? "Invalid" : "Unknown");
+#endif
+
+    return ret;
+}
+
+int
 rx_request_proccess_method(rx_request_method_t *method, const char *buffer,
                            size_t len)
 {
 #if RX_DEBUG
     pthread_t tid = pthread_self();
     rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%8.sProcessing method: %.*s\n", tid, "", len, buffer);
+           "[Thread %ld]%4.s├── Processing method buffer: \"%.*s\"", tid, "",
+           len, buffer);
 #endif
 
     if (buffer == NULL || len == 0)
@@ -165,6 +338,14 @@ rx_request_proccess_method(rx_request_method_t *method, const char *buffer,
         *method = RX_REQUEST_METHOD_INVALID;
     }
 
+#if defined(RX_DEBUG)
+    if (*method == RX_REQUEST_METHOD_INVALID)
+        printf(" -> ERROR ❌ (Result: Invalid method)\n");
+    else
+        printf(" -> OK ✅\n");
+
+#endif
+
     return RX_OK;
 }
 
@@ -175,30 +356,38 @@ rx_request_process_uri(struct rx_request_uri *uri, const char *buffer,
 #if RX_DEBUG
     pthread_t tid = pthread_self();
     rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%8.sProcessing URI: %.*s\n", tid, "", len, buffer);
+           "[Thread %ld]%4.s├── Processing URI buffer: \"%.*s\"", tid, "", len,
+           buffer);
 #endif
+
+    int ret;
+    char *path_ptr, *query_string_ptr;
+
+    ret      = RX_OK;
+    path_ptr = query_string_ptr = NULL;
 
     if (buffer == NULL)
     {
-        return RX_ERROR;
+        uri->result = RX_REQUEST_URI_RESULT_INVALID;
+        ret         = RX_ERROR;
+
+        goto end;
     }
-
-    char *path_ptr;
-    char *query_string_ptr;
-
-    path_ptr         = NULL;
-    query_string_ptr = NULL;
 
     if (len == 0)
     {
         uri->result = RX_REQUEST_URI_RESULT_INVALID;
-        return RX_ERROR;
+        ret         = RX_ERROR;
+
+        goto end;
     }
 
     if (len > RX_MAX_URI_LENGTH)
     {
         uri->result = RX_REQUEST_URI_RESULT_TOO_LONG;
-        return RX_ERROR;
+        ret         = RX_ERROR;
+
+        goto end;
     }
 
     memcpy(uri->raw_uri, buffer, len);
@@ -208,9 +397,7 @@ rx_request_process_uri(struct rx_request_uri *uri, const char *buffer,
     path_ptr = strchr(uri->raw_uri, '/');
 
     if (path_ptr == NULL)
-    {
         path_ptr = uri->raw_uri;
-    }
 
     query_string_ptr = strchr(uri->raw_uri, '?');
 
@@ -226,7 +413,29 @@ rx_request_process_uri(struct rx_request_uri *uri, const char *buffer,
     uri->path   = path_ptr;
     uri->result = RX_REQUEST_URI_RESULT_OK;
 
-    return RX_OK;
+end:
+#if defined(RX_DEBUG)
+    if (ret == RX_OK)
+    {
+        printf(" -> OK ✅\n");
+        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+               "[Thread %ld]%4.s│%3.s├── Path: %.*s\n", tid, "", "",
+               uri->path_end - uri->path, uri->path);
+        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+               "[Thread %ld]%4.s│%3.s└── Query String: %.*s\n", tid, "", "",
+               uri->query_string_end - uri->query_string, uri->query_string);
+    }
+    else
+    {
+        printf(" -> ERROR ❌ (Result: %s)\n",
+               uri->result == RX_REQUEST_URI_RESULT_INVALID    ? "Invalid"
+               : uri->result == RX_REQUEST_URI_RESULT_TOO_LONG ? "Too Long"
+                                                               : "Unknown");
+    }
+
+#endif
+
+    return ret;
 }
 
 int
@@ -236,30 +445,38 @@ rx_request_process_version(struct rx_request_version *version,
 #if defined(RX_DEBUG)
     pthread_t tid = pthread_self();
     rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%8.sProcessing version: %.*s\n", tid, "", len, buffer);
+           "[Thread %ld]%4.s└── Processing version buffer: \"%.*s\"", tid, "",
+           len, buffer);
 #endif
-    if (buffer == NULL || len == 0)
-    {
-        version->result = RX_REQUEST_VERSION_RESULT_INVALID;
-        return RX_ERROR;
-    }
 
+    int ret;
     const char *slash, *dot, *end, *major, *minor;
 
     slash = dot = end = buffer;
+    ret               = RX_OK;
+
+    if (buffer == NULL || len == 0)
+    {
+        version->result = RX_REQUEST_VERSION_RESULT_INVALID;
+        ret             = RX_ERROR;
+        goto end;
+    }
 
     slash = strchr(buffer, '/');
 
     if (slash == NULL)
     {
         version->result = RX_REQUEST_VERSION_RESULT_INVALID;
-        return RX_ERROR;
+        ret             = RX_ERROR;
+        goto end;
     }
 
     if (strncmp("HTTP", buffer, slash - buffer) != 0)
     {
         version->result = RX_REQUEST_VERSION_RESULT_INVALID;
-        return RX_ERROR;
+        ret             = RX_ERROR;
+
+        goto end;
     }
 
     major = slash + 1;
@@ -268,7 +485,9 @@ rx_request_process_version(struct rx_request_version *version,
     if (dot == NULL)
     {
         version->result = RX_REQUEST_VERSION_RESULT_INVALID;
-        return RX_ERROR;
+        ret             = RX_ERROR;
+
+        goto end;
     }
 
     minor = dot + 1;
@@ -277,20 +496,47 @@ rx_request_process_version(struct rx_request_version *version,
     if (dot - major != 1 || end - minor != 1)
     {
         version->result = RX_REQUEST_VERSION_RESULT_INVALID;
-        return RX_ERROR;
+        ret             = RX_ERROR;
+
+        goto end;
     }
 
     if (*major != '1' || *minor != '1')
     {
         version->result = RX_REQUEST_VERSION_RESULT_UNSUPPORTED;
-        return RX_ERROR;
+        ret             = RX_ERROR;
+
+        goto end;
     }
 
     version->result = RX_REQUEST_VERSION_RESULT_OK;
-    version->major  = *major - '0';
-    version->minor  = *minor - '0';
+    version->major  = atoi(major);
+    version->minor  = atoi(minor);
 
-    return RX_OK;
+end:
+#if defined(RX_DEBUG)
+    if (ret == RX_OK)
+    {
+        printf(" -> OK ✅\n");
+        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+               "[Thread %ld]%8.s├── Protocol: HTTP\n", tid, "", "");
+        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%8.s├── Major: %u\n",
+               tid, "", version->major);
+        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%8.s└── Minor: %u\n",
+               tid, "", version->minor);
+    }
+    else
+    {
+        printf(" -> ERROR ❌ (Result: %s)\n",
+               version->result == RX_REQUEST_VERSION_RESULT_INVALID ? "Invalid"
+               : version->result == RX_REQUEST_VERSION_RESULT_UNSUPPORTED
+                   ? "Unsupported"
+                   : "Unknown");
+    }
+
+#endif
+
+    return ret;
 }
 
 int

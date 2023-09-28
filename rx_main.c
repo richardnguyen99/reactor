@@ -715,7 +715,7 @@ rx_request_process(struct rx_connection *conn)
     int ret;
     char *endl;
     char *startl;
-    size_t hdrsz, i;
+    size_t i;
     pthread_t tid = pthread_self();
     clock_t start, end;
     struct epoll_event event;
@@ -734,7 +734,6 @@ rx_request_process(struct rx_connection *conn)
     start  = clock();
     startl = conn->buffer_start;
     endl   = startl;
-    hdrsz  = conn->header_end - conn->buffer_start;
     i      = 0;
 
     rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.sHeader length: %ld\n",
@@ -751,27 +750,12 @@ rx_request_process(struct rx_connection *conn)
         return RX_ERROR_PTR;
     }
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.sMethod: %d\n", tid, "",
-           conn->request->method);
-
     i += endl - startl;
     startl = endl + 2;
 
     endl = strstr(startl, "\r\n");
 
-    i += endl - startl;
-    startl = endl + 2;
-
-    for (; i < hdrsz;)
-    {
-        endl = strstr(startl, "\r\n");
-
-        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.s%.*s\n", tid, "",
-               (int)(endl - startl), startl);
-
-        i += endl - startl;
-        startl = endl + 2;
-    }
+    ret = rx_request_process_headers(conn->request, startl, endl - startl);
 
     conn->state = RX_CONNECTION_STATE_WRITING_RESPONSE;
 

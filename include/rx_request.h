@@ -207,6 +207,22 @@ rx_request_process_start_line(struct rx_request *request, const char *buffer,
                               size_t len);
 
 int
+rx_request_process_headers(struct rx_request *request, const char *buffer,
+                           size_t len);
+
+#if defined(RX_DEBUG)
+int
+rx_request_parse_header(const char *buffer, size_t len, const char *last,
+                        const char **key, const char **key_end,
+                        const char **value, const char **value_end);
+#else
+int
+rx_request_parse_header(const char *buffer, size_t len, const char **key,
+                        const char **key_end, const char **value,
+                        const char **value_end);
+#endif
+
+int
 rx_request_proccess_method(rx_request_method_t *method, const char *buffer,
                            size_t len);
 
