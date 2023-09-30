@@ -66,10 +66,19 @@ enum rx_request_version_result
     RX_REQUEST_VERSION_RESULT_UNSUPPORTED,
 };
 
+enum rx_request_header_host_result
+{
+    RX_REQUEST_HEADER_HOST_RESULT_NONE,
+    RX_REQUEST_HEADER_HOST_RESULT_OK,
+    RX_REQUEST_HEADER_HOST_RESULT_INVALID,
+    RX_REQUEST_HEADER_HOST_RESULT_UNSUPPORTED,
+};
+
 typedef enum rx_request_state rx_request_state_t;
 typedef enum rx_request_method rx_request_method_t;
 typedef enum rx_request_uri_result rx_request_uri_result_t;
 typedef enum rx_request_version_result rx_request_version_result_t;
+typedef enum rx_request_header_host_result rx_request_header_host_result_t;
 
 /* Structure to store the URI of an HTTP request
 
@@ -170,7 +179,9 @@ struct rx_request_version
 
 struct rx_header_host
 {
+    rx_request_header_host_result_t result;
     char raw_host[RX_MAX_HEADER_LENGTH];
+    size_t len;
     char *host;
     char *host_end;
     char *port;
@@ -234,7 +245,14 @@ int
 rx_request_process_version(struct rx_request_version *version,
                            const char *buffer, size_t len);
 
+#if defined(RX_DEBUG)
 int
-rx_request_process_header_host(struct rx_header_host *host, char *buffer);
+rx_request_process_header_host(struct rx_header_host *host, const char *last,
+                               const char *buffer, size_t len);
+#else
+int
+rx_request_process_header_host(struct rx_header_host *host, const char *buffer,
+                               size_t len);
+#endif
 
 #endif /* __RX_REQUEST_H__ */

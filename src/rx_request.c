@@ -171,7 +171,43 @@ rx_request_process_headers(struct rx_request *request, const char *buffer,
             goto end;
         }
 
+        if (strncasecmp("Host", key_begin, key_end - key_begin) == 0)
+        {
 #if defined(RX_DEBUG)
+            ret = rx_request_process_header_host(
+                &request->host, last, value_begin, value_end - value_begin);
+#else
+            ret = rx_request_process_header_host(&request->host, value_begin,
+                                                 value_end - value_begin);
+#endif
+
+            if (ret != RX_OK)
+            {
+                goto end;
+            }
+        }
+#if defined(RX_DEBUG)
+        else
+        {
+            if (last != NULL)
+            {
+                rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+                       "[Thread %ld]%4.s│%3.s│   ⋯\n", tid, "", "");
+                rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+                       "[Thread %ld]%4.s│%3.s└── " ANSI_COLOR_YELLOW
+                       "Header `%.*s` is not recognized (skipped)\n",
+                       tid, "", "", (int)(key_end - key_begin), key_begin);
+            }
+            else
+            {
+                rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%8.s│   ⋯\n",
+                       tid, "");
+                rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+                       "[Thread %ld]%8.s└── " ANSI_COLOR_YELLOW
+                       "Header `%.*s` is not recognized (skipped)\n",
+                       tid, "", (int)(key_end - key_begin), key_begin);
+            }
+        }
         cnt++;
 #endif
         key_begin = value_end + 2;
@@ -179,12 +215,6 @@ rx_request_process_headers(struct rx_request *request, const char *buffer,
     }
 
 end:
-#if defined(RX_DEBUG)
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%4.sProcessed %u headers successfully\n", tid, "", cnt);
-#endif
-
     return ret;
 }
 
@@ -274,7 +304,7 @@ end:
                    "[Thread %ld]%8.s├── Key: \"%.*s\"\n", tid, "",
                    (int)(*key_end - *key), *key);
             rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-                   "[Thread %ld]%8.s└── Value: \"%.*s%s\"\n", tid, "",
+                   "[Thread %ld]%8.s├── Value: \"%.*s%s\"\n", tid, "",
                    size > 80 ? 80 : size, *value, size > 80 ? "..." : "");
         }
         else
@@ -283,7 +313,7 @@ end:
                    "[Thread %ld]%4.s│%3.s├── Key: \"%.*s\"\n", tid, "", "",
                    (int)(*key_end - *key), *key);
             rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-                   "[Thread %ld]%4.s│%3.s└── Value: \"%.*s%s\"\n", tid, "", "",
+                   "[Thread %ld]%4.s│%3.s├── Value: \"%.*s%s\"\n", tid, "", "",
                    size > 80 ? 80 : size, *value, size > 80 ? "..." : "");
         }
     }
@@ -539,13 +569,118 @@ end:
     return ret;
 }
 
+#if defined(RX_DEBUG)
 int
-rx_request_process_header_host(struct rx_header_host *host, char *buffer)
+rx_request_process_header_host(struct rx_header_host *host, const char *last,
+                               const char *buffer, size_t len)
+#else
+int
+rx_request_process_header_host(struct rx_header_host *host, const char *buffer,
+                               size_t len)
+#endif
 {
-    NOOP(host);
-    NOOP(buffer);
+#if defined(RX_DEBUG)
+    pthread_t tid = pthread_self();
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.s│%3.s│   ⋯\n", tid, "",
+           "");
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+           "[Thread %ld]%4.s│%3.s└── " ANSI_COLOR_GREEN
+           "Header `Host` is recognized: \"Host: %.*s\\r\\n\"\n",
+           tid, "", "", len, buffer);
+#endif
+    int ret;
+    char *colon;
 
-    return 0;
+    if (buffer == NULL || len == 0)
+    {
+        host->result = RX_REQUEST_HEADER_HOST_RESULT_INVALID;
+        ret          = RX_ERROR;
+
+        goto end;
+    }
+
+    ret = RX_OK;
+
+    memcpy(host->raw_host, buffer, len);
+    host->raw_host[len] = '\0';
+    host->len           = len;
+
+    colon = strchr(host->raw_host, ':');
+
+    // Colon exists but it is at the first or last position
+    if (colon == host->raw_host || colon == host->raw_host + len - 1)
+
+    {
+        host->result = RX_REQUEST_HEADER_HOST_RESULT_INVALID;
+        ret          = RX_ERROR;
+
+        goto end;
+    }
+
+    if (colon == NULL)
+    {
+        host->raw_host[len]       = ':';
+        host->raw_host[len + 1]   = '8';
+        host->raw_host[len + 2]   = '0';
+        colon                     = host->raw_host + len;
+        host->len                 = len + 3;
+        host->raw_host[host->len] = '\0';
+    }
+
+    host->host     = host->raw_host;
+    host->host_end = host->raw_host + (colon - host->raw_host);
+    host->port     = colon + 1;
+    host->port_end = host->raw_host + host->len;
+
+    if (strncmp("localhost", host->host, host->host_end - host->host) == 0)
+    {
+        host->result = RX_REQUEST_HEADER_HOST_RESULT_OK;
+    }
+    else if (strncmp("0.0.0.0", host->host, host->host_end - host->host) == 0)
+    {
+        host->result = RX_REQUEST_HEADER_HOST_RESULT_OK;
+    }
+    else if (strncmp("127.0.0.1", host->host, host->host_end - host->host) == 0)
+    {
+        host->result = RX_REQUEST_HEADER_HOST_RESULT_OK;
+    }
+    else
+    {
+        host->result = RX_REQUEST_HEADER_HOST_RESULT_INVALID;
+        ret          = RX_ERROR;
+
+        goto end;
+    }
+
+    if (host->port != NULL && host->port_end != NULL)
+    {
+        if (strncmp("8080", host->port, host->port_end - host->port) != 0)
+        {
+            host->result = RX_REQUEST_HEADER_HOST_RESULT_UNSUPPORTED;
+            ret          = RX_ERROR;
+
+            goto end;
+        }
+        else
+        {
+            host->result = RX_REQUEST_HEADER_HOST_RESULT_OK;
+        }
+    }
+
+end:
+#if defined(RX_DEBUG)
+
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+           "[Thread %ld]%4.s│%7.s├── "
+           "Host: %.*s\n",
+           tid, "", "", (host->host_end - host->host), host->host);
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+           "[Thread %ld]%4.s│%7.s└── "
+           "Port: %.*s\n",
+           tid, "", "", (host->port_end - host->port), host->port);
+#endif
+
+    return ret;
 }
 
 static void
@@ -573,6 +708,9 @@ rx_memset_header_host(struct rx_header_host *host)
 {
     memset(host->raw_host, 0, sizeof(host->raw_host));
 
-    host->host = host->raw_host;
-    host->port = 0;
+    host->result   = RX_REQUEST_HEADER_HOST_RESULT_NONE;
+    host->host     = host->raw_host;
+    host->host_end = host->raw_host;
+    host->port     = NULL;
+    host->port_end = NULL;
 }

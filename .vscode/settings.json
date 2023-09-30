@@ -46,7 +46,8 @@
         "unity/unity_fixture.h": "c",
         "unity/unity_memory.h": "c",
         "unity/unity_fixture_internals.h": "c",
-        "unity/unity.h": "c"
+        "unity/unity.h": "c",
+        "unity_fixture.h": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
 }
