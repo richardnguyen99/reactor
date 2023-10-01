@@ -29,6 +29,17 @@
 
 #define RX_MAX_HEADER_LENGTH 1024
 
+enum rx_encoding
+{
+    RX_ENCODING_IDENTITY,
+    RX_ENCODING_GZIP,
+    RX_ENCODING_DEFLATE,
+    RX_ENCODING_BROTLI,
+    RX_ENCODING_COMPRESS,
+    RX_ENCODING_ANY,
+    RX_ENCODING_UNSET,
+};
+
 enum rx_request_uri_result
 {
     RX_REQUEST_URI_RESULT_NONE,
@@ -79,6 +90,7 @@ typedef enum rx_request_method rx_request_method_t;
 typedef enum rx_request_uri_result rx_request_uri_result_t;
 typedef enum rx_request_version_result rx_request_version_result_t;
 typedef enum rx_request_header_host_result rx_request_header_host_result_t;
+typedef enum rx_encoding rx_encoding_t;
 
 /* Structure to store the URI of an HTTP request
 
@@ -193,9 +205,10 @@ struct rx_header_user_agent
     char raw_user_agent[RX_MAX_HEADER_LENGTH];
 };
 
-struct rx_header_accept
+struct rx_header_accept_encoding
 {
-    char raw_accept[RX_MAX_HEADER_LENGTH];
+    rx_encoding_t encoding;
+    float qvalue;
 };
 
 struct rx_request
@@ -207,7 +220,7 @@ struct rx_request
 
     struct rx_header_host host;
     struct rx_header_user_agent user_agent;
-    struct rx_header_accept accept;
+    struct rx_header_accept_encoding accept_encoding;
 };
 
 int
@@ -221,17 +234,10 @@ int
 rx_request_process_headers(struct rx_request *request, const char *buffer,
                            size_t len);
 
-#if defined(RX_DEBUG)
-int
-rx_request_parse_header(const char *buffer, size_t len, const char *last,
-                        const char **key, const char **key_end,
-                        const char **value, const char **value_end);
-#else
 int
 rx_request_parse_header(const char *buffer, size_t len, const char **key,
                         const char **key_end, const char **value,
                         const char **value_end);
-#endif
 
 int
 rx_request_proccess_method(rx_request_method_t *method, const char *buffer,
@@ -245,14 +251,16 @@ int
 rx_request_process_version(struct rx_request_version *version,
                            const char *buffer, size_t len);
 
-#if defined(RX_DEBUG)
-int
-rx_request_process_header_host(struct rx_header_host *host, const char *last,
-                               const char *buffer, size_t len);
-#else
 int
 rx_request_process_header_host(struct rx_header_host *host, const char *buffer,
                                size_t len);
-#endif
+
+int
+rx_request_process_header_accept_encoding(
+    struct rx_header_accept_encoding *accept_encoding, const char *buffer,
+    size_t len);
+
+const char *
+rx_request_method_str(rx_request_method_t method);
 
 #endif /* __RX_REQUEST_H__ */

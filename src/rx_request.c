@@ -33,6 +33,17 @@ rx_memset_version(struct rx_request_version *version);
 static void
 rx_memset_header_host(struct rx_header_host *host);
 
+static void
+rx_memset_header_accept_encoding(
+    struct rx_header_accept_encoding *accept_encoding);
+
+static void
+rx_parse_ae_header(struct rx_header_accept_encoding *ae, const char *buffer,
+                   size_t len);
+
+static double
+rx_parse_q_value(const char *buffer, size_t len);
+
 int
 rx_request_init(struct rx_request *request)
 {
@@ -45,6 +56,7 @@ rx_request_init(struct rx_request *request)
     rx_memset_uri(&request->uri);
     rx_memset_version(&request->version);
     rx_memset_header_host(&request->host);
+    rx_memset_header_accept_encoding(&request->accept_encoding);
 
     request->state = RX_REQUEST_STATE_READY;
 
@@ -55,14 +67,12 @@ int
 rx_request_process_start_line(struct rx_request *request, const char *buffer,
                               size_t len)
 {
-#if RX_DEBUG
+#if defined(RX_DEBUG)
     pthread_t tid = pthread_self();
 
     rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%4.s. Processing starting line: %.*s\n", tid, "", len,
-           buffer);
+           "[Thread %ld]%4.sProcessing request line\n", tid, "");
 #endif
-
     if (buffer == NULL || len == 0)
     {
         return RX_ERROR;
@@ -128,15 +138,6 @@ int
 rx_request_process_headers(struct rx_request *request, const char *buffer,
                            size_t len)
 {
-#if defined(RX_DEBUG)
-    const char *last;
-    size_t cnt    = 0;
-    pthread_t tid = pthread_self();
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%4.s. Processing headers\n", tid, "");
-#endif
-    NOOP(request);
-
     int ret;
     const char *key_begin, *key_end, *value_begin, *value_end;
 
@@ -153,18 +154,10 @@ rx_request_process_headers(struct rx_request *request, const char *buffer,
 
     while (value_end != NULL && value_end - key_begin > 0)
     {
-#if defined(RX_DEBUG)
-        last = value_end + 2;
-        last = (*last == '\r' && *(last + 1) == '\n') ? NULL : last;
 
-        ret = rx_request_parse_header(key_begin, value_end - key_begin, last,
-                                      &key_begin, &key_end, &value_begin,
-                                      &value_end);
-#else
         ret = rx_request_parse_header(key_begin, value_end - key_begin,
                                       &key_begin, &key_end, &value_begin,
                                       &value_end);
-#endif
 
         if (ret != RX_OK)
         {
@@ -173,43 +166,28 @@ rx_request_process_headers(struct rx_request *request, const char *buffer,
 
         if (strncasecmp("Host", key_begin, key_end - key_begin) == 0)
         {
-#if defined(RX_DEBUG)
-            ret = rx_request_process_header_host(
-                &request->host, last, value_begin, value_end - value_begin);
-#else
+
             ret = rx_request_process_header_host(&request->host, value_begin,
                                                  value_end - value_begin);
-#endif
 
             if (ret != RX_OK)
             {
                 goto end;
             }
         }
-#if defined(RX_DEBUG)
-        else
+        else if (strlen("Accept-Encoding") == (key_end - key_begin) &&
+                 strncasecmp("Accept-Encoding", key_begin,
+                             key_end - key_begin) == 0)
         {
-            if (last != NULL)
+            ret = rx_request_process_header_accept_encoding(
+                &request->accept_encoding, value_begin,
+                value_end - value_begin);
+
+            if (ret != RX_OK)
             {
-                rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-                       "[Thread %ld]%4.s│%3.s│   ⋯\n", tid, "", "");
-                rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-                       "[Thread %ld]%4.s│%3.s└── " ANSI_COLOR_YELLOW
-                       "Header `%.*s` is not recognized (skipped)\n",
-                       tid, "", "", (int)(key_end - key_begin), key_begin);
-            }
-            else
-            {
-                rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%8.s│   ⋯\n",
-                       tid, "");
-                rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-                       "[Thread %ld]%8.s└── " ANSI_COLOR_YELLOW
-                       "Header `%.*s` is not recognized (skipped)\n",
-                       tid, "", (int)(key_end - key_begin), key_begin);
+                goto end;
             }
         }
-        cnt++;
-#endif
         key_begin = value_end + 2;
         value_end = strstr(key_begin, "\r\n");
     }
@@ -218,36 +196,11 @@ end:
     return ret;
 }
 
-#if defined(RX_DEBUG)
-int
-rx_request_parse_header(const char *buffer, size_t len, const char *last,
-                        const char **key, const char **key_end,
-                        const char **value, const char **value_end)
-#else // !defined(RX_DEBUG)
 int
 rx_request_parse_header(const char *buffer, size_t len, const char **key,
                         const char **key_end, const char **value,
                         const char **value_end)
-#endif
 {
-#if defined(RX_DEBUG)
-    pthread_t tid = pthread_self();
-
-    if (last == NULL)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-               "[Thread %ld]%4.s└── Parsing header buffer: \"%.*s%s\"", tid, "",
-               len > 80 ? 80 : len, buffer, len > 80 ? "..." : "");
-    }
-    else
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-               "[Thread %ld]%4.s├── Parsing header buffer: \"%.*s%s\"", tid, "",
-               len > 80 ? 80 : len, buffer, len > 80 ? "..." : "");
-    }
-
-#endif
-
     int ret;
     const char *colon, *end;
 
@@ -292,37 +245,6 @@ rx_request_parse_header(const char *buffer, size_t len, const char **key,
     *value_end = end;
 
 end:
-#if defined(RX_DEBUG)
-    if (ret == RX_OK)
-    {
-        int size = *value_end - *value;
-        printf(" -> OK ✅\n");
-
-        if (last == NULL)
-        {
-            rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-                   "[Thread %ld]%8.s├── Key: \"%.*s\"\n", tid, "",
-                   (int)(*key_end - *key), *key);
-            rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-                   "[Thread %ld]%8.s├── Value: \"%.*s%s\"\n", tid, "",
-                   size > 80 ? 80 : size, *value, size > 80 ? "..." : "");
-        }
-        else
-        {
-            rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-                   "[Thread %ld]%4.s│%3.s├── Key: \"%.*s\"\n", tid, "", "",
-                   (int)(*key_end - *key), *key);
-            rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-                   "[Thread %ld]%4.s│%3.s├── Value: \"%.*s%s\"\n", tid, "", "",
-                   size > 80 ? 80 : size, *value, size > 80 ? "..." : "");
-        }
-    }
-
-    else
-        printf(" -> ERROR ❌ (Result: %s)\n",
-               ret == RX_ERROR ? "Invalid" : "Unknown");
-#endif
-
     return ret;
 }
 
@@ -330,13 +252,6 @@ int
 rx_request_proccess_method(rx_request_method_t *method, const char *buffer,
                            size_t len)
 {
-#if RX_DEBUG
-    pthread_t tid = pthread_self();
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%4.s├── Processing method buffer: \"%.*s\"", tid, "",
-           len, buffer);
-#endif
-
     if (buffer == NULL || len == 0)
     {
         *method = RX_REQUEST_METHOD_INVALID;
@@ -367,13 +282,15 @@ rx_request_proccess_method(rx_request_method_t *method, const char *buffer,
     {
         *method = RX_REQUEST_METHOD_INVALID;
     }
-
 #if defined(RX_DEBUG)
-    if (*method == RX_REQUEST_METHOD_INVALID)
-        printf(" -> ERROR ❌ (Result: Invalid method)\n");
-    else
-        printf(" -> OK ✅\n");
+    pthread_t tid = pthread_self();
+    char *color   = *method == RX_REQUEST_METHOD_INVALID ? ANSI_COLOR_RED
+                                                         : ANSI_COLOR_GREEN;
+    char *mark    = *method == RX_REQUEST_METHOD_INVALID ? "❌" : "✅";
 
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+           "[Thread %ld]%4.s%s%3.s%sMethod: %s\n" ANSI_COLOR_RESET, tid, "",
+           mark, "", color, rx_request_method_str(*method));
 #endif
 
     return RX_OK;
@@ -383,13 +300,6 @@ int
 rx_request_process_uri(struct rx_request_uri *uri, const char *buffer,
                        size_t len)
 {
-#if RX_DEBUG
-    pthread_t tid = pthread_self();
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%4.s├── Processing URI buffer: \"%.*s\"", tid, "", len,
-           buffer);
-#endif
-
     int ret;
     char *path_ptr, *query_string_ptr;
 
@@ -445,26 +355,8 @@ rx_request_process_uri(struct rx_request_uri *uri, const char *buffer,
 
 end:
 #if defined(RX_DEBUG)
-    if (ret == RX_OK)
-    {
-        printf(" -> OK ✅\n");
-        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-               "[Thread %ld]%4.s│%3.s├── Path: %.*s\n", tid, "", "",
-               uri->path_end - uri->path, uri->path);
-        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-               "[Thread %ld]%4.s│%3.s└── Query String: %.*s\n", tid, "", "",
-               uri->query_string_end - uri->query_string, uri->query_string);
-    }
-    else
-    {
-        printf(" -> ERROR ❌ (Result: %s)\n",
-               uri->result == RX_REQUEST_URI_RESULT_INVALID    ? "Invalid"
-               : uri->result == RX_REQUEST_URI_RESULT_TOO_LONG ? "Too Long"
-                                                               : "Unknown");
-    }
-
+    pthread_t tid = pthread_self();
 #endif
-
     return ret;
 }
 
@@ -472,13 +364,6 @@ int
 rx_request_process_version(struct rx_request_version *version,
                            const char *buffer, size_t len)
 {
-#if defined(RX_DEBUG)
-    pthread_t tid = pthread_self();
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%4.s└── Processing version buffer: \"%.*s\"", tid, "",
-           len, buffer);
-#endif
-
     int ret;
     const char *slash, *dot, *end, *major, *minor;
 
@@ -544,50 +429,13 @@ rx_request_process_version(struct rx_request_version *version,
     version->minor  = atoi(minor);
 
 end:
-#if defined(RX_DEBUG)
-    if (ret == RX_OK)
-    {
-        printf(" -> OK ✅\n");
-        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-               "[Thread %ld]%8.s├── Protocol: HTTP\n", tid, "", "");
-        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%8.s├── Major: %u\n",
-               tid, "", version->major);
-        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%8.s└── Minor: %u\n",
-               tid, "", version->minor);
-    }
-    else
-    {
-        printf(" -> ERROR ❌ (Result: %s)\n",
-               version->result == RX_REQUEST_VERSION_RESULT_INVALID ? "Invalid"
-               : version->result == RX_REQUEST_VERSION_RESULT_UNSUPPORTED
-                   ? "Unsupported"
-                   : "Unknown");
-    }
-
-#endif
-
     return ret;
 }
 
-#if defined(RX_DEBUG)
-int
-rx_request_process_header_host(struct rx_header_host *host, const char *last,
-                               const char *buffer, size_t len)
-#else
 int
 rx_request_process_header_host(struct rx_header_host *host, const char *buffer,
                                size_t len)
-#endif
 {
-#if defined(RX_DEBUG)
-    pthread_t tid = pthread_self();
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.s│%3.s│   ⋯\n", tid, "",
-           "");
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%4.s│%3.s└── " ANSI_COLOR_GREEN
-           "Header `Host` is recognized: \"Host: %.*s\\r\\n\"\n",
-           tid, "", "", len, buffer);
-#endif
     int ret;
     char *colon;
 
@@ -668,19 +516,71 @@ rx_request_process_header_host(struct rx_header_host *host, const char *buffer,
     }
 
 end:
-#if defined(RX_DEBUG)
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%4.s│%7.s├── "
-           "Host: %.*s\n",
-           tid, "", "", (host->host_end - host->host), host->host);
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%4.s│%7.s└── "
-           "Port: %.*s\n",
-           tid, "", "", (host->port_end - host->port), host->port);
-#endif
-
     return ret;
+}
+
+int
+rx_request_process_header_accept_encoding(
+    struct rx_header_accept_encoding *accept_encoding, const char *buffer,
+    size_t len)
+{
+    const char *begin, *end, *comma;
+
+    if (buffer == NULL || len == 0)
+    {
+        accept_encoding->encoding = RX_ENCODING_IDENTITY;
+        accept_encoding->qvalue   = 1.0;
+
+        return RX_OK;
+    }
+
+    begin = buffer;
+    end   = buffer + len;
+    comma = strchr(begin, ',');
+
+    while (comma != NULL)
+    {
+        rx_parse_ae_header(accept_encoding, begin, comma - begin);
+
+        for (comma = comma + 1; *comma == ' '; ++comma)
+            ;
+
+        begin = comma;
+        comma = strchr(begin, ',');
+    }
+
+    if (comma == NULL && begin != end)
+    {
+        rx_parse_ae_header(accept_encoding, begin, end - begin);
+    }
+
+    if (accept_encoding->encoding == RX_ENCODING_UNSET)
+    {
+        accept_encoding->encoding = RX_ENCODING_IDENTITY;
+        accept_encoding->qvalue   = 1.0;
+    }
+
+    return RX_OK;
+}
+
+const char *
+rx_request_method_str(rx_request_method_t method)
+{
+    switch (method)
+    {
+    case RX_REQUEST_METHOD_GET:
+        return "GET";
+    case RX_REQUEST_METHOD_POST:
+        return "POST";
+    case RX_REQUEST_METHOD_PUT:
+        return "PUT";
+    case RX_REQUEST_METHOD_DELETE:
+        return "DELETE";
+    case RX_REQUEST_METHOD_HEAD:
+        return "HEAD";
+    default:
+        return "INVALID";
+    }
 }
 
 static void
@@ -713,4 +613,110 @@ rx_memset_header_host(struct rx_header_host *host)
     host->host_end = host->raw_host;
     host->port     = NULL;
     host->port_end = NULL;
+}
+
+static void
+rx_memset_header_accept_encoding(
+    struct rx_header_accept_encoding *accept_encoding)
+{
+    accept_encoding->encoding = RX_ENCODING_UNSET;
+    accept_encoding->qvalue   = 0.0;
+}
+
+static void
+rx_parse_ae_header(struct rx_header_accept_encoding *ae, const char *buffer,
+                   size_t len)
+{
+    const char *begin, *semi, *end;
+    double qvalue;
+
+    begin = buffer;
+    end   = buffer + len;
+    semi  = strchr(begin, ';');
+
+    if (semi == NULL || semi == end)
+    {
+        qvalue = 1.0;
+        semi   = end;
+    }
+    else
+    {
+        qvalue = rx_parse_q_value(semi + 1, end - semi - 1);
+    }
+
+    if (qvalue > ae->qvalue)
+    {
+        if (strncmp("gzip", begin, semi - begin) == 0)
+        {
+            ae->encoding = RX_ENCODING_GZIP;
+            ae->qvalue   = qvalue;
+        }
+        else if (strncmp("deflate", begin, semi - begin) == 0)
+        {
+            ae->encoding = RX_ENCODING_DEFLATE;
+            ae->qvalue   = qvalue;
+        }
+        else if (strncmp("br", begin, semi - begin) == 0)
+        {
+            ae->encoding = RX_ENCODING_BROTLI;
+            ae->qvalue   = qvalue;
+        }
+        else if (strncmp("identity", begin, semi - begin) == 0)
+        {
+            ae->encoding = RX_ENCODING_IDENTITY;
+            ae->qvalue   = qvalue;
+        }
+        else if (strncmp("*", begin, semi - begin) == 0)
+        {
+            ae->encoding = RX_ENCODING_ANY;
+            ae->qvalue   = qvalue;
+        }
+        else if (strncmp("compress", begin, semi - begin) == 0)
+        {
+            ae->encoding = RX_ENCODING_COMPRESS;
+            ae->qvalue   = qvalue;
+        }
+    }
+
+    if (ae->encoding == RX_ENCODING_UNSET)
+    {
+        ae->encoding = RX_ENCODING_IDENTITY;
+        ae->qvalue   = 1.0;
+    }
+}
+
+static double
+rx_parse_q_value(const char *buffer, size_t len)
+{
+    if (buffer == NULL || len == 0)
+        return -1;
+
+    const char *begin, *end, *equal;
+    char buf[6];
+    size_t bufsize;
+    double ans;
+
+    begin   = buffer;
+    end     = buffer + len;
+    equal   = strchr(begin, '=');
+    bufsize = 0;
+    ans     = 0.0;
+
+    if (equal == NULL || equal == begin || equal == end)
+        return -1;
+
+    if (strncmp("q", begin, equal - begin) != 0)
+        return -1;
+
+    bufsize = end - equal - 1 > 5 ? 5 : end - equal - 1;
+    memcpy(buf, equal + 1, bufsize);
+
+    ans = atof(buf);
+
+    if (ans < 0.0)
+        ans = 0.0;
+    else if (ans > 1.0)
+        ans = 1.0;
+
+    return ans;
 }
