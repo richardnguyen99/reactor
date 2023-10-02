@@ -38,6 +38,7 @@ struct rx_file;
 struct rx_request_uri;
 struct rx_task;
 struct rx_ring;
+struct rx_qlist;
 
 typedef struct rx_string rx_str_t;
 
@@ -74,6 +75,7 @@ typedef enum rx_http_status_enum rx_http_status_t;
 #include <rx_connection.h>
 #include <rx_file.h>
 #include <rx_log.h>
+#include <rx_qlist.h>
 #include <rx_request.h>
 #include <rx_response.h>
 #include <rx_ring.h>

@@ -21,27 +21,38 @@
  * SOFTWARE.
  */
 
-#include <unity/unity_fixture.h>
+#ifndef __RX_QLIST_H__
+#define __RX_QLIST_H__ 1
 
-static void
-RunAllTests(void)
+#include <rx_config.h>
+#include <rx_core.h>
+
+#define RX_QLIST_VALUE_SIZE 64
+
+struct rx_qlist_node
 {
-    RUN_TEST_GROUP(RX_ADD);
-    RUN_TEST_GROUP(RX_SUBTRACT);
+    char value[RX_QLIST_VALUE_SIZE];
+    float weight;
 
-    RUN_TEST_GROUP(RX_REQUEST_URI);
-    RUN_TEST_GROUP(RX_REQUEST_METHOD);
-    RUN_TEST_GROUP(RX_REQUEST_VERSION);
-    RUN_TEST_GROUP(RX_REQUEST_HEADER);
-    RUN_TEST_GROUP(RX_REQUEST_HOST_HEADER);
-    RUN_TEST_GROUP(RX_REQUEST_ACCEPT_ENCODING_HEADER);
+    struct rx_qlist_node *prev;
+    struct rx_qlist_node *next;
+};
 
-    RUN_TEST_GROUP(RX_RING);
-    RUN_TEST_GROUP(RX_QLIST);
-}
+struct rx_qlist
+{
+    struct rx_qlist_node *head;
+    struct rx_qlist_node *tail;
+    size_t size;
+};
 
 int
-main(int argc, const char *argv[])
-{
-    return UnityMain(argc, argv, RunAllTests);
-}
+rx_qlist_create(struct rx_qlist *list);
+
+void
+rx_qlist_destroy(struct rx_qlist *list);
+
+int
+rx_qlist_add(struct rx_qlist *list, const char *value, size_t len,
+             float weight);
+
+#endif /* __RX_QLIST_H__ */
