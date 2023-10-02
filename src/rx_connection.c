@@ -59,6 +59,8 @@ rx_connection_free(struct rx_connection *conn)
     if (conn->request != NULL)
     {
         conn->request->state = RX_REQUEST_STATE_DONE;
+
+        rx_request_destroy(conn->request);
         free(conn->request);
     }
 

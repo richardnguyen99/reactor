@@ -47,7 +47,7 @@ rx_qlist_destroy(struct rx_qlist *list)
 {
     struct rx_qlist_node *node, *next;
 
-    node = list->head;
+    node = list->head->next;
 
     while (node != NULL)
     {
@@ -55,6 +55,8 @@ rx_qlist_destroy(struct rx_qlist *list)
         free(node);
         node = next;
     }
+
+    free(list->head);
 
     list->head = NULL;
     list->tail = NULL;
@@ -96,7 +98,6 @@ rx_qlist_add(struct rx_qlist *list, const char *value, size_t len, float weight)
         list->tail = newNode;
 
     curr->next = newNode;
-
     list->size++;
 
     return RX_OK;

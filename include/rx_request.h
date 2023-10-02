@@ -221,10 +221,14 @@ struct rx_request
     struct rx_header_host host;
     struct rx_header_user_agent user_agent;
     struct rx_header_accept_encoding accept_encoding;
+    struct rx_qlist accept;
 };
 
 int
 rx_request_init(struct rx_request *request);
+
+void
+rx_request_destroy(struct rx_request *request);
 
 int
 rx_request_process_start_line(struct rx_request *request, const char *buffer,
@@ -259,6 +263,10 @@ int
 rx_request_process_header_accept_encoding(
     struct rx_header_accept_encoding *accept_encoding, const char *buffer,
     size_t len);
+
+int
+rx_request_process_header_accept(struct rx_qlist *accept, const char *buffer,
+                                 size_t len);
 
 const char *
 rx_request_method_str(rx_request_method_t method);

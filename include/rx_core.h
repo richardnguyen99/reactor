@@ -79,6 +79,7 @@ typedef enum rx_http_status_enum rx_http_status_t;
 #include <rx_request.h>
 #include <rx_response.h>
 #include <rx_ring.h>
+#include <rx_string.h>
 #include <rx_task.h>
 
 #endif /* __RX_CORE_H__ */

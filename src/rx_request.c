@@ -38,8 +38,14 @@ rx_memset_header_accept_encoding(
     struct rx_header_accept_encoding *accept_encoding);
 
 static void
+rx_memset_header_accept(struct rx_qlist *accept);
+
+static void
 rx_parse_ae_header(struct rx_header_accept_encoding *ae, const char *buffer,
                    size_t len);
+
+static void
+rx_parse_accept_header(struct rx_qlist *accept, const char *buffer, size_t len);
 
 static double
 rx_parse_q_value(const char *buffer, size_t len);
@@ -52,15 +58,23 @@ rx_request_init(struct rx_request *request)
     memset(&request->uri, 0, sizeof(request->uri));
     memset(&request->version, 0, sizeof(request->version));
     memset(&request->host, 0, sizeof(request->host));
+    memset(&request->accept, 0, sizeof(request->accept));
 
     rx_memset_uri(&request->uri);
     rx_memset_version(&request->version);
     rx_memset_header_host(&request->host);
     rx_memset_header_accept_encoding(&request->accept_encoding);
+    rx_memset_header_accept(&request->accept);
 
     request->state = RX_REQUEST_STATE_READY;
 
     return RX_OK;
+}
+
+void
+rx_request_destroy(struct rx_request *request)
+{
+    rx_qlist_destroy(&request->accept);
 }
 
 int
@@ -188,6 +202,18 @@ rx_request_process_headers(struct rx_request *request, const char *buffer,
                 goto end;
             }
         }
+        else if (strlen("Accept") == (key_end - key_begin) &&
+                 strncasecmp("Accept", key_begin, key_end - key_begin) == 0)
+        {
+            ret = rx_request_process_header_accept(
+                &request->accept, value_begin, value_end - value_begin);
+
+            if (ret != RX_OK)
+            {
+                goto end;
+            }
+        }
+
         key_begin = value_end + 2;
         value_end = strstr(key_begin, "\r\n");
     }
@@ -563,6 +589,51 @@ rx_request_process_header_accept_encoding(
     return RX_OK;
 }
 
+int
+rx_request_process_header_accept(struct rx_qlist *accept, const char *buffer,
+                                 size_t len)
+{
+#if defined(RX_DEBUG)
+    pthread_t tid = pthread_self();
+
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.sAccept header: %.*s\n",
+           tid, "", (int)len, buffer);
+#endif
+
+    const char *begin, *end, *comma;
+    size_t offset;
+
+    // Accept header is present but no value is given
+    if (buffer == NULL || len == 0)
+    {
+        rx_qlist_add(accept, "*/*", 3, 1.0);
+
+        return RX_OK;
+    }
+
+    begin  = buffer;
+    offset = 0;
+    end    = buffer + len;
+    comma  = rx_strnchr(begin, len, ',');
+
+    while (comma != NULL)
+    {
+        rx_parse_accept_header(accept, begin, comma - begin);
+
+        for (comma = comma + 1; *comma == ' '; ++comma)
+            ;
+
+        offset = comma - buffer - 1;
+        begin  = comma;
+        comma  = rx_strnchr(buffer + offset + 1, len - offset, ',');
+    }
+
+    if (comma == NULL && begin != end)
+        rx_parse_accept_header(accept, begin, end - begin);
+
+    return RX_OK;
+}
+
 const char *
 rx_request_method_str(rx_request_method_t method)
 {
@@ -621,6 +692,12 @@ rx_memset_header_accept_encoding(
 {
     accept_encoding->encoding = RX_ENCODING_UNSET;
     accept_encoding->qvalue   = 0.0;
+}
+
+static void
+rx_memset_header_accept(struct rx_qlist *accept)
+{
+    rx_qlist_create(accept);
 }
 
 static void
@@ -685,6 +762,29 @@ rx_parse_ae_header(struct rx_header_accept_encoding *ae, const char *buffer,
     }
 }
 
+static void
+rx_parse_accept_header(struct rx_qlist *accept, const char *buf, size_t len)
+{
+    const char *begin, *semi, *end;
+    double qvalue;
+
+    begin = buf;
+    end   = buf + len;
+    semi  = rx_strnchr(begin, len, ';');
+
+    if (semi == NULL || semi == end)
+    {
+        qvalue = 1.0;
+        semi   = end;
+    }
+    else
+    {
+        qvalue = rx_parse_q_value(semi + 1, end - semi - 1);
+    }
+
+    rx_qlist_add(accept, begin, semi - begin, qvalue);
+}
+
 static double
 rx_parse_q_value(const char *buffer, size_t len)
 {
@@ -710,6 +810,7 @@ rx_parse_q_value(const char *buffer, size_t len)
 
     bufsize = end - equal - 1 > 5 ? 5 : end - equal - 1;
     memcpy(buf, equal + 1, bufsize);
+    buf[bufsize] = '\0';
 
     ans = atof(buf);
 
