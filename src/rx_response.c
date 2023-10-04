@@ -45,7 +45,7 @@ rx_response_destroy(struct rx_response *res)
 
     if (res->content != NULL)
     {
-        munmap(res->content, res->content_length);
+        free(res->content);
         res->content        = NULL;
         res->content_length = 0;
     }

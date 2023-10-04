@@ -1,5 +1,7 @@
 const btn = document.querySelector("#alertBtn");
 
-btn.addEventListener("click", () => {
-    alert("Hello World!");
-});
+if (btn) {
+    btn.addEventListener("click", () => {
+        alert("Hello World!");
+    });
+}

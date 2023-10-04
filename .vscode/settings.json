@@ -36,6 +36,7 @@
         "rx_connection.h": "c",
         "rx_task.h": "c",
         "rx_ring.h": "c",
+        "rx_thread.h": "c",
         "types.h": "c",
         "sendfile.h": "c",
         "vector": "c",

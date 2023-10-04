@@ -27,29 +27,15 @@
 #define RX_TASK_TYPE_PROCESS_REQUEST  1
 #define RX_TASK_TYPE_PROCESS_RESPONSE 2
 
-struct rx_thread_pool
-{
-    pthread_t threads[8];
-    size_t nthreads;
+struct rx_file template;
 
-    pthread_mutex_t lock;
-    sem_t empty;
-    sem_t full;
-
-    struct rx_ring *ring;
-};
-
-void *
-rx_thread_pool_worker(void *arg);
-
-int
-rx_thread_pool_init(struct rx_thread_pool *pool, struct rx_ring *ring);
-
-int
-rx_thread_pool_submit(struct rx_thread_pool *pool, struct rx_task *task);
+char *template_ptr;
 
 void *
 rx_route_index_get(struct rx_request *req, struct rx_response *res);
+
+void *
+rx_route_about_get(struct rx_request *req, struct rx_response *res);
 
 void *
 rx_request_process(struct rx_connection *conn);
@@ -62,6 +48,13 @@ const struct rx_route router_table[] = {{.endpoint = "/",
                                                       .patch  = NULL,
                                                       .delete = NULL,
                                                       .head   = NULL}},
+                                        {.endpoint = "/about",
+                                         .resource = "pages/about.html",
+                                         .handler  = {.get  = rx_route_about_get,
+                                                      .post = NULL,
+                                                      .put  = NULL,
+                                                      .patch = NULL,
+                                                      .head  = NULL}},
                                         {
                                             .endpoint = NULL,
                                             .resource = NULL,
@@ -169,6 +162,31 @@ main(int argc, const char *argv[])
     if (epoll_fd == -1)
     {
         sprintf(msg, "epoll_create1: %s\n", strerror(errno));
+        goto err_epoll;
+    }
+
+    printf("OK\n");
+
+    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Open template file... ");
+
+    ret = rx_file_open(&template, "pages/_template.html", O_RDONLY);
+
+    if (ret == RX_ERROR)
+    {
+        sprintf(msg, "rx_file_open: %s\n", strerror(errno));
+        goto err_epoll;
+    }
+
+    printf("OK\n");
+
+    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Read template file... ");
+
+    template_ptr =
+        mmap(NULL, template.size, PROT_READ, MAP_PRIVATE, template.fd, 0);
+
+    if (template_ptr == MAP_FAILED)
+    {
+        sprintf(msg, "mmap: %s\n", strerror(errno));
         goto err_epoll;
     }
 
@@ -641,127 +659,6 @@ err_loop:
 }
 
 void *
-rx_thread_pool_worker(void *arg)
-{
-    struct rx_thread_pool *pool = arg;
-
-    for (;;)
-    {
-        sem_wait(&pool->full);
-        pthread_mutex_lock(&pool->lock);
-
-        struct rx_task *task = rx_ring_pop(pool->ring);
-
-        pthread_mutex_unlock(&pool->lock);
-        sem_post(&pool->empty);
-
-        if (task == NULL)
-        {
-            continue;
-        }
-
-        task->handle(task->arg);
-
-        free(task);
-    }
-}
-
-int
-rx_thread_pool_init(struct rx_thread_pool *pool, struct rx_ring *ring)
-{
-    int ret;
-
-    pool->nthreads = 8;
-    pool->ring     = ring;
-
-    ret = pthread_mutex_init(&pool->lock, NULL);
-
-    if (ret == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "pthread_mutex_init: %s\n",
-               strerror(errno));
-        return RX_ERROR;
-    }
-
-    ret = sem_init(&pool->empty, 0, 0);
-
-    if (ret == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "sem_init: %s\n", strerror(errno));
-        return RX_ERROR;
-    }
-
-    ret = sem_init(&pool->full, 0, 256);
-
-    if (ret == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "sem_init: %s\n", strerror(errno));
-        return RX_ERROR;
-    }
-
-    for (size_t i = 0; i < 8; i++)
-    {
-        ret = pthread_create(&pool->threads[i], NULL, rx_thread_pool_worker,
-                             pool);
-
-        if (ret != 0)
-        {
-            rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "pthread_create: %s\n",
-                   strerror(errno));
-            pool->nthreads--;
-        }
-    }
-
-    return RX_OK;
-}
-
-int
-rx_thread_pool_submit(struct rx_thread_pool *pool, struct rx_task *task)
-{
-    int ret;
-
-    ret = sem_wait(&pool->empty);
-
-    if (ret == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "sem_wait: %s\n", strerror(errno));
-        return RX_ERROR;
-    }
-
-    ret = pthread_mutex_lock(&pool->lock);
-
-    if (ret == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "pthread_mutex_lock: %s\n",
-               strerror(errno));
-        return RX_ERROR;
-    }
-
-    rx_ring_push(pool->ring, task);
-
-    ret = pthread_mutex_unlock(&pool->lock);
-
-    if (ret == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "pthread_mutex_unlock: %s\n",
-               strerror(errno));
-        return RX_ERROR;
-    }
-
-    ret = sem_post(&pool->full);
-
-    if (ret == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "sem_post: %s\n", strerror(errno));
-        return RX_ERROR;
-    }
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "Submit task to thread pool\n");
-
-    return RX_OK;
-}
-
-void *
 rx_request_process(struct rx_connection *conn)
 {
     int ret;
@@ -918,8 +815,9 @@ rx_route_index_get(struct rx_request *req, struct rx_response *res)
     NOOP(req);
     NOOP(res);
 
-    int ret;
+    int ret, buflen;
     struct rx_file file;
+    char *content;
 
     memset(&file, 0, sizeof(file));
     ret = rx_file_open(&file, "pages/index.html", O_RDONLY);
@@ -930,7 +828,7 @@ rx_route_index_get(struct rx_request *req, struct rx_response *res)
         return RX_ERROR_PTR;
     }
 
-    res->content = mmap(NULL, file.size, PROT_READ, MAP_PRIVATE, file.fd, 0);
+    content = mmap(NULL, file.size, PROT_READ, MAP_PRIVATE, file.fd, 0);
 
     if (res->content == MAP_FAILED)
     {
@@ -938,10 +836,73 @@ rx_route_index_get(struct rx_request *req, struct rx_response *res)
         return RX_ERROR_PTR;
     }
 
-    res->content_length = file.size;
+    buflen = asprintf(&res->content, template_ptr, content, file.size);
+
+    if (buflen == -1)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "asprintf: %s\n", strerror(errno));
+        return RX_ERROR_PTR;
+    }
+
+    res->content_length = buflen;
     res->content_type   = file.mime;
 
     rx_file_close(&file);
+
+    if (munmap(content, file.size) == -1)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "munmap: %s\n", strerror(errno));
+        return RX_ERROR_PTR;
+    }
+
+    return RX_OK_PTR;
+}
+
+void *
+rx_route_about_get(struct rx_request *req, struct rx_response *res)
+{
+    NOOP(req);
+    NOOP(res);
+
+    int ret, buflen;
+    struct rx_file file;
+    char *content;
+
+    memset(&file, 0, sizeof(file));
+    ret = rx_file_open(&file, "pages/about.html", O_RDONLY);
+
+    if (ret == RX_ERROR)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "Failed to open file\n");
+        return RX_ERROR_PTR;
+    }
+
+    content = mmap(NULL, file.size, PROT_READ, MAP_PRIVATE, file.fd, 0);
+
+    if (res->content == MAP_FAILED)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "mmap: %s\n", strerror(errno));
+        return RX_ERROR_PTR;
+    }
+
+    buflen = asprintf(&res->content, template_ptr, content, file.size);
+
+    if (buflen == -1)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "asprintf: %s\n", strerror(errno));
+        return RX_ERROR_PTR;
+    }
+
+    res->content_length = buflen;
+    res->content_type   = file.mime;
+
+    rx_file_close(&file);
+
+    if (munmap(content, file.size) == -1)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "munmap: %s\n", strerror(errno));
+        return RX_ERROR_PTR;
+    }
 
     return RX_OK_PTR;
 }

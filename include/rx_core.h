@@ -40,6 +40,7 @@ struct rx_task;
 struct rx_ring;
 struct rx_qlist;
 struct rx_route;
+struct rx_thread_pool;
 
 typedef struct rx_string rx_str_t;
 
@@ -83,5 +84,6 @@ typedef enum rx_http_status_enum rx_http_status_t;
 #include <rx_route.h>
 #include <rx_string.h>
 #include <rx_task.h>
+#include <rx_thread.h>
 
 #endif /* __RX_CORE_H__ */
