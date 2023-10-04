@@ -48,7 +48,8 @@ rx_connection_init(struct rx_connection *conn, int efd, int fd,
         return RX_ERROR;
     }
 
-    conn->state = RX_CONNECTION_STATE_READY;
+    conn->state    = RX_CONNECTION_STATE_READY;
+    conn->task_num = 0;
 
     return RX_OK;
 }
@@ -67,6 +68,8 @@ rx_connection_free(struct rx_connection *conn)
     if (conn->response != NULL)
     {
         conn->response->status_code = RX_HTTP_STATUS_CODE_UNSET;
+
+        rx_response_destroy(conn->response);
         free(conn->response);
     }
 

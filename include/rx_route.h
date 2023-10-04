@@ -21,52 +21,33 @@
  * SOFTWARE.
  */
 
-#ifndef __RX_RESPONSE_H__
-#define __RX_RESPONSE_H__ 1
+#ifndef __RX_ROUTE_H__
+#define __RX_ROUTE_H__ 1
 
 #include <rx_config.h>
 #include <rx_core.h>
 
-enum RX_RESPONSE_SUPPORTED_MIME
+struct rx_router_handler
 {
-    RX_RESPONSE_NONE       = 0x000000000,
-    RX_RESPONSE_ALL        = 0x000000010,
-    RX_RESPONSE_TEXT_ALL   = 0x000000008,
-    RX_RESPONSE_TEXT_PLAIN = 0x000000009,
-    RX_RESPONSE_TEXT_HTML  = 0x00000000A,
-    RX_RESPONSE_TEXT_CSS   = 0x00000000B,
-    RX_RESPONSE_TEXT_JS    = 0x00000000C,
-    RX_RESPONSE_IMAGE_ALL  = 0x000000020,
-    RX_RESPONSE_IMAGE_ICO  = 0x000000011,
+    void *(*get)(struct rx_request *req, struct rx_response *res);
+    void *(*post)(struct rx_request *req, struct rx_response *res);
+    void *(*put)(struct rx_request *req, struct rx_response *res);
+    void *(*patch)(struct rx_request *req, struct rx_response *res);
+    void *(*delete)(struct rx_request *req, struct rx_response *res);
+    void *(*head)(struct rx_request *req, struct rx_response *res);
 };
 
-typedef enum RX_RESPONSE_SUPPORTED_MIME rx_response_mime_t;
-
-struct rx_response
+struct rx_route
 {
-    // struct rx_http_version version;
-    rx_http_status_t status_code;
-    char *status_message;
+    struct rx_router_handler handler;
 
-    char *content;
-    size_t content_length;
-
-    char *content_type;
+    const char *endpoint;
+    const char *resource;
 };
 
-int
-rx_response_init(struct rx_response *response);
-
-void
-rx_response_destroy(struct rx_response *response);
+extern const struct rx_route router_table[];
 
 int
-rx_response_check_mime(struct rx_qlist *accept, const char *mime);
+rx_route_get(const char *endpoint, struct rx_route *storage);
 
-rx_response_mime_t
-rx_response_get_content_type(struct rx_qlist *accept, const char *ext);
-
-const char *
-rx_response_mime_to_string(rx_response_mime_t mime);
-
-#endif /* __RX_RESPONSE_H__ */
+#endif /* __RX_ROUTE_H__ */

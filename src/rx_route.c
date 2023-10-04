@@ -21,52 +21,28 @@
  * SOFTWARE.
  */
 
-#ifndef __RX_RESPONSE_H__
-#define __RX_RESPONSE_H__ 1
-
 #include <rx_config.h>
 #include <rx_core.h>
 
-enum RX_RESPONSE_SUPPORTED_MIME
-{
-    RX_RESPONSE_NONE       = 0x000000000,
-    RX_RESPONSE_ALL        = 0x000000010,
-    RX_RESPONSE_TEXT_ALL   = 0x000000008,
-    RX_RESPONSE_TEXT_PLAIN = 0x000000009,
-    RX_RESPONSE_TEXT_HTML  = 0x00000000A,
-    RX_RESPONSE_TEXT_CSS   = 0x00000000B,
-    RX_RESPONSE_TEXT_JS    = 0x00000000C,
-    RX_RESPONSE_IMAGE_ALL  = 0x000000020,
-    RX_RESPONSE_IMAGE_ICO  = 0x000000011,
-};
-
-typedef enum RX_RESPONSE_SUPPORTED_MIME rx_response_mime_t;
-
-struct rx_response
-{
-    // struct rx_http_version version;
-    rx_http_status_t status_code;
-    char *status_message;
-
-    char *content;
-    size_t content_length;
-
-    char *content_type;
-};
-
 int
-rx_response_init(struct rx_response *response);
+rx_route_get(const char *endpoint, struct rx_route *storage)
+{
+    int i;
 
-void
-rx_response_destroy(struct rx_response *response);
+    if (endpoint == NULL || storage == NULL)
+        return RX_ERROR;
 
-int
-rx_response_check_mime(struct rx_qlist *accept, const char *mime);
+    for (i = 0; router_table[i].endpoint != NULL; i++)
+    {
+        if (strcmp(router_table[i].endpoint, endpoint) == 0)
+        {
+            storage->endpoint = router_table[i].endpoint;
+            storage->resource = router_table[i].resource;
+            storage->handler  = router_table[i].handler;
 
-rx_response_mime_t
-rx_response_get_content_type(struct rx_qlist *accept, const char *ext);
+            return RX_OK;
+        }
+    }
 
-const char *
-rx_response_mime_to_string(rx_response_mime_t mime);
-
-#endif /* __RX_RESPONSE_H__ */
+    return RX_OK;
+}

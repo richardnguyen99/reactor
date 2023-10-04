@@ -49,7 +49,29 @@ int
 rx_thread_pool_submit(struct rx_thread_pool *pool, struct rx_task *task);
 
 void *
+rx_route_index_get(struct rx_request *req, struct rx_response *res);
+
+void *
 rx_request_process(struct rx_connection *conn);
+
+const struct rx_route router_table[] = {{.endpoint = "/",
+                                         .resource = "pages/index.html",
+                                         .handler  = {.get  = rx_route_index_get,
+                                                      .post = NULL,
+                                                      .put  = NULL,
+                                                      .patch  = NULL,
+                                                      .delete = NULL,
+                                                      .head   = NULL}},
+                                        {
+                                            .endpoint = NULL,
+                                            .resource = NULL,
+                                            .handler  = {.get    = NULL,
+                                                         .post   = NULL,
+                                                         .put    = NULL,
+                                                         .patch  = NULL,
+                                                         .delete = NULL,
+                                                         .head   = NULL},
+                                        }};
 
 int
 main(int argc, const char *argv[])
@@ -316,6 +338,11 @@ main(int argc, const char *argv[])
                     (void)rx_response_init(conn->response);
                 }
 
+                conn->task_num++;
+
+                rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
+                       "No. tasks from fd %d: %ld\n", fd, conn->task_num);
+
                 nread = recv(fd, buf, sizeof(buf), 0);
 
                 if (nread == -1)
@@ -448,29 +475,31 @@ main(int argc, const char *argv[])
 
                 const char *template = "HTTP/1.1 200 OK\r\n"
                                        "Host: %s:%s\r\n"
-                                       "Content-Type: text/plain\r\n"
-                                       "Content-Length: 12\r\n"
+                                       "Content-Type: %s\r\n"
+                                       "Content-Length: %zu\r\n"
                                        "Date: %s\r\n"
                                        "Connection: close\r\n"
-                                       "\r\n"
-                                       "Hello, World!"
                                        "\r\n";
 
-                int fd = conn->fd;
+                int fd                  = conn->fd;
+                struct rx_response *res = conn->response;
 
                 // HTTP Date format
                 const char *date_format = "%a, %d %b %Y %H:%M:%S %Z";
                 char date_buf[128];
-
-                time_t now    = time(NULL);
-                struct tm *tm = gmtime(&now);
-
-                strftime(date_buf, sizeof(date_buf), date_format, tm);
+                time_t now;
+                struct tm *tm;
 
                 char *buf;
                 ssize_t buf_len, nsend;
 
-                buf_len = asprintf(&buf, template, host, service, date_buf);
+                now = time(NULL);
+                tm  = gmtime(&now);
+                strftime(date_buf, sizeof(date_buf), date_format, tm);
+
+                buf_len =
+                    asprintf(&buf, template, host, service, res->content_type,
+                             res->content_length, date_buf, res->content);
 
                 if (buf_len == -1)
                 {
@@ -478,6 +507,19 @@ main(int argc, const char *argv[])
                             __LINE__, strerror(errno));
                     goto err_loop;
                 }
+
+                buf = realloc(buf, buf_len + res->content_length);
+
+                if (buf == NULL)
+                {
+                    sprintf(msg, "realloc (at %s:%d): %s\n", __FILE__, __LINE__,
+                            strerror(errno));
+                    goto err_loop;
+                }
+
+                memcpy(buf + buf_len, res->content, res->content_length);
+                buf_len += res->content_length;
+                buf[buf_len] = '\0';
 
                 for (;;)
                 {
@@ -500,10 +542,20 @@ main(int argc, const char *argv[])
                     break;
                 }
 
+                rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+                       "Sent headers (%ld bytes) to fd %d\n", nsend, fd);
+
                 free(buf);
 
                 rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "Sent %ld bytes to fd %d\n",
                        nsend, fd);
+
+                conn->task_num--;
+
+                if (conn->task_num != 0)
+                {
+                    continue;
+                }
 
                 ret = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
 
@@ -718,6 +770,7 @@ rx_request_process(struct rx_connection *conn)
     size_t i;
     pthread_t tid = pthread_self();
     clock_t start, end;
+    struct rx_route route;
     struct epoll_event event;
 
     rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
@@ -735,6 +788,7 @@ rx_request_process(struct rx_connection *conn)
     startl = conn->buffer_start;
     endl   = startl;
     i      = 0;
+    memset(&route, 0, sizeof(route));
 
     rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.sHeader length: %ld\n",
            tid, "", conn->header_end - conn->buffer_start);
@@ -766,6 +820,81 @@ rx_request_process(struct rx_connection *conn)
            "\n",
            tid, "", (double)(end - start) / CLOCKS_PER_SEC * 1000);
 
+    if (strncmp("/public", conn->request->uri.path, 7) == 0)
+    {
+
+        struct rx_file file;
+        size_t resource_len =
+            conn->request->uri.path_end - conn->request->uri.path - 1;
+        char resource[resource_len];
+
+        memset(&file, 0, sizeof(file));
+        memcpy(resource, conn->request->uri.path + 1,
+               conn->request->uri.path_end - conn->request->uri.path);
+        resource[resource_len] = '\0';
+
+        rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Static file request: %s\n",
+               resource);
+
+        ret = rx_file_open(&file, resource, O_RDONLY);
+
+        if (ret == RX_FATAL_WITH_ERROR)
+        {
+            rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "Failed to open file\n");
+            return RX_ERROR_PTR;
+        }
+
+        conn->response->content =
+            (char *)mmap(NULL, file.size, PROT_READ, MAP_PRIVATE, file.fd, 0);
+
+        if (conn->response->content == MAP_FAILED)
+        {
+            rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "mmap: %s\n", strerror(errno));
+            return RX_ERROR_PTR;
+        }
+
+        conn->response->content_length = file.size;
+        conn->response->content_type   = file.mime;
+
+        rx_file_close(&file);
+
+        goto end;
+    }
+
+    ret = rx_route_get(conn->request->uri.path, &route);
+
+    if (ret != RX_OK)
+    {
+        goto end;
+    }
+
+    if (conn->request->method == RX_REQUEST_METHOD_GET &&
+        route.handler.get != NULL)
+    {
+        route.handler.get(conn->request, conn->response);
+    }
+    else if (conn->request->method == RX_REQUEST_METHOD_POST &&
+             route.handler.post != NULL)
+    {
+        route.handler.post(conn->request, conn->response);
+    }
+    else if (conn->request->method == RX_REQUEST_METHOD_PUT &&
+             route.handler.put != NULL)
+    {
+        route.handler.put(conn->request, conn->response);
+    }
+    else if (conn->request->method == RX_REQUEST_METHOD_DELETE &&
+             route.handler.delete != NULL)
+    {
+        route.handler.delete(conn->request, conn->response);
+    }
+    else if (conn->request->method == RX_REQUEST_METHOD_HEAD &&
+             route.handler.head != NULL)
+    {
+        route.handler.head(conn->request, conn->response);
+    }
+
+end:
     event.events   = EPOLLOUT | EPOLLET;
     event.data.ptr = conn;
 
@@ -779,6 +908,40 @@ rx_request_process(struct rx_connection *conn)
 
     rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
            "[Thread %ld]%4.sSubmit finished task to event poll\n", tid, "");
+
+    return RX_OK_PTR;
+}
+
+void *
+rx_route_index_get(struct rx_request *req, struct rx_response *res)
+{
+    NOOP(req);
+    NOOP(res);
+
+    int ret;
+    struct rx_file file;
+
+    memset(&file, 0, sizeof(file));
+    ret = rx_file_open(&file, "pages/index.html", O_RDONLY);
+
+    if (ret == RX_ERROR)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "Failed to open file\n");
+        return RX_ERROR_PTR;
+    }
+
+    res->content = mmap(NULL, file.size, PROT_READ, MAP_PRIVATE, file.fd, 0);
+
+    if (res->content == MAP_FAILED)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "mmap: %s\n", strerror(errno));
+        return RX_ERROR_PTR;
+    }
+
+    res->content_length = file.size;
+    res->content_type   = file.mime;
+
+    rx_file_close(&file);
 
     return RX_OK_PTR;
 }

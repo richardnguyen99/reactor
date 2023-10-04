@@ -30,8 +30,148 @@ rx_response_init(struct rx_response *res)
     res->status_code    = RX_HTTP_STATUS_CODE_UNSET;
     res->status_message = NULL;
 
-    res->buffer       = NULL;
-    res->content_type = 0;
+    res->content        = NULL;
+    res->content_length = 0;
+    res->content_type   = 0;
 
     return RX_OK;
+}
+
+void
+rx_response_destroy(struct rx_response *res)
+{
+    if (res->status_message != NULL)
+        free(res->status_message);
+
+    if (res->content != NULL)
+    {
+        munmap(res->content, res->content_length);
+        res->content        = NULL;
+        res->content_length = 0;
+    }
+}
+
+int
+rx_response_check_mime(struct rx_qlist *accept, const char *mime)
+{
+    if (accept == NULL || accept->size == 0 || mime == NULL)
+        return RX_OK;
+
+    struct rx_qlist_node *node;
+    int accept_bits;
+
+    node        = accept->head->next;
+    accept_bits = 0;
+
+    while (node != NULL)
+    {
+        if (strcmp(node->value, "*/*") == 0)
+            return RX_OK;
+
+        if (strcmp(node->value, "text/*") == 0)
+            accept_bits |= RX_RESPONSE_TEXT_ALL;
+
+        if (strcmp(node->value, "image/*") == 0)
+            accept_bits |= RX_RESPONSE_IMAGE_ALL;
+
+        if (strcmp(node->value, mime) == 0)
+        {
+            if (strcmp(node->value, "text/plain") == 0)
+                return RX_OK;
+            else if (strcmp(node->value, "text/html") == 0)
+                return RX_OK;
+            else if (strcmp(node->value, "text/css") == 0)
+                return RX_OK;
+            else if (strcmp(node->value, "text/javascript") == 0)
+                return RX_OK;
+        }
+
+        node = node->next;
+    }
+
+    if (accept_bits & RX_RESPONSE_TEXT_ALL && strncasecmp("text", mime, 4) == 0)
+        return RX_OK;
+
+    if (accept_bits & RX_RESPONSE_IMAGE_ALL &&
+        strncasecmp("image", mime, 5) == 0)
+        return RX_OK;
+
+    return RX_ERROR;
+}
+
+rx_response_mime_t
+rx_response_get_content_type(struct rx_qlist *accept, const char *mime)
+{
+    int accept_bits = 0;
+    int type_bits   = 0;
+    struct rx_qlist_node *node;
+
+    if (accept == NULL || accept->size == 0)
+        return RX_RESPONSE_TEXT_ALL;
+
+    node = accept->head->next;
+
+    if (strncasecmp("text", mime, 4) == 0)
+        type_bits |= RX_RESPONSE_TEXT_ALL;
+    else if (strncasecmp("image", mime, 5) == 0)
+        type_bits |= RX_RESPONSE_IMAGE_ALL;
+
+    while (node != NULL)
+    {
+        if (strcmp(node->value, "*/*") == 0)
+        {
+            accept_bits |= RX_RESPONSE_ALL;
+        }
+
+        if (strcmp(node->value, "text/*") == 0)
+        {
+            accept_bits |= RX_RESPONSE_TEXT_ALL;
+        }
+
+        if (strcmp(node->value, "image/*") == 0)
+        {
+            accept_bits |= RX_RESPONSE_IMAGE_ALL;
+        }
+
+        if (strcmp(node->value, mime) == 0)
+        {
+            if (strcmp(node->value, "text/plain") == 0)
+                return RX_RESPONSE_TEXT_PLAIN;
+            else if (strcmp(node->value, "text/html") == 0)
+                return RX_RESPONSE_TEXT_HTML;
+            else if (strcmp(node->value, "text/css") == 0)
+                return RX_RESPONSE_TEXT_CSS;
+            else if (strcmp(node->value, "text/javascript") == 0)
+                return RX_RESPONSE_TEXT_JS;
+        }
+
+        node = node->next;
+    }
+
+    if (accept_bits & RX_RESPONSE_TEXT_ALL)
+        return RX_RESPONSE_TEXT_ALL;
+
+    return RX_RESPONSE_NONE;
+}
+
+const char *
+rx_response_mime_to_string(rx_response_mime_t mime)
+{
+    switch (mime)
+    {
+    case RX_RESPONSE_ALL:
+        return "*/*";
+    case RX_RESPONSE_TEXT_ALL:
+        return "text/*";
+    case RX_RESPONSE_TEXT_PLAIN:
+        return "text/plain";
+    case RX_RESPONSE_TEXT_HTML:
+        return "text/html";
+    case RX_RESPONSE_TEXT_CSS:
+        return "text/css";
+    case RX_RESPONSE_TEXT_JS:
+        return "text/javascript";
+    default:
+        return NULL;
+    }
 }

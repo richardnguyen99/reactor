@@ -119,5 +119,10 @@ rx_file_get_mime(const char *ext)
         return "application/xml";
     }
 
+    if (strcmp(ext, "ico") == 0)
+    {
+        return "image/x-icon";
+    }
+
     return "text/octet-stream";
 }

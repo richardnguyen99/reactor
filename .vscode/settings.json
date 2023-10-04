@@ -47,7 +47,15 @@
         "unity/unity_memory.h": "c",
         "unity/unity_fixture_internals.h": "c",
         "unity/unity.h": "c",
-        "unity_fixture.h": "c"
+        "unity_fixture.h": "c",
+        "memory": "c",
+        "format": "c",
+        "istream": "c",
+        "functional": "c",
+        "array": "c",
+        "string": "c",
+        "string_view": "c",
+        "span": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
 }

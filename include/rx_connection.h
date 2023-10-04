@@ -72,6 +72,8 @@ struct rx_connection
     */
     rx_conn_state_t state;
 
+    size_t task_num;
+
     /* Buffer to store HTTP Header part
 
         If the buffer exceeds (RX_HDR_MAXSIZE - 1) bytes, which is 8911,

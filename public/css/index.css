@@ -1,0 +1,19 @@
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    line-height: 1.5;
+    height: 100%;
+    tab-size: 4;
+    font-feature-settings: "cv02","cv03","cv04","cv11";
+    font-variation-settings: normal;
+}
+
+body {
+    min-height: 100%;
+    margin: 0;
+    line-height: inherit;
+}
