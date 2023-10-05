@@ -27,6 +27,21 @@
 #include <rx_config.h>
 #include <rx_core.h>
 
+/* ### Handlers for each HTTP endpoint
+ *
+ * Every endpoint will support these following HTTP methods:
+ *
+ * - GET
+ * - POST
+ * - PUT
+ * - PATCH
+ * - DELETE
+ * - HEAD
+ *
+ * Each handler will be called when the corresponding HTTP method is used. If a
+ * request is made with an unsupported HTTP method, the server will respond with
+ * a 405 status code (Method Not Allowed).
+ */
 struct rx_router_handler
 {
     void *(*get)(struct rx_request *req, struct rx_response *res);
@@ -49,5 +64,11 @@ extern const struct rx_route router_table[];
 
 int
 rx_route_get(const char *endpoint, struct rx_route *storage);
+
+extern void *
+rx_route_static(struct rx_request *req, struct rx_response *res);
+
+extern void *
+rx_route_4xx(struct rx_request *req, struct rx_response *res, int code);
 
 #endif /* __RX_ROUTE_H__ */

@@ -27,7 +27,7 @@
 int
 rx_route_get(const char *endpoint, struct rx_route *storage)
 {
-    int i;
+    int i, ret;
 
     if (endpoint == NULL || storage == NULL)
         return RX_ERROR;
@@ -44,5 +44,22 @@ rx_route_get(const char *endpoint, struct rx_route *storage)
         }
     }
 
-    return RX_OK;
+    if (strncasecmp(endpoint, "/public/", 8) == 0)
+    {
+        storage->endpoint = "/public/";
+        storage->resource = endpoint;
+
+        memset(&storage->handler, 0, sizeof(struct rx_router_handler));
+
+        storage->handler.get    = rx_route_static;
+        storage->handler.post   = NULL;
+        storage->handler.put    = NULL;
+        storage->handler.patch  = NULL;
+        storage->handler.delete = NULL;
+        storage->handler.head   = NULL;
+
+        return RX_OK;
+    }
+
+    return RX_ERROR;
 }
