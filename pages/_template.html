@@ -7,55 +7,70 @@
         <meta viewport="width=device-width, initial-scale=1.0" />
         <link rel="icon" type="image/x-icon" href="/public/favicon.ico" />
         <script src="/public/js/tailwind.min.js"></script>
-
         <link rel="stylesheet" href="/public/css/index.css" />
+        <style type="text/tailwindcss">
+            @layer utilities {
+                ul {
+                    list-style-type: disc;
+                    padding-left: 1.5rem;
+                    margin-top: 1rem;
+                    margin-bottom: 1rem;
+
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1em;
+                }
+
+                li {
+                    display: list-item;
+                }
+            }
+        </style>
     </head>
     <body>
-        <main>
+        <div
+            class="font-mono bg-slate-50 w-full drop-shadow shadow-md shadow-slate-200"
+        >
             <div
-                class="font-mono bg-slate-50 w-full drop-shadow shadow-md shadow-slate-200"
+                class="flex items-center md:[768px] lg:w-[1024px] mx-auto px-4 gap-6"
             >
-                <div
-                    class="flex items-center md:[768px] lg:w-[1024px] mx-auto px-4 gap-6"
-                >
-                    <div class="my-3">
-                        <a
-                            href="/"
-                            class="inlineb-block font-bold text-2xl cursor-pointer"
-                            >HTTP</a
-                        >
-                    </div>
-                    <div class="flex items-center justify-between w-full">
-                        <div class="flex items-center gap-4">
-                            <div
-                                class="px-3 py-2 rounded-md hover:bg-slate-200"
-                            >
-                                <a href="/post">POST</a>
-                            </div>
-                            <div
-                                class="px-3 py-2 rounded-md hover:bg-slate-200"
-                            >
-                                <a href="/about">About</a>
-                            </div>
-                            <div
-                                class="px-3 py-2 rounded-md hover:bg-slate-200"
-                            >
-                                <a href="/docs">Docs</a>
-                            </div>
+                <div class="my-3">
+                    <a
+                        href="/"
+                        class="inlineb-block font-bold text-2xl cursor-pointer"
+                        >Reactor</a
+                    >
+                </div>
+                <div class="flex items-center justify-between w-full">
+                    <div class="flex items-center gap-4">
+                        <div class="px-3 py-2 rounded-md hover:bg-slate-200">
+                            <a href="/post">POST</a>
                         </div>
-                        <div class="flex items-center">
-                            <div
-                                class="px-3 py-2 rounded-md hover:bg-slate-200"
-                            >
-                                <a href="/docs">GitHub</a>
-                            </div>
+                        <div class="px-3 py-2 rounded-md hover:bg-slate-200">
+                            <a href="/about">About</a>
+                        </div>
+                        <div class="px-3 py-2 rounded-md hover:bg-slate-200">
+                            <a href="/docs">Docs</a>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="px-3 py-2 rounded-md hover:bg-slate-200">
+                            <a href="/docs">GitHub</a>
                         </div>
                     </div>
                 </div>
             </div>
-            <div id="body">%s</div>
-        </main>
-        <script src="/public/js/jquery.min.js"></script>
-        <script src="/public/js/script.js"></script>
+        </div>
+        <main id="body">%s</main>
+        <hr class="my-8" />
+        <div class="md:w-[768px] lg:w-[1024px] mb-4 px-4 mx-auto">
+            <div class="flex items-center justify-center">
+                Built by Richard Nguyen with ❤️
+            </div>
+        </div>
     </body>
+    <script src="/public/js/jquery.min.js"></script>
+    <script src="/public/js/script.js"></script>
+    <script src="/public/js/rx-link.js"></script>
+    <script src="/public/js/rx-code.js"></script>
 </html>

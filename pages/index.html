@@ -1,4 +1,155 @@
-<h1>Hello, World</h1>
-<button id="alertBtn" class="px-2 py-3 rounded-md bg-sky-500 text-white">
-    Show me
-</button>
+<div class="md:w-[768px] lg:w-[1024px] px-4 mx-auto flex flex-col gap-12">
+    <div class="flex items-center justify-center flex-col mt-8 gap-12">
+        <h1 class="text-6xl font-black uppercase">Welcome to Reactor</h1>
+        <h3 class="text-xl">
+            An experimental HTTP server written in C using
+            <rx-inline-code>epoll</rx-inline-code> and
+            <rx-inline-code>pthread</rx-inline-code>
+        </h3>
+        <img
+            alt="rainbow-cat-gif"
+            src="/public/images/rainbow-cat-rainbow.gif"
+        />
+    </div>
+    <hr />
+    <div class="flex flex-col justify-center gap-12">
+        <section class="flex flex-col justify-center gap-8">
+            <h3 class="text-3xl font-bold">What is reactor?</h3>
+            <div class="flex flex-col justify-center gap-3">
+                <p>
+                    <rx-inline-code>reactor</rx-inline-code>, or more formally
+                    <a
+                        is="rx-link"
+                        target="_blank"
+                        href="https://en.wikipedia.org/wiki/Reactor_pattern"
+                        >reactor pattern</a
+                    >, is a design pattern for handling multiple requests
+                    concurrently in which there is a single event loop that
+                    monitors multiple file descriptors (opening connection that
+                    represents a request), and there is a thread pool to handle
+                    and process requests.
+                </p>
+                <p>
+                    The single event loop uses
+                    <rx-inline-code>epoll</rx-inline-code> to monitor file
+                    descriptors and demultiplex events to the appropriate
+                    handler, or in this case, the thread pool. The event loop
+                    will monitor <em>three</em> states of the file descriptor:
+                </p>
+                <ul>
+                    <li>
+                        <rx-inline-code>EPOLLIN</rx-inline-code> &mdash; Clients
+                        want to send requests
+                    </li>
+                    <li>
+                        <rx-inline-code>EPOLLOUT</rx-inline-code> &mdash; Server
+                        wants to send response
+                    </li>
+                    <li>
+                        <rx-inline-code>EPOLLERR</rx-inline-code> &mdash; Errors
+                        happen during processing
+                    </li>
+                </ul>
+                <p>
+                    The thread pool spawns a number of threads (POSIX
+                    <rx-inline-code>pthread</rx-inline-code>) at the
+                    initialization of the server (when the server is booting).
+                    Each thread will be listening to a bounded buffer for a
+                    task. When a task is available, the thread will pop the task
+                    from the buffer and process it. After processing, the thread
+                    will notify the event loop and go back listening.
+                </p>
+            </div>
+        </section>
+
+        <section class="flex flex-col justify-center gap-8">
+            <h3 class="text-3xl font-bold">Why reactor?</h3>
+            <div class="flex flex-col justify-center gap-3">
+                <p>
+                    Linux <rx-inline-code>epoll</rx-inline-code> is a scalable
+                    I/O event notification mechanism that is efficient at
+                    monitoring a large number of files descriptors. Therefore,
+                    the server can quickly tell which files descriptors are
+                    ready for reading or writing. However, the event loop needs
+                    to be kept non-blocking.
+                </p>
+                <p>
+                    A thread pool, on the other hand, is a collection of threads
+                    whose responsibility is fulfill requests assigned to it.
+                    Since processing requests can be blocking (e.g. reading from
+                    an HTML file like this page), each task is consumd by a
+                    thread to avoid blocking the event loop.
+                </p>
+            </div>
+        </section>
+
+        <section class="flex flex-col justify-center gap-8">
+            <h3 class="text-3xl font-bold">How does it work?</h3>
+            <div class="flex flex-col justify-center gap-3">
+                <p>
+                    The server itself is a passive TCP socket that listens for a
+                    new connection. It also maintains a list of active
+                    connections using
+                    <rx-inline-code>epoll</rx-inline-code>. When a new
+                    connection is connected successfully, its file descriptor
+                    will be added to the epoll instance.
+                </p>
+                <p>
+                    The event loop will monitor the epoll instance for new
+                    events. If the event is from the server socket, it means
+                    that there is a new connection. If the event is from active
+                    client sockets, it means that there are some data to be read
+                    from, or written to, the client. It can be also an error
+                    happening during processing (either from the client or from
+                    the server).
+                </p>
+                <p>
+                    Every socket in the event loop is set to non-blocking mode,
+                    which means operations like
+                    <rx-inline-code>read</rx-inline-code> and
+                    <rx-inline-code>write</rx-inline-code> will not block the
+                    server, and return immediately (either with data or error).
+                    By doing so, the event loop can quickly tell which sockets
+                    are ready for reading or writing. However, it also requires
+                    some mechanisms to handle the incomplete data. This is done
+                    by maintaining a <strong>temporary buffer</strong> for each
+                    connection.
+                </p>
+                <p>
+                    Initially, newly-connected clients are set to read mode
+                    (<rx-inline-code>EPOLLIN</rx-inline-code>). After reading a
+                    request completely, the event loop will pass the request to
+                    the thread pool for processing.
+                </p>
+                <p>
+                    Thread pools are designed with a bounded buffer (<a
+                        is="rx-link"
+                        target="_blank"
+                        rel="noreferrer"
+                        href="https://en.wikipedia.org/wiki/Producer%E2%80%93consumer_problem"
+                        >Producer-consumer problem</a
+                    >). The buffer is a ring buffer that is shared among all the
+                    threads. When there is an available task from the buffer, a
+                    thread will pop that task and process it.
+                </p>
+                <p>
+                    Concurrency problem is handled by using two
+                    <strong>semaphores</strong> and one
+                    <strong>mutex</strong> lock. The first semaphore is used (by
+                    the main thread / event loop) to signal (worker threads)
+                    that there is at least one task available in the buffer. The
+                    second semaphore is used (by worker threads) to signal (main
+                    thread / event loop) that there is at least one slot
+                    available for new tasks in the buffer.
+                </p>
+                <p>
+                    After processing the request, the thread will construct an
+                    appropriate response and submit it back to the event loop by
+                    setting the event to write mode
+                    (<rx-inline-code>EPOLLOUT</rx-inline-code>). The event loop
+                    will then write the response to the client socket.
+                </p>
+            </div>
+        </section>
+    </div>
+</div>

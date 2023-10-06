@@ -124,5 +124,10 @@ rx_file_get_mime(const char *ext)
         return "image/x-icon";
     }
 
+    if (strcmp(ext, "gif") == 0)
+    {
+        return "image/gif";
+    }
+
     return "text/octet-stream";
 }
