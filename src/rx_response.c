@@ -175,3 +175,23 @@ rx_response_mime_to_string(rx_response_mime_t mime)
         return NULL;
     }
 }
+
+const char *
+rx_response_status_message(rx_http_status_t status_code)
+{
+    switch (status_code)
+    {
+    case RX_HTTP_STATUS_CODE_OK:
+        return RX_HTTP_STATUS_MSG_OK;
+    case RX_HTTP_STATUS_CODE_BAD_REQUEST:
+        return RX_HTTP_STATUS_MSG_BAD_REQUEST;
+    case RX_HTTP_STATUS_CODE_NOT_FOUND:
+        return RX_HTTP_STATUS_MSG_NOT_FOUND;
+    case RX_HTTP_STATUS_CODE_METHOD_NOT_ALLOWED:
+        return RX_HTTP_STATUS_MSG_METHOD_NOT_ALLOWED;
+    case RX_HTTP_STATUS_CODE_INTERNAL_SERVER_ERROR:
+        return RX_HTTP_STATUS_MSG_INTERNAL_SERVER_ERROR;
+    default:
+        return RX_HTTP_STATUS_CODE_UNSET;
+    }
+}

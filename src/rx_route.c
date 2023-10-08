@@ -27,7 +27,7 @@
 int
 rx_route_get(const char *endpoint, struct rx_route *storage)
 {
-    int i, ret;
+    int i;
 
     if (endpoint == NULL || storage == NULL)
         return RX_ERROR;

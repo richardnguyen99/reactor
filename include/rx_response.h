@@ -69,4 +69,7 @@ rx_response_get_content_type(struct rx_qlist *accept, const char *ext);
 const char *
 rx_response_mime_to_string(rx_response_mime_t mime);
 
+const char *
+rx_response_status_message(rx_http_status_t status_code);
+
 #endif /* __RX_RESPONSE_H__ */

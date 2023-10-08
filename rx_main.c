@@ -40,9 +40,6 @@ rx_route_about_get(struct rx_request *req, struct rx_response *res);
 void *
 rx_route_static(struct rx_request *req, struct rx_response *res);
 
-void *
-rx_request_process(struct rx_connection *conn);
-
 const struct rx_route router_table[] = {{.endpoint = "/",
                                          .resource = "pages/index.html",
                                          .handler  = {.get  = rx_route_index_get,
@@ -509,7 +506,7 @@ main(int argc, const char *argv[])
                            conn->buffer_end - conn->body_start);
 
                     task->arg    = conn;
-                    task->handle = (void *(*)(void *))rx_request_process;
+                    task->handle = (void *(*)(void *))rx_connection_process;
                     rx_thread_pool_submit(pool, task);
 
                     break;
@@ -544,8 +541,8 @@ main(int argc, const char *argv[])
                     continue;
                 }
 
-                const char *template = "HTTP/1.1 200 OK\r\n"
-                                       "Host: %s:%s\r\n"
+                const char *template = "HTTP/1.1 %ld %s\r\n"
+                                       "Server: Reactor\r\n"
                                        "Content-Type: %s\r\n"
                                        "Content-Length: %zu\r\n"
                                        "Date: %s\r\n"
@@ -568,9 +565,9 @@ main(int argc, const char *argv[])
                 tm  = gmtime(&now);
                 strftime(date_buf, sizeof(date_buf), date_format, tm);
 
-                buf_len =
-                    asprintf(&buf, template, host, service, res->content_type,
-                             res->content_length, date_buf, res->content);
+                buf_len = asprintf(&buf, template, res->status_code,
+                                   res->status_message, res->content_type,
+                                   res->content_length, date_buf, res->content);
 
                 if (buf_len == -1)
                 {
@@ -719,118 +716,6 @@ err_loop:
 }
 
 void *
-rx_request_process(struct rx_connection *conn)
-{
-    int ret;
-    char *endl;
-    char *startl;
-    size_t i;
-    pthread_t tid = pthread_self();
-    clock_t start, end;
-    struct rx_route route;
-    struct epoll_event event;
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
-           "[Thread %ld]%4.sProcessing request from %s:%s (socket = %d)\n", tid,
-           "", conn->host, conn->port, conn->fd);
-
-    if (conn->state != RX_CONNECTION_STATE_SERVING_REQUEST)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR,
-               "Connection is not ready to serve request\n");
-        return RX_ERROR_PTR;
-    }
-
-    start  = clock();
-    startl = conn->buffer_start;
-    endl   = startl;
-    i      = 0;
-    memset(&route, 0, sizeof(route));
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.sHeader length: %ld\n",
-           tid, "", conn->header_end - conn->buffer_start);
-
-    endl = strstr(startl, "\r\n");
-
-    ret = rx_request_process_start_line(conn->request, startl, endl - startl);
-    if (ret != RX_OK)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR,
-               "[Thread %ld]%4.sFailed to process request start line\n", tid,
-               "");
-        return RX_ERROR_PTR;
-    }
-
-    i += endl - startl;
-    startl = endl + 2;
-
-    endl = strstr(startl, "\r\n");
-
-    ret = rx_request_process_headers(conn->request, startl, endl - startl);
-
-    conn->state = RX_CONNECTION_STATE_WRITING_RESPONSE;
-
-    end = clock();
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
-           "[Thread %ld]%4.sRequest processed successfully (took %.4fms)"
-           "\n",
-           tid, "", (double)(end - start) / CLOCKS_PER_SEC * 1000);
-
-    ret = rx_route_get(conn->request->uri.path, &route);
-
-    if (ret != RX_OK)
-    {
-        rx_route_4xx(conn->request, conn->response,
-                     RX_HTTP_STATUS_CODE_NOT_FOUND);
-        goto end;
-    }
-
-    if (conn->request->method == RX_REQUEST_METHOD_GET &&
-        route.handler.get != NULL)
-    {
-        route.handler.get(conn->request, conn->response);
-    }
-    else if (conn->request->method == RX_REQUEST_METHOD_POST &&
-             route.handler.post != NULL)
-    {
-        route.handler.post(conn->request, conn->response);
-    }
-    else if (conn->request->method == RX_REQUEST_METHOD_PUT &&
-             route.handler.put != NULL)
-    {
-        route.handler.put(conn->request, conn->response);
-    }
-    else if (conn->request->method == RX_REQUEST_METHOD_DELETE &&
-             route.handler.delete != NULL)
-    {
-        route.handler.delete(conn->request, conn->response);
-    }
-    else if (conn->request->method == RX_REQUEST_METHOD_HEAD &&
-             route.handler.head != NULL)
-    {
-        route.handler.head(conn->request, conn->response);
-    }
-
-end:
-    event.events   = EPOLLOUT | EPOLLET;
-    event.data.ptr = conn;
-
-    ret = epoll_ctl(conn->efd, EPOLL_CTL_MOD, conn->fd, &event);
-
-    if (ret == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "epoll_ctl: %s\n", strerror(errno));
-        return RX_ERROR_PTR;
-    }
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
-           "[Thread %ld]%4.sSubmit finished task to event poll\n", tid, "");
-
-    return RX_OK_PTR;
-}
-
-void *
 rx_route_index_get(struct rx_request *req, struct rx_response *res)
 {
     NOOP(req);
@@ -867,6 +752,10 @@ rx_route_index_get(struct rx_request *req, struct rx_response *res)
 
     res->content_length = buflen;
     res->content_type   = file.mime;
+
+    res->status_code = RX_HTTP_STATUS_CODE_OK;
+    res->status_message =
+        (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
 
     rx_file_close(&file);
 
@@ -916,6 +805,9 @@ rx_route_about_get(struct rx_request *req, struct rx_response *res)
 
     res->content_length = buflen;
     res->content_type   = file.mime;
+    res->status_code    = RX_HTTP_STATUS_CODE_OK;
+    res->status_message =
+        (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
 
     rx_file_close(&file);
 
@@ -962,6 +854,9 @@ rx_route_static(struct rx_request *req, struct rx_response *res)
 
     res->content_length = file.size;
     res->content_type   = file.mime;
+    res->status_code    = RX_HTTP_STATUS_CODE_OK;
+    res->status_message =
+        (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
 
     rx_file_close(&file);
 
@@ -1012,7 +907,9 @@ rx_route_4xx(struct rx_request *req, struct rx_response *res, int code)
         return RX_ERROR_PTR;
     }
 
-    res->content_type = "text/html";
+    res->content_type   = "text/html";
+    res->status_code    = code;
+    res->status_message = (char *)rx_response_status_message(code);
 
     free(buf);
 
