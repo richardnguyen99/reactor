@@ -221,7 +221,7 @@ rx_response_construct(struct rx_response *res)
 {
     // HTTP Date format
     const char *date_format = "%a, %d %b %Y %H:%M:%S %Z";
-    const char *template    = "HTTP/1.1 %d %s\r\n"
+    const char *headers     = "HTTP/1.1 %d %s\r\n"
                               "Server: Reactor\r\n"
                               "Content-Type: %s\r\n"
                               "Content-Length: %zu\r\n"
@@ -229,48 +229,62 @@ rx_response_construct(struct rx_response *res)
                               "Connection: close\r\n"
                               "\r\n";
 
+    pthread_t tid;
     time_t now;
     struct tm *tm;
     char date_buf[128], *buf, *full_buf;
-    ssize_t buf_len, nsend;
+    ssize_t buf_len;
 
+    tid = pthread_self();
     now = time(NULL);
     tm  = gmtime(&now);
     strftime(date_buf, sizeof(date_buf), date_format, tm);
+    buf = NULL;
 
-    buf_len = asprintf(&buf, template, res->status_code, res->status_message,
+    memset(date_buf, '\0', sizeof(date_buf));
+
+    // Build response headers
+    buf_len = asprintf(&buf, headers, res->status_code, res->status_message,
                        res->content_type, res->content_length, date_buf);
 
-    if (buf_len < 0)
+    if (buf_len == -1)
     {
-        buf = NULL;
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "asprintf (at %s:%d): %s\n",
-               __FILE__, __LINE__, strerror(errno));
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR,
+               "[Thread %ld]%4.sasprintf() failed to allocate "
+               "memory for response buffer",
+               tid, "");
 
         return RX_ERROR;
     }
 
-    full_buf = calloc(1, buf_len + res->content_length + 1);
+    // Build full response buffer
+    full_buf = malloc((size_t)buf_len + res->content_length + 1);
 
     if (full_buf == NULL)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "realloc (at %s:%d): %s\n",
-               __FILE__, __LINE__, strerror(errno));
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR,
+               "[Thread %ld]%4.sfailed to allocate memory for "
+               "response buffer",
+               tid, "");
 
         return RX_ERROR;
     }
 
-    memcpy(full_buf, buf, buf_len);
+    // Copy headers and content into full buffer
+    memcpy(full_buf, buf, (size_t)buf_len);
+
+    // Copy content into full buffer. The content should be available from
+    // router at this point.
     memcpy(full_buf + buf_len, res->content, res->content_length);
+    full_buf[buf_len + res->content_length] = '\0';
     buf_len += res->content_length;
-    full_buf[buf_len] = '\0';
+
+    free(buf);
 
     res->is_resp_alloc   = 1;
     res->resp_buf        = full_buf;
     res->resp_buf_offset = 0;
     res->resp_buf_size   = (size_t)buf_len;
-
-    free(buf);
 
     return RX_OK;
 }

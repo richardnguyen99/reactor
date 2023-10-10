@@ -310,6 +310,7 @@ main(int argc, const char *argv[])
            "\n\n\tListening on %s:%s\n\n",
            host, service);
 
+    // Main event loop
     for (;;)
     {
         n = epoll_wait(epoll_fd, events, RX_MAX_EVENTS, -1);
@@ -350,7 +351,7 @@ main(int argc, const char *argv[])
 
                 struct rx_connection *conn =
                     malloc(sizeof(struct rx_connection));
-                ;
+
                 if (conn == NULL)
                 {
                     sprintf(msg, "malloc: %s\n", strerror(errno));
@@ -410,6 +411,16 @@ main(int argc, const char *argv[])
                     }
 
                     (void)rx_response_init(conn->response);
+                }
+
+                // At this moment, the server only supports one request per
+                // connection. If the client wishes to make parallele requests,
+                // it needs to open connections to the server.
+                if (conn->task_num > 0)
+                {
+                    rx_log(LOG_LEVEL_0, LOG_TYPE_WARN,
+                           "Connection on fd %d is busy\n", fd);
+                    continue;
                 }
 
                 conn->task_num++;
@@ -527,20 +538,20 @@ main(int argc, const char *argv[])
                 default:
                     break;
                 }
-
-                events[i].events = EPOLLOUT | EPOLLET;
-                ret = epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &events[i]);
-
-                if (ret == -1)
-                {
-                    sprintf(msg, "epoll_ctl (at %s:%d): %s\n", __FILE__,
-                            __LINE__, strerror(errno));
-                    goto err_loop;
-                }
             }
             else if (events[i].events & EPOLLOUT)
             {
                 struct rx_connection *conn = events[i].data.ptr;
+
+                if (conn->state == RX_CONNECTION_STATE_CLOSING)
+                {
+                    rx_log(LOG_LEVEL_0, LOG_TYPE_WARN,
+                           "[EPOLLOUT] Closing connection on fd %d\n "
+                           "detected\n",
+                           conn->fd);
+
+                    goto close_connection;
+                }
 
                 if (conn->state != RX_CONNECTION_STATE_WRITING_RESPONSE)
                 {
@@ -586,6 +597,7 @@ main(int argc, const char *argv[])
 
                 if (buf == NULL)
                 {
+                    conn->task_num--;
                     sprintf(msg, "realloc (at %s:%d): %s\n", __FILE__, __LINE__,
                             strerror(errno));
                     goto err_loop;
@@ -607,6 +619,7 @@ main(int argc, const char *argv[])
                         }
                         else
                         {
+                            conn->task_num--;
                             sprintf(msg, "send (at %s:%d): %s\n", __FILE__,
                                     __LINE__, strerror(errno));
                             goto err_loop;
@@ -625,13 +638,14 @@ main(int argc, const char *argv[])
                        nsend, fd);
 
                 conn->task_num--;
-
-                if (conn->task_num != 0)
+                if (conn->task_num > 0)
                 {
                     rx_connection_cleanup(conn);
+
                     continue;
                 }
 
+            close_connection:
                 ret = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
 
                 if (ret == -1)
@@ -653,14 +667,8 @@ main(int argc, const char *argv[])
                 struct rx_connection *conn = events[i].data.ptr;
                 int fd                     = conn->fd;
 
-                rx_log(LOG_LEVEL_0, LOG_TYPE_WARN, "Closing fd %d\n", fd);
-
                 conn->state = RX_CONNECTION_STATE_CLOSING;
-
-                if (conn->task_num != 0)
-                {
-                    continue;
-                }
+                conn->task_num--;
 
                 if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL) == -1)
                 {
@@ -668,16 +676,22 @@ main(int argc, const char *argv[])
                     goto err_loop;
                 }
 
-                rx_connection_free(conn);
-                free(conn);
-                events[i].data.ptr = NULL;
+                if (conn->task_num == 0)
+                {
+                    rx_connection_free(conn);
+                    free(conn);
+                    events[i].data.ptr = NULL;
 
-                rx_log(LOG_LEVEL_0, LOG_TYPE_WARN,
-                       "Connection closed on fd %d with error %s (event "
-                       "code = %ld)\n",
-                       fd,
-                       events[i].events & EPOLLERR ? "EPOLLERR" : "EPOLLRDHUP",
-                       events[i].events);
+                    rx_log(LOG_LEVEL_0, LOG_TYPE_WARN,
+                           "Connection closed on fd %d with error %s (event "
+                           "code = %ld)\n",
+                           fd,
+                           events[i].events & EPOLLERR ? "EPOLLERR"
+                                                       : "EPOLLRDHUP",
+                           events[i].events);
+                }
+
+                continue;
             }
         }
     }

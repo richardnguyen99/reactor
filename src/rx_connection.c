@@ -75,6 +75,7 @@ rx_connection_cleanup(struct rx_connection *conn)
 
     conn->request  = NULL;
     conn->response = NULL;
+    conn->task_num = 0;
 }
 
 void
@@ -130,8 +131,6 @@ rx_connection_process(struct rx_connection *conn)
     endl   = strstr(startl, "\r\n");
     ret    = rx_request_process_headers(conn->request, startl, endl - startl);
 
-    conn->state = RX_CONNECTION_STATE_WRITING_RESPONSE;
-
     end = clock();
 
     rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
@@ -184,7 +183,21 @@ rx_connection_process(struct rx_connection *conn)
     }
 
 end:
-    event.events   = EPOLLOUT | EPOLLET;
+    (void)rx_response_construct(conn->response);
+
+    conn->state = conn->state == RX_CONNECTION_STATE_CLOSING
+                      ? RX_CONNECTION_STATE_CLOSING
+                      : RX_CONNECTION_STATE_WRITING_RESPONSE;
+
+    if (conn->state == RX_CONNECTION_STATE_CLOSING)
+    {
+        event.events = EPOLLERR | EPOLLRDHUP | EPOLLET;
+    }
+    else
+    {
+        event.events = EPOLLOUT | EPOLLET;
+    }
+
     event.data.ptr = conn;
 
     ret = epoll_ctl(conn->efd, EPOLL_CTL_MOD, conn->fd, &event);
