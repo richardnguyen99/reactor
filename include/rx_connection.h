@@ -107,6 +107,9 @@ rx_connection_init(struct rx_connection *conn, int efd, int fd,
 void
 rx_connection_free(struct rx_connection *conn);
 
+void
+rx_connection_cleanup(struct rx_connection *conn);
+
 void *
 rx_connection_process(struct rx_connection *conn);
 

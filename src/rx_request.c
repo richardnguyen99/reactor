@@ -312,7 +312,7 @@ rx_request_proccess_method(rx_request_method_t *method, const char *buffer,
     pthread_t tid = pthread_self();
     char *color   = *method == RX_REQUEST_METHOD_INVALID ? ANSI_COLOR_RED
                                                          : ANSI_COLOR_GREEN;
-    char *mark    = *method == RX_REQUEST_METHOD_INVALID ? "❌" : "✅";
+    char *mark    = *method == RX_REQUEST_METHOD_INVALID ? "x" : "-";
 
     rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
            "[Thread %ld]%4.s%s%3.s%sMethod: %s\n" ANSI_COLOR_RESET, tid, "",
@@ -382,6 +382,24 @@ rx_request_process_uri(struct rx_request_uri *uri, const char *buffer,
 end:
 #if defined(RX_DEBUG)
     pthread_t tid = pthread_self();
+
+    char *color = uri->result != RX_REQUEST_URI_RESULT_OK ? ANSI_COLOR_RED
+                                                          : ANSI_COLOR_GREEN;
+    char *mark  = uri->result != RX_REQUEST_URI_RESULT_OK ? "x" : "-";
+
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+           "[Thread %ld]%4.s%s%3.s%sURI parsing: %s\n"
+
+           ANSI_COLOR_RESET,
+           tid, "", mark, "", color,
+           uri->result == RX_REQUEST_URI_RESULT_OK ? "OK" : "INVALID");
+
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%8.s%sPath: \"%.*s\"\n",
+           tid, "", color, (int)(uri->path_end - uri->path), uri->path);
+
+    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
+           "[Thread %ld]%8.s%sQuery string: \"%.*s\"\n", tid, "", color,
+           (int)(uri->query_string_end - uri->query_string), uri->query_string);
 #endif
     return ret;
 }

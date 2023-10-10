@@ -63,7 +63,7 @@ struct rx_route
 extern const struct rx_route router_table[];
 
 int
-rx_route_get(const char *endpoint, struct rx_route *storage);
+rx_route_get(struct rx_route *storage, const char *endpoint, size_t ep_len);
 
 extern void *
 rx_route_static(struct rx_request *req, struct rx_response *res);

@@ -27,12 +27,23 @@
 int
 rx_response_init(struct rx_response *res)
 {
+    if (res == NULL)
+    {
+        return RX_ERROR;
+    }
+
     res->status_code    = RX_HTTP_STATUS_CODE_UNSET;
     res->status_message = NULL;
 
-    res->content        = NULL;
-    res->content_length = 0;
-    res->content_type   = 0;
+    res->is_content_mmapd = 0;
+    res->content          = NULL;
+    res->content_length   = 0;
+    res->content_type     = 0;
+
+    res->is_resp_alloc   = 0;
+    res->resp_buf        = NULL;
+    res->resp_buf_offset = 0;
+    res->resp_buf_size   = 0;
 
     return RX_OK;
 }
@@ -40,14 +51,23 @@ rx_response_init(struct rx_response *res)
 void
 rx_response_destroy(struct rx_response *res)
 {
-    if (res->status_message != NULL)
-        free(res->status_message);
-
     if (res->content != NULL)
     {
-        free(res->content);
+        if (res->is_content_mmapd == 1)
+            munmap(res->content, res->content_length);
+        else
+            free(res->content);
+
         res->content        = NULL;
         res->content_length = 0;
+    }
+
+    if (res->resp_buf != NULL && res->is_resp_alloc == 1)
+    {
+        free(res->resp_buf);
+        res->resp_buf        = NULL;
+        res->resp_buf_offset = 0;
+        res->resp_buf_size   = 0;
     }
 }
 
@@ -176,7 +196,7 @@ rx_response_mime_to_string(rx_response_mime_t mime)
     }
 }
 
-const char *
+char *
 rx_response_status_message(rx_http_status_t status_code)
 {
     switch (status_code)
@@ -194,4 +214,63 @@ rx_response_status_message(rx_http_status_t status_code)
     default:
         return RX_HTTP_STATUS_CODE_UNSET;
     }
+}
+
+int
+rx_response_construct(struct rx_response *res)
+{
+    // HTTP Date format
+    const char *date_format = "%a, %d %b %Y %H:%M:%S %Z";
+    const char *template    = "HTTP/1.1 %d %s\r\n"
+                              "Server: Reactor\r\n"
+                              "Content-Type: %s\r\n"
+                              "Content-Length: %zu\r\n"
+                              "Date: %s\r\n"
+                              "Connection: close\r\n"
+                              "\r\n";
+
+    time_t now;
+    struct tm *tm;
+    char date_buf[128], *buf, *full_buf;
+    ssize_t buf_len, nsend;
+
+    now = time(NULL);
+    tm  = gmtime(&now);
+    strftime(date_buf, sizeof(date_buf), date_format, tm);
+
+    buf_len = asprintf(&buf, template, res->status_code, res->status_message,
+                       res->content_type, res->content_length, date_buf);
+
+    if (buf_len < 0)
+    {
+        buf = NULL;
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "asprintf (at %s:%d): %s\n",
+               __FILE__, __LINE__, strerror(errno));
+
+        return RX_ERROR;
+    }
+
+    full_buf = calloc(1, buf_len + res->content_length + 1);
+
+    if (full_buf == NULL)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "realloc (at %s:%d): %s\n",
+               __FILE__, __LINE__, strerror(errno));
+
+        return RX_ERROR;
+    }
+
+    memcpy(full_buf, buf, buf_len);
+    memcpy(full_buf + buf_len, res->content, res->content_length);
+    buf_len += res->content_length;
+    full_buf[buf_len] = '\0';
+
+    res->is_resp_alloc   = 1;
+    res->resp_buf        = full_buf;
+    res->resp_buf_offset = 0;
+    res->resp_buf_size   = (size_t)buf_len;
+
+    free(buf);
+
+    return RX_OK;
 }

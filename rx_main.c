@@ -348,7 +348,9 @@ main(int argc, const char *argv[])
                     goto err_loop;
                 }
 
-                struct rx_connection *conn = malloc(sizeof(*conn));
+                struct rx_connection *conn =
+                    malloc(sizeof(struct rx_connection));
+                ;
                 if (conn == NULL)
                 {
                     sprintf(msg, "malloc: %s\n", strerror(errno));
@@ -363,6 +365,10 @@ main(int argc, const char *argv[])
                 ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev);
                 if (ret != 0)
                 {
+                    rx_connection_free(conn);
+                    free(conn);
+                    ev.data.ptr = NULL;
+
                     sprintf(msg, "epoll_ctl: %s\n", strerror(errno));
                     goto err_loop;
                 }
@@ -383,7 +389,7 @@ main(int argc, const char *argv[])
 
                 if (conn->request == NULL)
                 {
-                    conn->request = malloc(sizeof(*conn->request));
+                    conn->request = calloc(1, sizeof(*conn->request));
                     if (conn->request == NULL)
                     {
                         sprintf(msg, "malloc: %s\n", strerror(errno));
@@ -567,7 +573,7 @@ main(int argc, const char *argv[])
 
                 buf_len = asprintf(&buf, template, res->status_code,
                                    res->status_message, res->content_type,
-                                   res->content_length, date_buf, res->content);
+                                   res->content_length, date_buf);
 
                 if (buf_len == -1)
                 {
@@ -576,7 +582,7 @@ main(int argc, const char *argv[])
                     goto err_loop;
                 }
 
-                buf = realloc(buf, buf_len + res->content_length);
+                buf = realloc(buf, buf_len + res->content_length + 1);
 
                 if (buf == NULL)
                 {
@@ -622,6 +628,7 @@ main(int argc, const char *argv[])
 
                 if (conn->task_num != 0)
                 {
+                    rx_connection_cleanup(conn);
                     continue;
                 }
 
@@ -647,6 +654,13 @@ main(int argc, const char *argv[])
                 int fd                     = conn->fd;
 
                 rx_log(LOG_LEVEL_0, LOG_TYPE_WARN, "Closing fd %d\n", fd);
+
+                conn->state = RX_CONNECTION_STATE_CLOSING;
+
+                if (conn->task_num != 0)
+                {
+                    continue;
+                }
 
                 if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL) == -1)
                 {
@@ -718,15 +732,73 @@ err_loop:
 void *
 rx_route_index_get(struct rx_request *req, struct rx_response *res)
 {
-    NOOP(req);
-    NOOP(res);
+    int *ret, status, buflen;
+    struct rx_file file;
+    char *content;
 
+    memset(&file, 0, sizeof(file));
+    ret    = RX_OK_PTR;
+    status = rx_file_open(&file, "pages/index.html", O_RDONLY);
+
+    if (status == RX_ERROR)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "Failed to open file\n");
+        ret = RX_ERROR_PTR;
+
+        goto end;
+    }
+
+    content = mmap(NULL, file.size, PROT_READ, MAP_PRIVATE, file.fd, 0);
+
+    if (content == MAP_FAILED)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "mmap (at %s:%d): %s\n", __FILE__,
+               __LINE__ - 4, strerror(errno));
+        ret = RX_ERROR_PTR;
+
+        goto end;
+    }
+
+    buflen = asprintf(&res->content, template_ptr, content, file.size);
+
+    if (buflen == -1)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "asprintf: %s\n", strerror(errno));
+
+        ret          = RX_ERROR_PTR;
+        res->content = NULL;
+
+        goto end;
+    }
+
+    res->content_length = buflen;
+    res->content_type   = file.mime;
+
+    res->status_code = RX_HTTP_STATUS_CODE_OK;
+    res->status_message =
+        (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
+
+end:
+    rx_file_close(&file);
+
+    if (munmap(content, file.size) == -1)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "munmap: %s\n", strerror(errno));
+        return RX_ERROR_PTR;
+    }
+
+    return ret;
+}
+
+void *
+rx_route_about_get(struct rx_request *req, struct rx_response *res)
+{
     int ret, buflen;
     struct rx_file file;
     char *content;
 
     memset(&file, 0, sizeof(file));
-    ret = rx_file_open(&file, "pages/index.html", O_RDONLY);
+    ret = rx_file_open(&file, "pages/about.html", O_RDONLY);
 
     if (ret == RX_ERROR)
     {
@@ -769,71 +841,21 @@ rx_route_index_get(struct rx_request *req, struct rx_response *res)
 }
 
 void *
-rx_route_about_get(struct rx_request *req, struct rx_response *res)
-{
-    NOOP(req);
-    NOOP(res);
-
-    int ret, buflen;
-    struct rx_file file;
-    char *content;
-
-    memset(&file, 0, sizeof(file));
-    ret = rx_file_open(&file, "pages/about.html", O_RDONLY);
-
-    if (ret == RX_ERROR)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "Failed to open file\n");
-        return RX_ERROR_PTR;
-    }
-
-    content = mmap(NULL, file.size, PROT_READ, MAP_PRIVATE, file.fd, 0);
-
-    if (res->content == MAP_FAILED)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "mmap: %s\n", strerror(errno));
-        return RX_ERROR_PTR;
-    }
-
-    buflen = asprintf(&res->content, template_ptr, content, file.size);
-
-    if (buflen == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "asprintf: %s\n", strerror(errno));
-        return RX_ERROR_PTR;
-    }
-
-    res->content_length = buflen;
-    res->content_type   = file.mime;
-    res->status_code    = RX_HTTP_STATUS_CODE_OK;
-    res->status_message =
-        (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
-
-    rx_file_close(&file);
-
-    if (munmap(content, file.size) == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "munmap: %s\n", strerror(errno));
-        return RX_ERROR_PTR;
-    }
-
-    return RX_OK_PTR;
-}
-
-void *
 rx_route_static(struct rx_request *req, struct rx_response *res)
 {
     const size_t resource_len = req->uri.path_end - req->uri.path - 1;
 
     int ret;
     struct rx_file file;
-    char resource[resource_len];
+    char resource[resource_len], *buf;
 
     memset(&file, 0, sizeof(file));
     memcpy(resource, req->uri.path + 1, req->uri.path_end - req->uri.path);
     resource[resource_len] = '\0';
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Static file request: %s\n", resource);
+    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
+           "[Thread %ld]%4.sStatic file request: %s\n", pthread_self(), "",
+           resource);
 
     ret = rx_file_open(&file, resource, O_RDONLY);
 
@@ -843,18 +865,19 @@ rx_route_static(struct rx_request *req, struct rx_response *res)
         return RX_ERROR_PTR;
     }
 
-    res->content =
-        (char *)mmap(NULL, file.size, PROT_READ, MAP_PRIVATE, file.fd, 0);
+    buf = (char *)mmap(NULL, file.size, PROT_READ, MAP_PRIVATE, file.fd, 0);
 
-    if (res->content == MAP_FAILED)
+    if (buf == MAP_FAILED)
     {
         rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "mmap: %s\n", strerror(errno));
         return RX_ERROR_PTR;
     }
 
-    res->content_length = file.size;
-    res->content_type   = file.mime;
-    res->status_code    = RX_HTTP_STATUS_CODE_OK;
+    res->is_content_mmapd = 1;
+    res->content          = buf;
+    res->content_length   = file.size;
+    res->content_type     = file.mime;
+    res->status_code      = RX_HTTP_STATUS_CODE_OK;
     res->status_message =
         (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
 

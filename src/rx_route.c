@@ -25,16 +25,16 @@
 #include <rx_core.h>
 
 int
-rx_route_get(const char *endpoint, struct rx_route *storage)
+rx_route_get(struct rx_route *storage, const char *endpoint, size_t ep_len)
 {
     int i;
 
-    if (endpoint == NULL || storage == NULL)
+    if (endpoint == NULL || storage == NULL || ep_len == 0)
         return RX_ERROR;
 
     for (i = 0; router_table[i].endpoint != NULL; i++)
     {
-        if (strcmp(router_table[i].endpoint, endpoint) == 0)
+        if (strncasecmp(router_table[i].endpoint, endpoint, ep_len) == 0)
         {
             storage->endpoint = router_table[i].endpoint;
             storage->resource = router_table[i].resource;
@@ -44,7 +44,7 @@ rx_route_get(const char *endpoint, struct rx_route *storage)
         }
     }
 
-    if (strncasecmp(endpoint, "/public/", 8) == 0)
+    if (ep_len > 8 && strncasecmp(endpoint, "/public/", 8) == 0)
     {
         storage->endpoint = "/public/";
         storage->resource = endpoint;

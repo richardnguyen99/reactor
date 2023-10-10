@@ -48,10 +48,15 @@ struct rx_response
     rx_http_status_t status_code;
     char *status_message;
 
+    int is_content_mmapd;
     char *content;
     size_t content_length;
-
     char *content_type;
+
+    int is_resp_alloc;
+    char *resp_buf;
+    size_t resp_buf_offset;
+    size_t resp_buf_size;
 };
 
 int
@@ -69,7 +74,10 @@ rx_response_get_content_type(struct rx_qlist *accept, const char *ext);
 const char *
 rx_response_mime_to_string(rx_response_mime_t mime);
 
-const char *
+char *
 rx_response_status_message(rx_http_status_t status_code);
+
+int
+rx_response_construct(struct rx_response *response);
 
 #endif /* __RX_RESPONSE_H__ */

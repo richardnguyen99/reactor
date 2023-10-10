@@ -55,7 +55,7 @@ rx_connection_init(struct rx_connection *conn, int efd, int fd,
 }
 
 void
-rx_connection_free(struct rx_connection *conn)
+rx_connection_cleanup(struct rx_connection *conn)
 {
     if (conn->request != NULL)
     {
@@ -73,7 +73,14 @@ rx_connection_free(struct rx_connection *conn)
         free(conn->response);
     }
 
-    conn->request = NULL;
+    conn->request  = NULL;
+    conn->response = NULL;
+}
+
+void
+rx_connection_free(struct rx_connection *conn)
+{
+    rx_connection_cleanup(conn);
 
     close(conn->fd);
 }
@@ -83,7 +90,6 @@ rx_connection_process(struct rx_connection *conn)
 {
     pthread_t tid = pthread_self();
     int ret;
-    size_t i;
     char *startl, *endl;
     clock_t start, end;
     struct rx_route route;
@@ -103,7 +109,7 @@ rx_connection_process(struct rx_connection *conn)
     start  = clock();
     startl = conn->buffer_start;
     endl   = startl;
-    i      = 0;
+
     memset(&route, 0, sizeof(route));
 
     rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.sHeader length: %ld\n",
@@ -120,12 +126,9 @@ rx_connection_process(struct rx_connection *conn)
         return RX_ERROR_PTR;
     }
 
-    i += endl - startl;
     startl = endl + 2;
-
-    endl = strstr(startl, "\r\n");
-
-    ret = rx_request_process_headers(conn->request, startl, endl - startl);
+    endl   = strstr(startl, "\r\n");
+    ret    = rx_request_process_headers(conn->request, startl, endl - startl);
 
     conn->state = RX_CONNECTION_STATE_WRITING_RESPONSE;
 
@@ -136,7 +139,9 @@ rx_connection_process(struct rx_connection *conn)
            "\n",
            tid, "", (double)(end - start) / CLOCKS_PER_SEC * 1000);
 
-    ret = rx_route_get(conn->request->uri.path, &route);
+    ret = rx_route_get(
+        &route, conn->request->uri.path,
+        (size_t)(conn->request->uri.path_end - conn->request->uri.path));
 
     if (ret != RX_OK)
     {
