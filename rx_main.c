@@ -40,31 +40,44 @@ rx_route_about_get(struct rx_request *req, struct rx_response *res);
 void *
 rx_route_static(struct rx_request *req, struct rx_response *res);
 
-const struct rx_route router_table[] = {{.endpoint = "/",
-                                         .resource = "pages/index.html",
-                                         .handler  = {.get  = rx_route_index_get,
-                                                      .post = NULL,
-                                                      .put  = NULL,
-                                                      .patch  = NULL,
-                                                      .delete = NULL,
-                                                      .head   = NULL}},
-                                        {.endpoint = "/about",
-                                         .resource = "pages/about.html",
-                                         .handler  = {.get  = rx_route_about_get,
-                                                      .post = NULL,
-                                                      .put  = NULL,
-                                                      .patch = NULL,
-                                                      .head  = NULL}},
-                                        {
-                                            .endpoint = NULL,
-                                            .resource = NULL,
-                                            .handler  = {.get    = NULL,
-                                                         .post   = NULL,
-                                                         .put    = NULL,
-                                                         .patch  = NULL,
-                                                         .delete = NULL,
-                                                         .head   = NULL},
-                                        }};
+/* clang-format off */
+const struct rx_route router_table[] = {
+{
+    .endpoint = "/",
+    .resource = "pages/index.html",
+    .handler  = {
+        .get    = rx_route_index_get,
+        .post   = NULL,
+        .put    = NULL,
+        .patch  = NULL,
+        .delete = NULL,
+        .head   = NULL
+    }
+},
+{
+    .endpoint = "/about",
+    .resource = "pages/about.html",
+    .handler  = {
+        .get    = rx_route_about_get,
+        .post   = NULL,
+        .put    = NULL,
+        .patch  = NULL,
+        .head   = NULL
+    }
+},
+{
+    .endpoint = NULL,
+    .resource = NULL,
+    .handler  = {
+        .get    = NULL,
+        .post   = NULL,
+        .put    = NULL,
+        .patch  = NULL,
+        .delete = NULL,
+        .head   = NULL
+    },
+}};
+/* clang-format on */
 
 int
 main(int argc, const char *argv[])
@@ -242,6 +255,42 @@ main(int argc, const char *argv[])
 
     printf("OK\n");
 
+    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Load view engine... ");
+
+    ret = rx_view_init();
+
+    if (ret == RX_ERROR)
+    {
+        sprintf(msg, "rx_view_init: %s\n", strerror(errno));
+        goto err_epoll;
+    }
+
+    ret = rx_view_load_template("pages/_template.html");
+
+    if (ret == RX_ERROR)
+    {
+        sprintf(msg, "rx_view_load_template: %s\n", strerror(errno));
+        goto err_epoll;
+    }
+
+    ret = rx_view_load_4xx("pages/_4xx.html");
+
+    if (ret == RX_ERROR)
+    {
+        sprintf(msg, "rx_view_load_4xx: %s\n", strerror(errno));
+        goto err_epoll;
+    }
+
+    ret = rx_view_load_5xx("pages/_5xx.html");
+
+    if (ret == RX_ERROR)
+    {
+        sprintf(msg, "rx_view_load_5xx: %s\n", strerror(errno));
+        goto err_epoll;
+    }
+
+    printf("OK\n");
+
     rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
            "Add server socket to epoll instance... ");
 
@@ -413,6 +462,11 @@ main(int argc, const char *argv[])
                     (void)rx_response_init(conn->response);
                 }
 
+                if (conn->state == RX_CONNECTION_STATE_READING_HEADER)
+                {
+                    goto continue_reading;
+                }
+
                 // At this moment, the server only supports one request per
                 // connection. If the client wishes to make parallele requests,
                 // it needs to open connections to the server.
@@ -423,11 +477,13 @@ main(int argc, const char *argv[])
                     continue;
                 }
 
+                conn->state = RX_CONNECTION_STATE_READING_HEADER;
                 conn->task_num++;
 
                 rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
                        "No. tasks from fd %d: %ld\n", fd, conn->task_num);
 
+            continue_reading:
                 nread = recv(fd, buf, sizeof(buf), 0);
 
                 if (nread == -1)
@@ -465,8 +521,7 @@ main(int argc, const char *argv[])
                     continue;
                 }
 
-                buf[nread]  = '\0';
-                conn->state = RX_CONNECTION_STATE_READING_HEADER;
+                buf[nread] = '\0';
 
                 rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
                        "Received %ld bytes from fd %d\n", nread, fd);
@@ -542,6 +597,8 @@ main(int argc, const char *argv[])
             else if (events[i].events & EPOLLOUT)
             {
                 struct rx_connection *conn = events[i].data.ptr;
+                int fd                     = conn->fd;
+                struct rx_response *res    = conn->response;
 
                 if (conn->state == RX_CONNECTION_STATE_CLOSING)
                 {
@@ -565,9 +622,6 @@ main(int argc, const char *argv[])
                                        "Date: %s\r\n"
                                        "Connection: close\r\n"
                                        "\r\n";
-
-                int fd                  = conn->fd;
-                struct rx_response *res = conn->response;
 
                 // HTTP Date format
                 const char *date_format = "%a, %d %b %Y %H:%M:%S %Z";
@@ -628,9 +682,6 @@ main(int argc, const char *argv[])
 
                     break;
                 }
-
-                rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-                       "Sent headers (%ld bytes) to fd %d\n", nsend, fd);
 
                 free(buf);
 
@@ -730,6 +781,8 @@ err_loop:
         munmap(client_template_ptr, client_template.size);
         munmap(server_template_ptr, server_template.size);
 
+        rx_view_destroy();
+
     err_socket:
         close(server_fd);
 
@@ -746,6 +799,8 @@ err_loop:
 void *
 rx_route_index_get(struct rx_request *req, struct rx_response *res)
 {
+    NOOP(req);
+
     int *ret, status, buflen;
     struct rx_file file;
     char *content;
@@ -773,7 +828,8 @@ rx_route_index_get(struct rx_request *req, struct rx_response *res)
         goto end;
     }
 
-    buflen = asprintf(&res->content, template_ptr, content, file.size);
+    buflen = asprintf(&res->content, rx_view_engine.base_template.data, content,
+                      file.size);
 
     if (buflen == -1)
     {
@@ -792,14 +848,14 @@ rx_route_index_get(struct rx_request *req, struct rx_response *res)
     res->status_message =
         (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
 
-end:
-    rx_file_close(&file);
-
     if (munmap(content, file.size) == -1)
     {
         rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "munmap: %s\n", strerror(errno));
         return RX_ERROR_PTR;
     }
+
+end:
+    rx_file_close(&file);
 
     return ret;
 }
@@ -807,6 +863,8 @@ end:
 void *
 rx_route_about_get(struct rx_request *req, struct rx_response *res)
 {
+    NOOP(req);
+
     int ret, buflen;
     struct rx_file file;
     char *content;
@@ -904,15 +962,15 @@ void *
 rx_route_4xx(struct rx_request *req, struct rx_response *res, int code)
 {
 #ifdef RX_DEBUG
-    rx_log(LOG_LEVEL_0, LOG_TYPE_WARN, "[Thread %ld]%4.sClient error",
-           pthread_self(), "");
+    rx_log(LOG_LEVEL_0, LOG_TYPE_WARN,
+           "[Thread %ld]%4.sClient error with code %d\n", pthread_self(), "",
+           code);
 #endif
-    char msg[80], reason[1024], *buf;
+    char msg[80], reason[3000], *buf;
     int buflen;
 
     switch (code)
     {
-
     case RX_HTTP_STATUS_CODE_NOT_FOUND:
         sprintf(msg, "Not Found");
         sprintf(reason, "The requested resource (%s) could not be found.",
@@ -928,7 +986,8 @@ rx_route_4xx(struct rx_request *req, struct rx_response *res, int code)
         break;
     }
 
-    buflen = asprintf(&buf, client_template_ptr, code, msg, reason);
+    buflen = asprintf(&buf, rx_view_engine.client_error_template.data, code,
+                      msg, reason);
 
     if (buflen == RX_ERROR)
     {
@@ -936,14 +995,15 @@ rx_route_4xx(struct rx_request *req, struct rx_response *res, int code)
         return RX_ERROR_PTR;
     }
 
-    res->content_length = asprintf(&res->content, template_ptr, buf);
+    buflen = asprintf(&res->content, rx_view_engine.base_template.data, buf);
 
-    if (res->content_length == RX_ERROR)
+    if (buflen == RX_ERROR)
     {
         rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "asprintf: %s\n", strerror(errno));
         return RX_ERROR_PTR;
     }
 
+    res->content_length = (size_t)buflen;
     res->content_type   = "text/html";
     res->status_code    = code;
     res->status_message = (char *)rx_response_status_message(code);
