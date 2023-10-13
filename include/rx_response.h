@@ -77,6 +77,9 @@ rx_response_mime_to_string(rx_response_mime_t mime);
 char *
 rx_response_status_message(rx_http_status_t status_code);
 
+void
+rx_response_render(struct rx_response *response, const char *path);
+
 int
 rx_response_construct(struct rx_response *response);
 

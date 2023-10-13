@@ -27,10 +27,6 @@
 #define RX_TASK_TYPE_PROCESS_REQUEST  1
 #define RX_TASK_TYPE_PROCESS_RESPONSE 2
 
-struct rx_file template, client_template, server_template;
-
-char *template_ptr, *client_template_ptr, *server_template_ptr;
-
 void *
 rx_route_index_get(struct rx_request *req, struct rx_response *res);
 
@@ -175,81 +171,6 @@ main(int argc, const char *argv[])
     if (epoll_fd == -1)
     {
         sprintf(msg, "epoll_create1: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Open template file... ");
-
-    ret = rx_file_open(&template, "pages/_template.html", O_RDONLY);
-
-    if (ret == RX_ERROR)
-    {
-        sprintf(msg, "rx_file_open: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Read template file... ");
-
-    template_ptr =
-        mmap(NULL, template.size, PROT_READ, MAP_PRIVATE, template.fd, 0);
-
-    if (template_ptr == MAP_FAILED)
-    {
-        sprintf(msg, "mmap: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Open 4xx template file... ");
-
-    ret = rx_file_open(&client_template, "pages/_4xx.html", O_RDONLY);
-
-    if (ret == RX_ERROR)
-    {
-        sprintf(msg, "rx_file_open: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Read 4xx template file... ");
-
-    client_template_ptr = mmap(NULL, client_template.size, PROT_READ,
-                               MAP_PRIVATE, client_template.fd, 0);
-
-    if (client_template_ptr == MAP_FAILED)
-    {
-        sprintf(msg, "mmap: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Open 5xx template file... ");
-
-    ret = rx_file_open(&server_template, "pages/_5xx.html", O_RDONLY);
-
-    if (ret == RX_ERROR)
-    {
-        sprintf(msg, "rx_file_open: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Read 5xx template file... ");
-
-    server_template_ptr = mmap(NULL, server_template.size, PROT_READ,
-                               MAP_PRIVATE, server_template.fd, 0);
-
-    if (server_template_ptr == MAP_FAILED)
-    {
-        sprintf(msg, "mmap: %s\n", strerror(errno));
         goto err_epoll;
     }
 
@@ -773,14 +694,6 @@ err_loop:
 
     err_epoll:
         close(epoll_fd);
-        rx_file_close(&template);
-        rx_file_close(&client_template);
-        rx_file_close(&server_template);
-
-        munmap(template_ptr, template.size);
-        munmap(client_template_ptr, client_template.size);
-        munmap(server_template_ptr, server_template.size);
-
         rx_view_destroy();
 
     err_socket:
@@ -801,63 +714,9 @@ rx_route_index_get(struct rx_request *req, struct rx_response *res)
 {
     NOOP(req);
 
-    int *ret, status, buflen;
-    struct rx_file file;
-    char *content;
+    rx_response_render(res, "pages/index.html");
 
-    memset(&file, 0, sizeof(file));
-    ret    = RX_OK_PTR;
-    status = rx_file_open(&file, "pages/index.html", O_RDONLY);
-
-    if (status == RX_ERROR)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "Failed to open file\n");
-        ret = RX_ERROR_PTR;
-
-        goto end;
-    }
-
-    content = mmap(NULL, file.size, PROT_READ, MAP_PRIVATE, file.fd, 0);
-
-    if (content == MAP_FAILED)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "mmap (at %s:%d): %s\n", __FILE__,
-               __LINE__ - 4, strerror(errno));
-        ret = RX_ERROR_PTR;
-
-        goto end;
-    }
-
-    buflen = asprintf(&res->content, rx_view_engine.base_template.data, content,
-                      file.size);
-
-    if (buflen == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "asprintf: %s\n", strerror(errno));
-
-        ret          = RX_ERROR_PTR;
-        res->content = NULL;
-
-        goto end;
-    }
-
-    res->content_length = buflen;
-    res->content_type   = file.mime;
-
-    res->status_code = RX_HTTP_STATUS_CODE_OK;
-    res->status_message =
-        (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
-
-    if (munmap(content, file.size) == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "munmap: %s\n", strerror(errno));
-        return RX_ERROR_PTR;
-    }
-
-end:
-    rx_file_close(&file);
-
-    return ret;
+    return NULL;
 }
 
 void *
@@ -865,51 +724,9 @@ rx_route_about_get(struct rx_request *req, struct rx_response *res)
 {
     NOOP(req);
 
-    int ret, buflen;
-    struct rx_file file;
-    char *content;
+    rx_response_render(res, "pages/about.html");
 
-    memset(&file, 0, sizeof(file));
-    ret = rx_file_open(&file, "pages/about.html", O_RDONLY);
-
-    if (ret == RX_ERROR)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "Failed to open file\n");
-        return RX_ERROR_PTR;
-    }
-
-    content = mmap(NULL, file.size, PROT_READ, MAP_PRIVATE, file.fd, 0);
-
-    if (res->content == MAP_FAILED)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "mmap: %s\n", strerror(errno));
-        return RX_ERROR_PTR;
-    }
-
-    buflen = asprintf(&res->content, template_ptr, content, file.size);
-
-    if (buflen == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "asprintf: %s\n", strerror(errno));
-        return RX_ERROR_PTR;
-    }
-
-    res->content_length = buflen;
-    res->content_type   = file.mime;
-
-    res->status_code = RX_HTTP_STATUS_CODE_OK;
-    res->status_message =
-        (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
-
-    rx_file_close(&file);
-
-    if (munmap(content, file.size) == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "munmap: %s\n", strerror(errno));
-        return RX_ERROR_PTR;
-    }
-
-    return RX_OK_PTR;
+    return NULL;
 }
 
 void *

@@ -216,6 +216,62 @@ rx_response_status_message(rx_http_status_t status_code)
     }
 }
 
+void
+rx_response_render(struct rx_response *res, const char *path)
+{
+
+    int ret, buflen;
+    struct rx_file file;
+    char *content;
+
+    memset(&file, 0, sizeof(file));
+    ret = rx_file_open(&file, path, O_RDONLY);
+
+    if (ret == RX_ERROR)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "Failed to open file\n");
+
+        goto end;
+    }
+
+    content = mmap(NULL, file.size, PROT_READ, MAP_PRIVATE, file.fd, 0);
+
+    if (content == MAP_FAILED)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "mmap (at %s:%d): %s\n", __FILE__,
+               __LINE__ - 4, strerror(errno));
+
+        goto end;
+    }
+
+    buflen = asprintf(&res->content, rx_view_engine.base_template.data, content,
+                      file.size);
+
+    if (buflen == -1)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "asprintf: %s\n", strerror(errno));
+
+        res->content = NULL;
+
+        goto end;
+    }
+
+    res->content_length = buflen;
+    res->content_type   = "text/html;charset=utf-8";
+
+    res->status_code = RX_HTTP_STATUS_CODE_OK;
+    res->status_message =
+        (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
+
+    if (munmap(content, file.size) == -1)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "munmap: %s\n", strerror(errno));
+    }
+
+end:
+    rx_file_close(&file);
+}
+
 int
 rx_response_construct(struct rx_response *res)
 {
