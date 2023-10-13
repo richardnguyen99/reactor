@@ -536,55 +536,13 @@ main(int argc, const char *argv[])
                     continue;
                 }
 
-                const char *template = "HTTP/1.1 %ld %s\r\n"
-                                       "Server: Reactor\r\n"
-                                       "Content-Type: %s\r\n"
-                                       "Content-Length: %zu\r\n"
-                                       "Date: %s\r\n"
-                                       "Connection: close\r\n"
-                                       "\r\n";
+                ssize_t nsend;
 
-                // HTTP Date format
-                const char *date_format = "%a, %d %b %Y %H:%M:%S %Z";
-                char date_buf[128];
-                time_t now;
-                struct tm *tm;
-
-                char *buf;
-                ssize_t buf_len, nsend;
-
-                now = time(NULL);
-                tm  = gmtime(&now);
-                strftime(date_buf, sizeof(date_buf), date_format, tm);
-
-                buf_len = asprintf(&buf, template, res->status_code,
-                                   res->status_message, res->content_type,
-                                   res->content_length, date_buf);
-
-                if (buf_len == -1)
+                for (nsend = 0; res->resp_buf_offset < res->resp_buf_size;)
                 {
-                    sprintf(msg, "asprintf (at %s:%d): %s\n", __FILE__,
-                            __LINE__, strerror(errno));
-                    goto err_loop;
-                }
-
-                buf = realloc(buf, buf_len + res->content_length + 1);
-
-                if (buf == NULL)
-                {
-                    conn->task_num--;
-                    sprintf(msg, "realloc (at %s:%d): %s\n", __FILE__, __LINE__,
-                            strerror(errno));
-                    goto err_loop;
-                }
-
-                memcpy(buf + buf_len, res->content, res->content_length);
-                buf_len += res->content_length;
-                buf[buf_len] = '\0';
-
-                for (;;)
-                {
-                    nsend = send(fd, buf, buf_len, MSG_NOSIGNAL);
+                    nsend = send(fd, res->resp_buf + res->resp_buf_offset,
+                                 res->resp_buf_size - res->resp_buf_offset,
+                                 MSG_NOSIGNAL);
 
                     if (nsend == -1)
                     {
@@ -601,10 +559,8 @@ main(int argc, const char *argv[])
                         }
                     }
 
-                    break;
+                    res->resp_buf_offset += (size_t)nsend;
                 }
-
-                free(buf);
 
                 rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "Sent %ld bytes to fd %d\n",
                        nsend, fd);
@@ -821,7 +777,7 @@ rx_route_4xx(struct rx_request *req, struct rx_response *res, int code)
     }
 
     res->content_length = (size_t)buflen;
-    res->content_type   = "text/html";
+    res->content_type   = RX_HTTP_MIME_TEXT_HTML;
     res->status_code    = code;
     res->status_message = (char *)rx_response_status_message(code);
 

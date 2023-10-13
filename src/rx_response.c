@@ -175,24 +175,36 @@ rx_response_get_content_type(struct rx_qlist *accept, const char *mime)
 }
 
 const char *
-rx_response_mime_to_string(rx_response_mime_t mime)
+rx_response_mime_to_string(rx_http_mime_t mime)
 {
     switch (mime)
     {
-    case RX_RESPONSE_ALL:
-        return "*/*";
-    case RX_RESPONSE_TEXT_ALL:
-        return "text/*";
-    case RX_RESPONSE_TEXT_PLAIN:
-        return "text/plain";
-    case RX_RESPONSE_TEXT_HTML:
-        return "text/html";
-    case RX_RESPONSE_TEXT_CSS:
-        return "text/css";
-    case RX_RESPONSE_TEXT_JS:
-        return "text/javascript";
+    case RX_HTTP_MIME_TEXT_PLAIN:
+        return RX_HTTP_MIME_TEXT_PLAIN_STR;
+    case RX_HTTP_MIME_TEXT_HTML:
+        return RX_HTTP_MIME_TEXT_HTML_STR;
+    case RX_HTTP_MIME_TEXT_CSS:
+        return RX_HTTP_MIME_TEXT_CSS_STR;
+    case RX_HTTP_MIME_TEXT_JS:
+        return RX_HTTP_MIME_TEXT_JS_STR;
+    case RX_HTTP_MIME_APPLICATION_XML:
+        return RX_HTTP_MIME_APPLICATION_XML_STR;
+    case RX_HTTP_MIME_APPLICATION_JSON:
+        return RX_HTTP_MIME_APPLICATION_JSON_STR;
+    case RX_HTTP_MIME_APPLICATION_XHTML:
+        return RX_HTTP_MIME_APPLICATION_XHTML_STR;
+    case RX_HTTP_MIME_IMAGE_ICO:
+        return RX_HTTP_MIME_IMAGE_ICO_STR;
+    case RX_HTTP_MIME_IMAGE_GIF:
+        return RX_HTTP_MIME_IMAGE_GIF_STR;
+    case RX_HTTP_MIME_IMAGE_JPEG:
+        return RX_HTTP_MIME_IMAGE_JPEG_STR;
+    case RX_HTTP_MIME_IMAGE_PNG:
+        return RX_HTTP_MIME_IMAGE_PNG_STR;
+    case RX_HTTP_MIME_IMAGE_SVG:
+        return RX_HTTP_MIME_IMAGE_SVG_STR;
     default:
-        return NULL;
+        return RX_HTTP_MIME_TEXT_OCTET_STREAM_STR;
     }
 }
 
@@ -257,7 +269,7 @@ rx_response_render(struct rx_response *res, const char *path)
     }
 
     res->content_length = buflen;
-    res->content_type   = "text/html;charset=utf-8";
+    res->content_type   = RX_HTTP_MIME_TEXT_HTML;
 
     res->status_code = RX_HTTP_STATUS_CODE_OK;
     res->status_message =
@@ -291,6 +303,11 @@ rx_response_construct(struct rx_response *res)
     char date_buf[128], *buf, *full_buf;
     ssize_t buf_len;
 
+    const rx_http_status_t status_code = res->status_code;
+    const char *status_message  = rx_response_status_message(status_code);
+    const char *content_type    = rx_response_mime_to_string(res->content_type);
+    const size_t content_length = res->content_length;
+
     tid = pthread_self();
     now = time(NULL);
     tm  = gmtime(&now);
@@ -300,8 +317,8 @@ rx_response_construct(struct rx_response *res)
     memset(date_buf, '\0', sizeof(date_buf));
 
     // Build response headers
-    buf_len = asprintf(&buf, headers, res->status_code, res->status_message,
-                       res->content_type, res->content_length, date_buf);
+    buf_len = asprintf(&buf, headers, status_code, status_message, content_type,
+                       content_length, date_buf);
 
     if (buf_len == -1)
     {

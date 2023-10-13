@@ -24,9 +24,7 @@
 #include <rx_config.h>
 #include <rx_core.h>
 
-/* Returns malloc'd string to represent the HTTP MIME type (RFC 6838)
-supported in reactor */
-static char *
+static int
 rx_file_get_mime(const char *ext);
 
 int
@@ -86,48 +84,32 @@ rx_file_close(struct rx_file *fstruct)
     return RX_OK;
 }
 
-static char *
+static int
 rx_file_get_mime(const char *ext)
 {
     if (ext == NULL)
-    {
-        return "text/plain";
-    }
+        return RX_HTTP_MIME_TEXT_ALL;
 
     if (strcmp(ext, "html") == 0)
-    {
-        return "text/html";
-    }
+        return RX_HTTP_MIME_TEXT_HTML;
 
     if (strcmp(ext, "css") == 0)
-    {
-        return "text/css";
-    }
+        return RX_HTTP_MIME_TEXT_CSS;
 
     if (strcmp(ext, "js") == 0)
-    {
-        return "text/javascript";
-    }
+        return RX_HTTP_MIME_TEXT_JS;
 
     if (strcmp(ext, "json") == 0)
-    {
-        return "application/json";
-    }
+        return RX_HTTP_MIME_APPLICATION_JSON;
 
     if (strcmp(ext, "xml") == 0)
-    {
-        return "application/xml";
-    }
+        return RX_HTTP_MIME_APPLICATION_XHTML;
 
     if (strcmp(ext, "ico") == 0)
-    {
-        return "image/x-icon";
-    }
+        return RX_HTTP_MIME_IMAGE_ICO;
 
     if (strcmp(ext, "gif") == 0)
-    {
-        return "image/gif";
-    }
+        return RX_HTTP_MIME_IMAGE_GIF;
 
-    return "text/octet-stream";
+    return RX_HTTP_MIME_TEXT_OCTET_STREAM;
 }

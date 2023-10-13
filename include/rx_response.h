@@ -51,7 +51,8 @@ struct rx_response
     int is_content_mmapd;
     char *content;
     size_t content_length;
-    char *content_type;
+    rx_http_mime_t content_type;
+    // char *content_type;
 
     int is_resp_alloc;
     char *resp_buf;
@@ -72,7 +73,7 @@ rx_response_mime_t
 rx_response_get_content_type(struct rx_qlist *accept, const char *ext);
 
 const char *
-rx_response_mime_to_string(rx_response_mime_t mime);
+rx_response_mime_to_string(rx_http_mime_t mime);
 
 char *
 rx_response_status_message(rx_http_status_t status_code);

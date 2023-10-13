@@ -35,7 +35,7 @@ struct rx_file
     char *path;
     char *name;
     char *ext;
-    char *mime;
+    rx_http_mime_t mime;
 
     size_t size;
 };

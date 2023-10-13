@@ -74,9 +74,51 @@ enum rx_http_status_enum
 #define RX_HTTP_STATUS_MSG_METHOD_NOT_ALLOWED    "Method Not Allowed"
 #define RX_HTTP_STATUS_MSG_INTERNAL_SERVER_ERROR "Internal Server Error"
 
+/* Should be used when parsing requests or reading files for fast comparison. */
+
+enum rx_http_mime_enum
+{
+    RX_HTTP_MIME_NONE              = 0x000000000,
+    RX_HTTP_MIME_ALL               = 0x000000FFF,
+    RX_HTTP_MIME_TEXT_ALL          = 0x00000000F,
+    RX_HTTP_MIME_TEXT_PLAIN        = 0x000000001,
+    RX_HTTP_MIME_TEXT_HTML         = 0x000000002,
+    RX_HTTP_MIME_TEXT_CSS          = 0x000000004,
+    RX_HTTP_MIME_TEXT_JS           = 0x000000008,
+    RX_HTTP_MIME_TEXT_OCTET_STREAM = 0x00000000A,
+    RX_HTTP_MIME_APPLICATION_ALL   = 0x0000000F0,
+    RX_HTTP_MIME_APPLICATION_XML   = 0x000000010,
+    RX_HTTP_MIME_APPLICATION_JSON  = 0x000000020,
+    RX_HTTP_MIME_APPLICATION_XHTML = 0x000000040,
+    RX_HTTP_MIME_IMAGE_ALL         = 0x000000F00,
+    RX_HTTP_MIME_IMAGE_ICO         = 0x000000100,
+    RX_HTTP_MIME_IMAGE_GIF         = 0x000000200,
+    RX_HTTP_MIME_IMAGE_JPEG        = 0x000000400,
+    RX_HTTP_MIME_IMAGE_PNG         = 0x000000800,
+    RX_HTTP_MIME_IMAGE_SVG         = 0x000000A00,
+};
+
+/* Should be used when constructing a response. Therefore, no all media-types
+   are supported. */
+
+#define RX_HTTP_MIME_TEXT_PLAIN_STR        "text/plain;charset=utf-8"
+#define RX_HTTP_MIME_TEXT_HTML_STR         "text/html;charset=utf-8"
+#define RX_HTTP_MIME_TEXT_CSS_STR          "text/css;charset=utf-8"
+#define RX_HTTP_MIME_TEXT_JS_STR           "text/javascript;charset=utf-8"
+#define RX_HTTP_MIME_TEXT_OCTET_STREAM_STR "text/octet-stream"
+#define RX_HTTP_MIME_APPLICATION_XML_STR   "application/xml"
+#define RX_HTTP_MIME_APPLICATION_JSON_STR  "application/json"
+#define RX_HTTP_MIME_APPLICATION_XHTML_STR "application/xhtml+xml"
+#define RX_HTTP_MIME_IMAGE_ICO_STR         "image/x-icon"
+#define RX_HTTP_MIME_IMAGE_GIF_STR         "image/gif"
+#define RX_HTTP_MIME_IMAGE_JPEG_STR        "image/jpeg"
+#define RX_HTTP_MIME_IMAGE_PNG_STR         "image/png"
+#define RX_HTTP_MIME_IMAGE_SVG_STR         "image/svg+xml"
+
 #define RX_MAX_URI_LENGTH 2048
 
 typedef enum rx_http_status_enum rx_http_status_t;
+typedef enum rx_http_mime_enum rx_http_mime_t;
 
 #include <rx_connection.h>
 #include <rx_file.h>
