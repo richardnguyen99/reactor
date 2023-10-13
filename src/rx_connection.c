@@ -138,6 +138,14 @@ rx_connection_process(struct rx_connection *conn)
            "\n",
            tid, "", (double)(end - start) / CLOCKS_PER_SEC * 1000);
 
+    if (conn->request->host.result > RX_REQUEST_HEADER_HOST_RESULT_OK)
+    {
+        rx_route_4xx(conn->request, conn->response,
+                     RX_HTTP_STATUS_CODE_BAD_REQUEST);
+
+        goto end;
+    }
+
     ret = rx_route_get(
         &route, conn->request->uri.path,
         (size_t)(conn->request->uri.path_end - conn->request->uri.path));
