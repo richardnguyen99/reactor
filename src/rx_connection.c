@@ -185,7 +185,7 @@ rx_connection_process(struct rx_connection *conn)
     else
     {
         rx_route_4xx(conn->request, conn->response,
-                     RX_HTTP_STATUS_CODE_NOT_FOUND);
+                     RX_HTTP_STATUS_CODE_METHOD_NOT_ALLOWED);
 
         goto end;
     }

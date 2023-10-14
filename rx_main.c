@@ -751,6 +751,15 @@ rx_route_4xx(struct rx_request *req, struct rx_response *res, int code)
 
         break;
 
+    case RX_HTTP_STATUS_CODE_METHOD_NOT_ALLOWED:
+        sprintf(msg, "Method Not Allowed");
+        sprintf(reason,
+                "The requested resource (%s) does not support the "
+                "method %s.",
+                req->uri.raw_uri, rx_request_method_str(req->method));
+
+        break;
+
     case RX_HTTP_STATUS_CODE_BAD_REQUEST:
     default:
         sprintf(msg, "Bad Request");
