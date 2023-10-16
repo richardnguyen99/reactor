@@ -26,6 +26,7 @@
 
 #include <rx_config.h>
 
+struct rx_engine;
 struct rx_log;
 struct rx_event;
 struct rx_server;
@@ -121,6 +122,7 @@ typedef enum rx_http_status_enum rx_http_status_t;
 typedef enum rx_http_mime_enum rx_http_mime_t;
 
 #include <rx_connection.h>
+#include <rx_engine.h>
 #include <rx_file.h>
 #include <rx_log.h>
 #include <rx_qlist.h>

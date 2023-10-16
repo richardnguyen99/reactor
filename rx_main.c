@@ -81,6 +81,8 @@ main(int argc, const char *argv[])
     NOOP(argc);
     NOOP(argv);
 
+    struct rx_engine engine;
+
     int server_fd, client_fd, ret, epoll_fd, n, i;
     struct addrinfo hints, *res, *p;
     struct sockaddr server;
@@ -88,6 +90,8 @@ main(int argc, const char *argv[])
     socklen_t server_len, client_len;
     struct epoll_event ev, events[RX_MAX_EVENTS];
     char msg[1024], host[NI_MAXHOST], service[NI_MAXSERV];
+
+    rx_engine_init(&engine, argc, argv);
 
     rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Load host address information... ");
 
@@ -521,6 +525,8 @@ main(int argc, const char *argv[])
                 int fd                     = conn->fd;
                 struct rx_response *res    = conn->response;
 
+                ssize_t nsend;
+
                 if (conn->state == RX_CONNECTION_STATE_CLOSING)
                 {
                     rx_log(LOG_LEVEL_0, LOG_TYPE_WARN,
@@ -535,8 +541,6 @@ main(int argc, const char *argv[])
                 {
                     continue;
                 }
-
-                ssize_t nsend;
 
                 for (nsend = 0; res->resp_buf_offset < res->resp_buf_size;)
                 {
