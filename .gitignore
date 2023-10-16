@@ -84,5 +84,14 @@ install-sh
 missing
 autom4te.cache/
 .deps/
-config.sub
+config*
+libtool
+ltmain.sh
+Makefile*
+*.lai
+
+# Un-ignore
+!configure.ac
+!configure
+!Makefile.am
 
