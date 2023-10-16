@@ -24,8 +24,6 @@
 #include <rx_config.h>
 #include <rx_core.h>
 
-struct rx_view rx_view_engine;
-
 const char *const rx_view_base_client_error = "\
 <!DOCTYPE html>\n\
 <html lang=\"en\">\n\
@@ -105,15 +103,12 @@ rx_view_map_file(struct rx_map_file *fmap, const char *path)
 int
 rx_view_init()
 {
-    memset(&rx_view_engine, 0, sizeof(struct rx_view));
-
-    memset(&rx_view_engine.base_template, 0, sizeof(struct rx_map_file));
-
-    memset(&rx_view_engine.client_error_template, 0,
-           sizeof(struct rx_map_file));
-
-    memset(&rx_view_engine.server_error_template, 0,
-           sizeof(struct rx_map_file));
+    /* clang-format off */
+    memset(&rx_view_engine,                       0, sizeof(struct rx_view));
+    memset(&rx_view_engine.base_template,         0, sizeof(struct rx_map_file));
+    memset(&rx_view_engine.client_error_template, 0, sizeof(struct rx_map_file));
+    memset(&rx_view_engine.server_error_template, 0, sizeof(struct rx_map_file));
+    /* clang-format on */
 
     return RX_OK;
 }

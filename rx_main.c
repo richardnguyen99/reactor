@@ -81,203 +81,20 @@ main(int argc, const char *argv[])
     NOOP(argc);
     NOOP(argv);
 
-    struct rx_engine engine;
-
-    int server_fd, client_fd, ret, epoll_fd, n, i;
-    struct addrinfo hints, *res, *p;
-    struct sockaddr server;
+    int ret;
     struct sockaddr_storage client;
-    socklen_t server_len, client_len;
-    struct epoll_event ev, events[RX_MAX_EVENTS];
-    char msg[1024], host[NI_MAXHOST], service[NI_MAXSERV];
+    socklen_t client_len;
 
-    rx_engine_init(&engine, argc, argv);
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Load host address information... ");
-
-    memset(msg, 0, sizeof(msg));
-    memset(&hints, 0, sizeof(hints));
-
-    hints.ai_family   = AF_INET;     /* IPv4 */
-    hints.ai_socktype = SOCK_STREAM; /* TCP */
-    hints.ai_flags    = AI_PASSIVE;  /* Listen on all interfaces */
-
-    if (getaddrinfo(NULL, "8080", &hints, &res) != 0)
-    {
-        sprintf(msg, "getaddrinfo: %s\n", gai_strerror(errno));
-        goto err_addrinfo;
-    }
-
-    for (p = res; p != NULL; p = p->ai_next)
-    {
-        server_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-
-        if (server_fd == -1)
-        {
-            perror("socket");
-            continue;
-        }
-
-        ret = bind(server_fd, p->ai_addr, p->ai_addrlen);
-        if (ret == -1)
-        {
-            if (close(server_fd) == -1)
-            {
-                sprintf(msg, "close: %s\n", strerror(errno));
-                goto err_addrinfo;
-            }
-
-            printf("Failed\n");
-            rx_log_error("bind: %s. Trying a new one... ", strerror(errno));
-            continue;
-        }
-
-        break;
-    }
-
-    if (p == NULL)
-    {
-        sprintf(msg, "Failed to bind socket to any address\n");
-        goto err_addrinfo;
-    }
-
-    memcpy(&server, p->ai_addr, p->ai_addrlen);
-    server_len = p->ai_addrlen;
-
-    freeaddrinfo(res);
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Get host and service name... ");
-
-    ret = getnameinfo(&server, server_len, host, NI_MAXHOST, service,
-                      NI_MAXSERV, NI_NUMERICSERV);
-
-    if (ret != 0)
-    {
-        sprintf(msg, "getnameinfo: %s\n", gai_strerror(errno));
-        goto err_addrinfo;
-    }
-
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Set socket to non-blocking mode... ");
-    ret = fcntl(server_fd, F_SETFL, O_NONBLOCK);
-    if (ret == -1)
-    {
-        sprintf(msg, "fcntl: %s\n", strerror(errno));
-        goto err_socket;
-    }
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Create epoll instance... ");
-
-    epoll_fd = epoll_create1(0);
-    if (epoll_fd == -1)
-    {
-        sprintf(msg, "epoll_create1: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Load view engine... ");
-
-    ret = rx_view_init();
-
-    if (ret == RX_ERROR)
-    {
-        sprintf(msg, "rx_view_init: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    ret = rx_view_load_template("pages/_template.html");
-
-    if (ret == RX_ERROR)
-    {
-        sprintf(msg, "rx_view_load_template: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    ret = rx_view_load_4xx("pages/_4xx.html");
-
-    if (ret == RX_ERROR)
-    {
-        sprintf(msg, "rx_view_load_4xx: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    ret = rx_view_load_5xx("pages/_5xx.html");
-
-    if (ret == RX_ERROR)
-    {
-        sprintf(msg, "rx_view_load_5xx: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
-           "Add server socket to epoll instance... ");
-
-    ev.events  = EPOLLIN;
-    ev.data.fd = server_fd;
-    ret        = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &ev);
-
-    if (ret == -1)
-    {
-        sprintf(msg, "epoll_ctl: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Initialize ring buffer... ");
-
-    struct rx_ring *ring = malloc(sizeof(*ring));
-    if (ring == NULL)
-    {
-        sprintf(msg, "malloc: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    rx_ring_init(ring);
-
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_1, LOG_TYPE_DEBUG, "Ring buffer address: %p\n", ring);
-    rx_log(LOG_LEVEL_1, LOG_TYPE_DEBUG, "Ring buffer size: %ld\n", ring->size);
-    rx_log(LOG_LEVEL_1, LOG_TYPE_DEBUG, "Ring buffer capacity: %ld\n",
-           ring->cap);
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Initialize thread pool... ");
-
-    struct rx_thread_pool *pool = malloc(sizeof(*pool));
-    if (pool == NULL)
-    {
-        sprintf(msg, "malloc: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    rx_thread_pool_init(pool, ring);
-
-    printf("OK\n");
-
-    rx_log(LOG_LEVEL_1, LOG_TYPE_DEBUG, "Thread pool address: %p\n", pool);
-    rx_log(LOG_LEVEL_1, LOG_TYPE_DEBUG, "No. active threads: %ld\n",
-           pool->nthreads);
-    rx_log(LOG_LEVEL_1, LOG_TYPE_DEBUG, "Ring buffer address: %p\n",
-           pool->ring);
-
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO, "Start listening on server socket... ");
-
-    ret = listen(server_fd, RX_LISTEN_BACKLOG);
-    if (ret == -1)
-    {
-        sprintf(msg, "listen: %s\n", strerror(errno));
-        goto err_epoll;
-    }
-
-    printf("OK\n");
+    ret = RX_OK;
+    rx_core_init(argc, argv);   /* Load config from CLI */
+    rx_core_gai();              /* Get address information to load socket */
+    rx_core_gni();              /* Get name information to represent socket */
+    rx_core_set_nonblocking();  /* Set socket to non-blocking mode */
+    rx_core_epoll_create();     /* Create epoll instance */
+    rx_core_load_view();        /* Load view engine */
+    rx_core_load_ring_buffer(); /* Load ring buffer */
+    rx_core_load_thread_pool(); /* Load thread pool */
+    rx_core_boot();             /* Make the server listen to connections */
 
     rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
            "Server has been created."
@@ -504,7 +321,7 @@ main(int argc, const char *argv[])
 
                     task->arg    = conn;
                     task->handle = (void *(*)(void *))rx_connection_process;
-                    rx_thread_pool_submit(pool, task);
+                    rx_thread_pool_submit(&rx_tp, task);
 
                     break;
 
@@ -628,7 +445,6 @@ main(int argc, const char *argv[])
         }
     }
 
-    ret = EXIT_SUCCESS;
     goto exit_with_grace;
 
 err_loop:
@@ -651,22 +467,15 @@ err_loop:
             rx_log_warn(LOG_LEVEL_0, LOG_TYPE_WARN,
                         "Closed connection on fd %d\n", events[i].data.fd);
         }
-
-    err_epoll:
-        close(epoll_fd);
-        rx_view_destroy();
-
-    err_socket:
-        close(server_fd);
-
-    err_addrinfo:
-        printf("Failed\n");
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, msg);
-        ret = EXIT_FAILURE;
-
-    exit_with_grace:
-        return ret;
     }
+
+err_epoll:
+    assert(close(epoll_fd) == 0);
+    assert(close(server_fd) == 0);
+    rx_view_destroy();
+
+exit_with_grace:
+    return ret;
 }
 
 void *

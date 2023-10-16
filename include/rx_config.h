@@ -27,6 +27,7 @@
 #define __RX_CONFIG_H__ 1
 
 /* ISO C standard libraries */
+#include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>

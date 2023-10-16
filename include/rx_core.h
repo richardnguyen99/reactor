@@ -26,7 +26,6 @@
 
 #include <rx_config.h>
 
-struct rx_engine;
 struct rx_log;
 struct rx_event;
 struct rx_server;
@@ -122,7 +121,6 @@ typedef enum rx_http_status_enum rx_http_status_t;
 typedef enum rx_http_mime_enum rx_http_mime_t;
 
 #include <rx_connection.h>
-#include <rx_engine.h>
 #include <rx_file.h>
 #include <rx_log.h>
 #include <rx_qlist.h>
@@ -134,5 +132,42 @@ typedef enum rx_http_mime_enum rx_http_mime_t;
 #include <rx_task.h>
 #include <rx_thread.h>
 #include <rx_view.h>
+
+extern int server_fd, client_fd, epoll_fd, n, i;
+extern socklen_t server_len;
+extern char msg[1024], host[NI_MAXHOST], service[NI_MAXSERV];
+
+extern struct rx_view rx_view_engine;
+extern struct rx_ring rx_ring_buffer;
+extern struct rx_thread_pool rx_tp;
+extern struct epoll_event ev, events[RX_MAX_EVENTS];
+extern struct sockaddr server;
+
+void
+rx_core_init(int argc, const char **argv);
+
+void
+rx_core_gai();
+
+void
+rx_core_gni();
+
+void
+rx_core_set_nonblocking();
+
+void
+rx_core_epoll_create();
+
+void
+rx_core_load_view();
+
+void
+rx_core_load_ring_buffer();
+
+void
+rx_core_load_thread_pool();
+
+void
+rx_core_boot();
 
 #endif /* __RX_CORE_H__ */
