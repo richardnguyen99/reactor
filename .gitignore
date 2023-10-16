@@ -71,6 +71,7 @@ _deps
 main
 reactor
 reactor-dev
+ar-lib
 rx_main
 rx_test
 rx_test.o
@@ -87,7 +88,9 @@ autom4te.cache/
 config*
 libtool
 ltmain.sh
+Makefile
 Makefile*
+src/Makefile.in
 *.lai
 
 # Un-ignore
