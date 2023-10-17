@@ -12886,9 +12886,90 @@ else $as_nop
   as_fn_error $? "pthread library not found" "$LINENO" 5
 fi
 
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for sqlite3_open in -lsqlite3" >&5
+printf %s "checking for sqlite3_open in -lsqlite3... " >&6; }
+if test ${ac_cv_lib_sqlite3_sqlite3_open+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lsqlite3  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+char sqlite3_open ();
+int
+main (void)
+{
+return sqlite3_open ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_lib_sqlite3_sqlite3_open=yes
+else $as_nop
+  ac_cv_lib_sqlite3_sqlite3_open=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_sqlite3_sqlite3_open" >&5
+printf "%s\n" "$ac_cv_lib_sqlite3_sqlite3_open" >&6; }
+if test "x$ac_cv_lib_sqlite3_sqlite3_open" = xyes
+then :
+  printf "%s\n" "#define HAVE_LIBSQLITE3 1" >>confdefs.h
+
+  LIBS="-lsqlite3 $LIBS"
+
+else $as_nop
+  as_fn_error $? "sqlite3 library not found" "$LINENO" 5
+fi
+
 
 # Check for header files (if needed)
 # Example: AC_CHECK_HEADERS([header_file], [action-if-found], [action-if-not-found])
+       for ac_header in sqlite3.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "sqlite3.h" "ac_cv_header_sqlite3_h" "$ac_includes_default"
+if test "x$ac_cv_header_sqlite3_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_SQLITE3_H 1" >>confdefs.h
+
+else $as_nop
+  as_fn_error $? "sqlite3.h not found" "$LINENO" 5
+fi
+
+done
+       for ac_header in sqlite3ext.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "sqlite3ext.h" "ac_cv_header_sqlite3ext_h" "$ac_includes_default"
+if test "x$ac_cv_header_sqlite3ext_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_SQLITE3EXT_H 1" >>confdefs.h
+
+else $as_nop
+  as_fn_error $? "sqlite3ext.h not found" "$LINENO" 5
+fi
+
+done
+       for ac_header in assert.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "assert.h" "ac_cv_header_assert_h" "$ac_includes_default"
+if test "x$ac_cv_header_assert_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_ASSERT_H 1" >>confdefs.h
+
+else $as_nop
+  as_fn_error $? "assert.h not found" "$LINENO" 5
+fi
+
+done
        for ac_header in pthread.h
 do :
   ac_fn_c_check_header_compile "$LINENO" "pthread.h" "ac_cv_header_pthread_h" "$ac_includes_default"
@@ -13096,6 +13177,58 @@ done
 
 # Check for functions (if needed)
 # Example: AC_CHECK_FUNCS([function_name], [action-if-found], [action-if-not-found])
+
+  for ac_func in pthread_create
+do :
+  ac_fn_c_check_func "$LINENO" "pthread_create" "ac_cv_func_pthread_create"
+if test "x$ac_cv_func_pthread_create" = xyes
+then :
+  printf "%s\n" "#define HAVE_PTHREAD_CREATE 1" >>confdefs.h
+
+else $as_nop
+  as_fn_error $? "pthread_create not found" "$LINENO" 5
+fi
+
+done
+
+  for ac_func in pthread_join
+do :
+  ac_fn_c_check_func "$LINENO" "pthread_join" "ac_cv_func_pthread_join"
+if test "x$ac_cv_func_pthread_join" = xyes
+then :
+  printf "%s\n" "#define HAVE_PTHREAD_JOIN 1" >>confdefs.h
+
+else $as_nop
+  as_fn_error $? "pthread_join not found" "$LINENO" 5
+fi
+
+done
+
+  for ac_func in pthread_detach
+do :
+  ac_fn_c_check_func "$LINENO" "pthread_detach" "ac_cv_func_pthread_detach"
+if test "x$ac_cv_func_pthread_detach" = xyes
+then :
+  printf "%s\n" "#define HAVE_PTHREAD_DETACH 1" >>confdefs.h
+
+else $as_nop
+  as_fn_error $? "pthread_detach not found" "$LINENO" 5
+fi
+
+done
+
+  for ac_func in pthread_cancel
+do :
+  ac_fn_c_check_func "$LINENO" "pthread_cancel" "ac_cv_func_pthread_cancel"
+if test "x$ac_cv_func_pthread_cancel" = xyes
+then :
+  printf "%s\n" "#define HAVE_PTHREAD_CANCEL 1" >>confdefs.h
+
+else $as_nop
+  as_fn_error $? "pthread_cancel not found" "$LINENO" 5
+fi
+
+done
 
   for ac_func in epoll_create
 do :
@@ -13366,6 +13499,16 @@ fi
 
 # Check for type definitions
 # Example: AC_CHECK_TYPES([type_name], [action-if-found], [action-if-not-found])
+ac_fn_c_check_type "$LINENO" "pthread_t" "ac_cv_type_pthread_t" "$ac_includes_default"
+if test "x$ac_cv_type_pthread_t" = xyes
+then :
+
+printf "%s\n" "#define HAVE_PTHREAD_T 1" >>confdefs.h
+
+RX_HAVE_PTHREAD_T=1
+else $as_nop
+  as_fn_error $? "pthread_t type not found" "$LINENO" 5
+fi
 
 ac_fn_c_check_type "$LINENO" "int8_t" "ac_cv_type_int8_t" "$ac_includes_default"
 if test "x$ac_cv_type_int8_t" = xyes
