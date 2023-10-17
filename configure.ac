@@ -46,6 +46,9 @@ AC_CHECK_HEADERS([sys/mman.h], [], [AC_MSG_ERROR([sys/mman.h not found])])
 AC_CONFIG_FILES([
     Makefile 
     src/Makefile
+    lib/Makefile
+    lib/unity/Makefile
+    test/Makefile
 ])
 
 # Output the configuration summary

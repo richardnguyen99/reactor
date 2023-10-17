@@ -65,10 +65,19 @@ extern const struct rx_route router_table[];
 int
 rx_route_get(struct rx_route *storage, const char *endpoint, size_t ep_len);
 
-extern void *
+void *
 rx_route_static(struct rx_request *req, struct rx_response *res);
 
-extern void *
+void *
 rx_route_4xx(struct rx_request *req, struct rx_response *res, int code);
+
+void *
+rx_route_index_get(struct rx_request *req, struct rx_response *res);
+
+void *
+rx_route_about_get(struct rx_request *req, struct rx_response *res);
+
+void *
+rx_route_static(struct rx_request *req, struct rx_response *res);
 
 #endif /* __RX_ROUTE_H__ */

@@ -13,8 +13,9 @@ librx_la_SOURCES =      \
     rx_thread.c        \
     rx_view.c         
 
-
-librx_la_CPPFLAGS = -I$(top_srcdir)/include
+librx_la_CFLAGS = \
+    -I$(top_srcdir)/include \
+    -Wall -Wextra -Werror -pedantic -std=c99 -fPIC -O3 
 
 # if BUILD_DEV
 # lib_LTLIBRARIES += librx-dev.la
