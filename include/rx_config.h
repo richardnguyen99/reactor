@@ -58,8 +58,20 @@
 
 #define NOOP(x) (void)x
 
-#ifndef u_char
+#ifndef RX_HAVE_U_CHAR
 typedef unsigned char u_char;
+#endif
+
+#ifndef RX_HAVE_NULLPTR
+#define NULL ((void *)0)
+#endif
+
+#ifndef RX_HAVE_SSIZE_T
+typedef long ssize_t;
+#endif
+
+#ifndef RX_HAVE_SIZE_T
+typedef unsigned long size_t;
 #endif
 
 #define RX_LISTEN_BACKLOG 512

@@ -57,7 +57,11 @@
         "string": "c",
         "string_view": "c",
         "span": "c",
-        "rx_view.h": "c"
+        "rx_view.h": "c",
+        "new": "c",
+        "ostream": "c",
+        "sstream": "c",
+        "typeinfo": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
 }
