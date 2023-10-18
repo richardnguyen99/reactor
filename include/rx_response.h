@@ -44,15 +44,15 @@ typedef enum RX_RESPONSE_SUPPORTED_MIME rx_response_mime_t;
 
 struct rx_response
 {
-    // struct rx_http_version version;
     rx_http_status_t status_code;
     char *status_message;
+
+    char *location;
 
     int is_content_mmapd;
     char *content;
     size_t content_length;
     rx_http_mime_t content_type;
-    // char *content_type;
 
     int is_resp_alloc;
     char *resp_buf;
@@ -83,6 +83,9 @@ rx_response_send(struct rx_response *response, const char *msg, size_t len);
 
 void
 rx_response_render(struct rx_response *response, const char *path);
+
+void
+rx_response_redirect(struct rx_response *response, const char *location);
 
 int
 rx_response_construct(struct rx_response *response);

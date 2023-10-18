@@ -145,7 +145,7 @@ rx_route_login_post(struct rx_request *req, struct rx_response *res)
 
     res->content_type = RX_HTTP_MIME_APPLICATION_JSON;
 
-    rx_response_send(res, body, strlen(body));
+    rx_response_redirect(res, "/");
 
     return NULL;
 }

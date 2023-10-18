@@ -35,6 +35,8 @@ rx_response_init(struct rx_response *res)
     res->status_code    = RX_HTTP_STATUS_CODE_UNSET;
     res->status_message = NULL;
 
+    res->location = NULL;
+
     res->is_content_mmapd = 0;
     res->content          = NULL;
     res->content_length   = 0;
@@ -68,6 +70,12 @@ rx_response_destroy(struct rx_response *res)
         res->resp_buf        = NULL;
         res->resp_buf_offset = 0;
         res->resp_buf_size   = 0;
+    }
+
+    if (res->location != NULL)
+    {
+        free(res->location);
+        res->location = NULL;
     }
 }
 
@@ -221,6 +229,8 @@ rx_response_status_message(rx_http_status_t status_code)
         return RX_HTTP_STATUS_MSG_BAD_REQUEST;
     case RX_HTTP_STATUS_CODE_NOT_FOUND:
         return RX_HTTP_STATUS_MSG_NOT_FOUND;
+    case RX_HTTP_STATUS_CODE_FOUND:
+        return RX_HTTP_STATUS_MSG_FOUND;
     case RX_HTTP_STATUS_CODE_METHOD_NOT_ALLOWED:
         return RX_HTTP_STATUS_MSG_METHOD_NOT_ALLOWED;
     case RX_HTTP_STATUS_CODE_INTERNAL_SERVER_ERROR:
@@ -252,14 +262,17 @@ rx_response_render(struct rx_response *res, const char *path)
 
     if (content == MAP_FAILED)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "mmap (at %s:%d): %s\n", __FILE__,
-               __LINE__ - 4, strerror(errno));
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "mmap (at %s:%d): %s\n", __FILE__,
+            __LINE__ - 4, strerror(errno)
+        );
 
         goto end;
     }
 
-    buflen = asprintf(&res->content, rx_view_engine.base_template.data, content,
-                      file.size);
+    buflen = asprintf(
+        &res->content, rx_view_engine.base_template.data, content, file.size
+    );
 
     if (buflen == -1)
     {
@@ -293,8 +306,10 @@ rx_response_send(struct rx_response *res, const char *msg, size_t len)
 
     if (buf == NULL)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "%s malloc: %s\n", __func__,
-               strerror(errno));
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "%s malloc: %s\n", __func__,
+            strerror(errno)
+        );
 
         return;
     }
@@ -312,6 +327,41 @@ rx_response_send(struct rx_response *res, const char *msg, size_t len)
         (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
 }
 
+void
+rx_response_redirect(struct rx_response *res, const char *location)
+{
+
+    /* Default status code for redirect is 302 (Found), unless set otherwise */
+
+    res->status_code = res->status_code == RX_HTTP_STATUS_CODE_UNSET
+                           ? RX_HTTP_STATUS_CODE_FOUND
+                           : res->status_code;
+    res->status_message =
+        (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_FOUND);
+
+    res->location = malloc(strlen(location) + 1);
+
+    if (res->location == NULL)
+    {
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "%s malloc: %s\n", __func__,
+            strerror(errno)
+        );
+
+        return;
+    }
+
+    strcpy(res->location, location);
+
+    /* Content, by default, is not set. If the caller wishes to add content to
+       a redirect response, it should construct the body itself before calling
+       this function.
+     */
+
+    res->content_type =
+        RX_HTTP_MIME_NONE ? RX_HTTP_MIME_TEXT_HTML : res->content_type;
+}
+
 int
 rx_response_construct(struct rx_response *res)
 {
@@ -323,35 +373,53 @@ rx_response_construct(struct rx_response *res)
                               "Content-Length: %zu\r\n"
                               "Date: %s\r\n"
                               "Connection: close\r\n"
-                              "\r\n";
+                              "%s" /* Additional headers */
+                          "\r\n";
 
     pthread_t tid;
     time_t now;
     struct tm *tm;
-    char date_buf[128], *buf, *full_buf;
-    ssize_t buf_len;
+    char date_buf[128], extra_header_buf[1024], *buf, *full_buf;
+    ssize_t buf_len, ehb_offset;
+
+    memset(extra_header_buf, '\0', sizeof(extra_header_buf));
 
     const rx_http_status_t status_code = res->status_code;
     const char *status_message  = rx_response_status_message(status_code);
     const char *content_type    = rx_response_mime_to_string(res->content_type);
     const size_t content_length = res->content_length;
 
-    tid = pthread_self();
-    now = time(NULL);
-    tm  = gmtime(&now);
+    tid        = pthread_self();
+    now        = time(NULL);
+    tm         = gmtime(&now);
+    ehb_offset = 0;
+    buf        = NULL;
     strftime(date_buf, sizeof(date_buf), date_format, tm);
-    buf = NULL;
+
+    if (res->location)
+    {
+        ehb_offset = snprintf(
+            extra_header_buf + ehb_offset, 1024 - ehb_offset,
+            "Location: %s\r\n", res->location
+        );
+    }
+
+    extra_header_buf[ehb_offset] = '\0';
 
     // Build response headers
-    buf_len = asprintf(&buf, headers, status_code, status_message, content_type,
-                       content_length, date_buf);
+    buf_len = asprintf(
+        &buf, headers, status_code, status_message, content_type,
+        content_length, date_buf, extra_header_buf
+    );
 
     if (buf_len == -1)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR,
-               "[Thread %ld]%4.sasprintf() failed to allocate "
-               "memory for response buffer",
-               tid, "");
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR,
+            "[Thread %ld]%4.sasprintf() failed to allocate "
+            "memory for response buffer",
+            tid, ""
+        );
 
         return RX_ERROR;
     }
@@ -361,10 +429,12 @@ rx_response_construct(struct rx_response *res)
 
     if (full_buf == NULL)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR,
-               "[Thread %ld]%4.sfailed to allocate memory for "
-               "response buffer",
-               tid, "");
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR,
+            "[Thread %ld]%4.sfailed to allocate memory for "
+            "response buffer",
+            tid, ""
+        );
 
         return RX_ERROR;
     }
