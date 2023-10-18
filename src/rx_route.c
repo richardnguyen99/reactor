@@ -39,6 +39,19 @@ const struct rx_route router_table[] = {
     }
 },
 {
+    .endpoint = "/login",
+    .resource = "pages/login.html",
+    .handler  = {
+        .get    = rx_route_login_get,
+        .post   = rx_route_login_post,
+        .put    = NULL,
+        .patch  = NULL,
+        .delete = NULL,
+        .head   = NULL
+    }
+
+},
+{
     .endpoint = "/about",
     .resource = "pages/about.html",
     .handler  = {
@@ -109,6 +122,30 @@ rx_route_index_get(struct rx_request *req, struct rx_response *res)
     NOOP(req);
 
     rx_response_render(res, "pages/index.html");
+
+    return NULL;
+}
+
+void *
+rx_route_login_get(struct rx_request *req, struct rx_response *res)
+{
+    NOOP(req);
+
+    rx_response_render(res, "pages/login.html");
+
+    return NULL;
+}
+
+void *
+rx_route_login_post(struct rx_request *req, struct rx_response *res)
+{
+    NOOP(req);
+
+    const char *body = "{\"data\": \"Hello, World!\", \"status\": 200}";
+
+    res->content_type = RX_HTTP_MIME_APPLICATION_JSON;
+
+    rx_response_send(res, body, strlen(body));
 
     return NULL;
 }

@@ -79,6 +79,9 @@ char *
 rx_response_status_message(rx_http_status_t status_code);
 
 void
+rx_response_send(struct rx_response *response, const char *msg, size_t len);
+
+void
 rx_response_render(struct rx_response *response, const char *path);
 
 int

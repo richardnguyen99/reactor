@@ -1,0 +1,38 @@
+<div class="md:w-[768px] lg:w-[1024px] px-4 mx-auto flex flex-col gap-12">
+    <div class="flex items-center justify-center flex-col mt-8 gap-12">
+        <h1 class="text-6xl font-black uppercase">Login</h1>
+        <h3 class="text-xl">
+            A simple route to test <rx-inline-code>POST</rx-inline-code> method
+        </h3>
+    </div>
+    <div class="flex items-center justify-center flex-col gap-12">
+        <form action="/login" method="POST" class="flex flex-col gap-4 w-6/12">
+            <div class="flex flex-col gap-2">
+                <label for="username">Username</label>
+                <input
+                    type="text"
+                    name="username"
+                    id="username"
+                    class="border border-gray-300 hover:border-sky-200 hover:bg-sky-50 outline-none focus:border-transparent focus:ring focus:ring-sky-500 focus:bg-sky-50 rounded-md px-4 py-2"
+                />
+            </div>
+            <div class="flex flex-col gap-2">
+                <label for="password">Password</label>
+                <input
+                    type="password"
+                    name="password"
+                    id="password"
+                    class="border border-gray-300 hover:border-sky-200 hover:bg-sky-50 outline-none focus:border-transparent focus:ring focus:ring-sky-500 focus:bg-sky-50 rounded-md px-4 py-2"
+                />
+            </div>
+            <div class="flex flex-col gap-2">
+                <button
+                    type="submit"
+                    class="bg-blue-400 hover:bg-blue-500 text-white rounded-md px-4 py-2"
+                >
+                    Login
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

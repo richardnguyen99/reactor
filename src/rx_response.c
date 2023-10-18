@@ -284,6 +284,32 @@ end:
     rx_file_close(&file);
 }
 
+void
+rx_response_send(struct rx_response *res, const char *msg, size_t len)
+{
+    char *buf = malloc(len + 1);
+
+    if (buf == NULL)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "%s malloc: %s\n", __func__,
+               strerror(errno));
+
+        return;
+    }
+
+    memcpy(buf, msg, len);
+    buf[len] = '\0';
+
+    if (res->content_type == RX_HTTP_MIME_NONE)
+        res->content_type = RX_HTTP_MIME_TEXT_PLAIN;
+
+    res->content        = buf;
+    res->content_length = len;
+    res->status_code    = RX_HTTP_STATUS_CODE_OK;
+    res->status_message =
+        (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
+}
+
 int
 rx_response_construct(struct rx_response *res)
 {

@@ -64,4 +64,5 @@
         "typeinfo": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "editor.wordWrapColumn": 80
 }
