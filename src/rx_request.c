@@ -35,20 +35,25 @@ rx_memset_header_host(struct rx_header_host *host);
 
 static void
 rx_memset_header_accept_encoding(
-    struct rx_header_accept_encoding *accept_encoding);
+    struct rx_header_accept_encoding *accept_encoding
+);
 
 static void
 rx_memset_header_accept(struct rx_qlist *accept);
 
 static void
-rx_parse_ae_header(struct rx_header_accept_encoding *ae, const char *buffer,
-                   size_t len);
+rx_parse_ae_header(
+    struct rx_header_accept_encoding *ae, const char *buffer, size_t len
+);
 
 static void
 rx_parse_accept_header(struct rx_qlist *accept, const char *buffer, size_t len);
 
 static double
 rx_parse_q_value(const char *buffer, size_t len);
+
+static int
+rx_request_hdrncmp(const char *str, size_t len, const char *key);
 
 int
 rx_request_init(struct rx_request *request)
@@ -78,14 +83,17 @@ rx_request_destroy(struct rx_request *request)
 }
 
 int
-rx_request_process_start_line(struct rx_request *request, const char *buffer,
-                              size_t len)
+rx_request_process_start_line(
+    struct rx_request *request, const char *buffer, size_t len
+)
 {
 #if defined(RX_DEBUG)
     pthread_t tid = pthread_self();
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%4.sProcessing request line\n", tid, "");
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_DEBUG,
+        "[Thread %ld]%4.sProcessing request line\n", tid, ""
+    );
 #endif
     if (buffer == NULL || len == 0)
     {
@@ -149,8 +157,9 @@ rx_request_process_start_line(struct rx_request *request, const char *buffer,
 }
 
 int
-rx_request_process_headers(struct rx_request *request, const char *buffer,
-                           size_t len)
+rx_request_process_headers(
+    struct rx_request *request, const char *buffer, size_t len
+)
 {
     int ret;
     const char *key_begin, *key_end, *value_begin, *value_end;
@@ -169,16 +178,19 @@ rx_request_process_headers(struct rx_request *request, const char *buffer,
     while (value_end != NULL && value_end - key_begin > 0)
     {
 
-        ret = rx_request_parse_header(key_begin, value_end - key_begin,
-                                      &key_begin, &key_end, &value_begin,
-                                      &value_end);
+        ret = rx_request_parse_header(
+            key_begin, value_end - key_begin, &key_begin, &key_end,
+            &value_begin, &value_end
+        );
 
         if (ret != RX_OK)
         {
             goto end;
         }
 
-        if (strncasecmp("Host", key_begin, key_end - key_begin) == 0)
+        /* clang-format off */
+        if (strlen("Host") == (key_end - key_begin) 
+            && strncasecmp("Host", key_begin, key_end - key_begin) == 0)
         {
 
             ret = rx_request_process_header_host(&request->host, value_begin,
@@ -189,9 +201,10 @@ rx_request_process_headers(struct rx_request *request, const char *buffer,
                 goto end;
             }
         }
-        else if (strlen("Accept-Encoding") == (key_end - key_begin) &&
-                 strncasecmp("Accept-Encoding", key_begin,
-                             key_end - key_begin) == 0)
+        else if (strlen("Accept-Encoding") == (key_end - key_begin) 
+                 && strncasecmp("Accept-Encoding", 
+                                key_begin, 
+                                key_end - key_begin) == 0)
         {
             ret = rx_request_process_header_accept_encoding(
                 &request->accept_encoding, value_begin,
@@ -202,8 +215,8 @@ rx_request_process_headers(struct rx_request *request, const char *buffer,
                 goto end;
             }
         }
-        else if (strlen("Accept") == (key_end - key_begin) &&
-                 strncasecmp("Accept", key_begin, key_end - key_begin) == 0)
+        else if (strlen("Accept") == (key_end - key_begin)
+                 && strncasecmp("Accept", key_begin, key_end - key_begin) == 0)
         {
             ret = rx_request_process_header_accept(
                 &request->accept, value_begin, value_end - value_begin);
@@ -213,6 +226,40 @@ rx_request_process_headers(struct rx_request *request, const char *buffer,
                 goto end;
             }
         }
+        else if (strlen("Content-Length") == (key_end - key_begin)
+                 && strncasecmp("Content-Length",
+                                key_begin,
+                                key_end - key_begin) == 0)
+        {
+            ret = rx_request_process_header_content_length(
+                    &request->content_length, 
+                    value_begin, 
+                    value_end - value_begin
+            );
+
+            if (ret != RX_OK)
+            {
+                goto end;
+            }
+        }
+        else if (strlen("Content-Type") == (key_end - key_begin)
+                 && strncasecmp("Content-Type", 
+                                key_begin, 
+                                key_end - key_begin) == 0)
+        {
+            ret = rx_request_process_header_content_type(
+                &request->content_type, 
+                value_begin,
+                value_end - value_begin
+            );
+
+            if (ret != RX_OK)
+            {
+                goto end;
+            }
+        }
+
+        /* clang-format on */
 
         key_begin = value_end + 2;
         value_end = strstr(key_begin, "\r\n");
@@ -223,9 +270,10 @@ end:
 }
 
 int
-rx_request_parse_header(const char *buffer, size_t len, const char **key,
-                        const char **key_end, const char **value,
-                        const char **value_end)
+rx_request_parse_header(
+    const char *buffer, size_t len, const char **key, const char **key_end,
+    const char **value, const char **value_end
+)
 {
     int ret;
     const char *colon, *end;
@@ -275,8 +323,9 @@ end:
 }
 
 int
-rx_request_proccess_method(rx_request_method_t *method, const char *buffer,
-                           size_t len)
+rx_request_proccess_method(
+    rx_request_method_t *method, const char *buffer, size_t len
+)
 {
     if (buffer == NULL || len == 0)
     {
@@ -314,17 +363,20 @@ rx_request_proccess_method(rx_request_method_t *method, const char *buffer,
                                                          : ANSI_COLOR_GREEN;
     char *mark    = *method == RX_REQUEST_METHOD_INVALID ? "x" : "-";
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%4.s%s%3.s%sMethod: %s\n" ANSI_COLOR_RESET, tid, "",
-           mark, "", color, rx_request_method_str(*method));
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_DEBUG,
+        "[Thread %ld]%4.s%s%3.s%sMethod: %s\n" ANSI_COLOR_RESET, tid, "", mark,
+        "", color, rx_request_method_str(*method)
+    );
 #endif
 
     return RX_OK;
 }
 
 int
-rx_request_process_uri(struct rx_request_uri *uri, const char *buffer,
-                       size_t len)
+rx_request_process_uri(
+    struct rx_request_uri *uri, const char *buffer, size_t len
+)
 {
     int ret;
     char *path_ptr, *query_string_ptr;
@@ -387,26 +439,33 @@ end:
                                                           : ANSI_COLOR_GREEN;
     char *mark  = uri->result != RX_REQUEST_URI_RESULT_OK ? "x" : "-";
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%4.s%s%3.s%sURI parsing: %s\n"
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_DEBUG,
+        "[Thread %ld]%4.s%s%3.s%sURI parsing: %s\n"
 
-           ANSI_COLOR_RESET,
-           tid, "", mark, "", color,
-           uri->result == RX_REQUEST_URI_RESULT_OK ? "OK" : "INVALID");
+        ANSI_COLOR_RESET,
+        tid, "", mark, "", color,
+        uri->result == RX_REQUEST_URI_RESULT_OK ? "OK" : "INVALID"
+    );
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%8.s%sPath: \"%.*s\"\n",
-           tid, "", color, (int)(uri->path_end - uri->path), uri->path);
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%8.s%sPath: \"%.*s\"\n", tid,
+        "", color, (int)(uri->path_end - uri->path), uri->path
+    );
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-           "[Thread %ld]%8.s%sQuery string: \"%.*s\"\n", tid, "", color,
-           (int)(uri->query_string_end - uri->query_string), uri->query_string);
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_DEBUG,
+        "[Thread %ld]%8.s%sQuery string: \"%.*s\"\n", tid, "", color,
+        (int)(uri->query_string_end - uri->query_string), uri->query_string
+    );
 #endif
     return ret;
 }
 
 int
-rx_request_process_version(struct rx_request_version *version,
-                           const char *buffer, size_t len)
+rx_request_process_version(
+    struct rx_request_version *version, const char *buffer, size_t len
+)
 {
     int ret;
     const char *slash, *dot, *end, *major, *minor;
@@ -477,8 +536,9 @@ end:
 }
 
 int
-rx_request_process_header_host(struct rx_header_host *host, const char *buffer,
-                               size_t len)
+rx_request_process_header_host(
+    struct rx_header_host *host, const char *buffer, size_t len
+)
 {
     int ret;
     char *colon;
@@ -566,7 +626,8 @@ end:
 int
 rx_request_process_header_accept_encoding(
     struct rx_header_accept_encoding *accept_encoding, const char *buffer,
-    size_t len)
+    size_t len
+)
 {
     const char *begin, *end, *comma;
 
@@ -608,14 +669,17 @@ rx_request_process_header_accept_encoding(
 }
 
 int
-rx_request_process_header_accept(struct rx_qlist *accept, const char *buffer,
-                                 size_t len)
+rx_request_process_header_accept(
+    struct rx_qlist *accept, const char *buffer, size_t len
+)
 {
 #if defined(RX_DEBUG)
     pthread_t tid = pthread_self();
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.sAccept header: %.*s\n",
-           tid, "", (int)len, buffer);
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.sAccept header: %.*s\n",
+        tid, "", (int)len, buffer
+    );
 #endif
 
     const char *begin, *end, *comma;
@@ -652,6 +716,87 @@ rx_request_process_header_accept(struct rx_qlist *accept, const char *buffer,
     return RX_OK;
 }
 
+int
+rx_request_process_header_content_length(
+    size_t *content_length, const char *buffer, size_t len
+)
+{
+#if defined(RX_DEBUG)
+    pthread_t tid = pthread_self();
+
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_DEBUG,
+        "[Thread %ld]%4.sContent-Length header: %.*s\n", tid, "", (int)len,
+        buffer
+    );
+#endif
+
+    if (content_length == NULL)
+    {
+        return RX_ERROR;
+    }
+
+    if (buffer == NULL || len == 0)
+    {
+        *content_length = 0;
+        return RX_OK;
+    }
+
+    *content_length = atoi(buffer);
+
+    return RX_OK;
+}
+
+int
+rx_request_process_header_content_type(
+    rx_http_mime_t *content_type, const char *buffer, size_t len
+)
+{
+#if defined(RX_DEBUG)
+    pthread_t tid = pthread_self();
+
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_DEBUG,
+        "[Thread %ld]%4.sContent-Type header: %.*s ", tid, "", (int)len, buffer
+    );
+#endif
+
+    if (content_type == NULL)
+    {
+        return RX_ERROR;
+    }
+
+    if (buffer == NULL || len == 0)
+    {
+        *content_type = RX_HTTP_MIME_TEXT_ALL;
+        return RX_OK;
+    }
+
+    *content_type = rx_request_mime(buffer, len);
+
+#if defined(RX_DEBUG)
+    printf("(Mask = %d)\n", *content_type);
+#endif
+
+    return RX_OK;
+}
+
+int
+rx_request_process_content(
+    char *content, size_t content_length, const char *buffer, size_t len
+)
+{
+    if (content == NULL || content_length == 0 || buffer == NULL || len == 0)
+    {
+        return RX_ERROR;
+    }
+
+    memcpy(content, buffer, len);
+    content[len] = '\0';
+
+    return RX_OK;
+}
+
 const char *
 rx_request_method_str(rx_request_method_t method)
 {
@@ -670,6 +815,105 @@ rx_request_method_str(rx_request_method_t method)
     default:
         return "INVALID";
     }
+}
+
+const char *
+rx_request_mime_str(rx_http_mime_t mime)
+{
+    switch (mime)
+    {
+    case RX_HTTP_MIME_APPLICATION_XFORM:
+        return "application/x-www-form-urlencoded";
+    case RX_HTTP_MIME_APPLICATION_JSON:
+        return "application/json";
+    case RX_HTTP_MIME_TEXT_ALL:
+        return "text/*";
+    case RX_HTTP_MIME_TEXT_HTML:
+        return "text/html";
+    case RX_HTTP_MIME_TEXT_PLAIN:
+        return "text/plain";
+    case RX_HTTP_MIME_TEXT_CSS:
+        return "text/css";
+    case RX_HTTP_MIME_TEXT_JS:
+        return "text/javascript";
+    case RX_HTTP_MIME_IMAGE_ALL:
+        return "image/*";
+    case RX_HTTP_MIME_IMAGE_JPEG:
+        return "image/jpeg";
+    case RX_HTTP_MIME_IMAGE_PNG:
+        return "image/png";
+    case RX_HTTP_MIME_IMAGE_GIF:
+        return "image/gif";
+    case RX_HTTP_MIME_ALL:
+    default:
+        return "*/*";
+    }
+}
+
+rx_http_mime_t
+rx_request_mime(const char *mime_str, size_t len)
+{
+    if (mime_str == NULL || len == 0 || strncasecmp("*/*", mime_str, 3) == 0)
+    {
+        return RX_HTTP_MIME_ALL;
+    }
+
+    if (strncasecmp("application/x-www-form-urlencoded", mime_str, 33) == 0)
+    {
+        return RX_HTTP_MIME_APPLICATION_XFORM;
+    }
+
+    if (strncasecmp("application/json", mime_str, 16) == 0)
+    {
+        return RX_HTTP_MIME_APPLICATION_JSON;
+    }
+
+    if (strncasecmp("text/*", mime_str, 6) == 0)
+    {
+        return RX_HTTP_MIME_TEXT_ALL;
+    }
+
+    if (strncasecmp("text/html", mime_str, 9) == 0)
+    {
+        return RX_HTTP_MIME_TEXT_HTML;
+    }
+
+    if (strncasecmp("text/plain", mime_str, 10) == 0)
+    {
+        return RX_HTTP_MIME_TEXT_PLAIN;
+    }
+
+    if (strncasecmp("text/css", mime_str, 8) == 0)
+    {
+        return RX_HTTP_MIME_TEXT_CSS;
+    }
+
+    if (strncasecmp("text/javascript", mime_str, 15) == 0)
+    {
+        return RX_HTTP_MIME_TEXT_JS;
+    }
+
+    if (strncasecmp("image/*", mime_str, 7) == 0)
+    {
+        return RX_HTTP_MIME_IMAGE_ALL;
+    }
+
+    if (strncasecmp("image/jpeg", mime_str, 10) == 0)
+    {
+        return RX_HTTP_MIME_IMAGE_JPEG;
+    }
+
+    if (strncasecmp("image/png", mime_str, 9) == 0)
+    {
+        return RX_HTTP_MIME_IMAGE_PNG;
+    }
+
+    if (strncasecmp("image/gif", mime_str, 9) == 0)
+    {
+        return RX_HTTP_MIME_IMAGE_GIF;
+    }
+
+    return RX_HTTP_MIME_ALL;
 }
 
 static void
@@ -706,7 +950,8 @@ rx_memset_header_host(struct rx_header_host *host)
 
 static void
 rx_memset_header_accept_encoding(
-    struct rx_header_accept_encoding *accept_encoding)
+    struct rx_header_accept_encoding *accept_encoding
+)
 {
     accept_encoding->encoding = RX_ENCODING_UNSET;
     accept_encoding->qvalue   = 0.0;
@@ -719,8 +964,9 @@ rx_memset_header_accept(struct rx_qlist *accept)
 }
 
 static void
-rx_parse_ae_header(struct rx_header_accept_encoding *ae, const char *buffer,
-                   size_t len)
+rx_parse_ae_header(
+    struct rx_header_accept_encoding *ae, const char *buffer, size_t len
+)
 {
     const char *begin, *semi, *end;
     double qvalue;
@@ -838,4 +1084,10 @@ rx_parse_q_value(const char *buffer, size_t len)
         ans = 1.0;
 
     return ans;
+}
+
+static int
+rx_request_hdrncmp(const char *str, size_t len, const char *key)
+{
+    return (strlen(key) == len && strncasecmp(key, str, len) == 0);
 }

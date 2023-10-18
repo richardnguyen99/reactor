@@ -25,8 +25,10 @@
 #include <rx_core.h>
 
 int
-rx_connection_init(struct rx_connection *conn, int efd, int fd,
-                   struct sockaddr addr, socklen_t addr_len)
+rx_connection_init(
+    struct rx_connection *conn, int efd, int fd, struct sockaddr addr,
+    socklen_t addr_len
+)
 {
     conn->efd      = efd;
     conn->fd       = fd;
@@ -41,8 +43,10 @@ rx_connection_init(struct rx_connection *conn, int efd, int fd,
     conn->header_end = conn->buffer_start;
     conn->body_start = conn->buffer_start;
 
-    if (getnameinfo(&conn->addr, conn->addr_len, conn->host, NI_MAXHOST,
-                    conn->port, NI_MAXSERV, NI_NUMERICSERV) != 0)
+    if (getnameinfo(
+            &conn->addr, conn->addr_len, conn->host, NI_MAXHOST, conn->port,
+            NI_MAXSERV, NI_NUMERICSERV
+        ) != 0)
     {
         rx_log_error("getnameinfo() failed: %s", strerror(errno));
         return RX_ERROR;
@@ -96,14 +100,18 @@ rx_connection_process(struct rx_connection *conn)
     struct rx_route route;
     struct epoll_event event;
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
-           "[Thread %ld]%4.sProcessing request from %s:%s (socket = %d)\n", tid,
-           "", conn->host, conn->port, conn->fd);
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_INFO,
+        "[Thread %ld]%4.sProcessing request from %s:%s (socket = %d)\n", tid,
+        "", conn->host, conn->port, conn->fd
+    );
 
     if (conn->state != RX_CONNECTION_STATE_SERVING_REQUEST)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR,
-               "Connection is not ready to serve request\n");
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR,
+            "Connection is not ready to serve request\n"
+        );
         return RX_ERROR_PTR;
     }
 
@@ -113,17 +121,20 @@ rx_connection_process(struct rx_connection *conn)
 
     memset(&route, 0, sizeof(route));
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.sHeader length: %ld\n",
-           tid, "", conn->header_end - conn->buffer_start);
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_DEBUG, "[Thread %ld]%4.sHeader length: %ld\n",
+        tid, "", conn->header_end - conn->buffer_start
+    );
 
     endl = strstr(startl, "\r\n");
 
     ret = rx_request_process_start_line(conn->request, startl, endl - startl);
     if (ret != RX_OK)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR,
-               "[Thread %ld]%4.sFailed to process request start line\n", tid,
-               "");
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR,
+            "[Thread %ld]%4.sFailed to process request start line\n", tid, ""
+        );
         return RX_ERROR_PTR;
     }
 
@@ -131,61 +142,114 @@ rx_connection_process(struct rx_connection *conn)
     endl   = strstr(startl, "\r\n");
     ret    = rx_request_process_headers(conn->request, startl, endl - startl);
 
+    if (ret != RX_OK)
+    {
+        rx_route_4xx(
+            conn->request, conn->response, RX_HTTP_STATUS_CODE_BAD_REQUEST
+        );
+
+        goto end;
+    }
+
     end = clock();
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
-           "[Thread %ld]%4.sRequest processed successfully (took %.4fms)"
-           "\n",
-           tid, "", (double)(end - start) / CLOCKS_PER_SEC * 1000);
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_INFO,
+        "[Thread %ld]%4.sRequest processed successfully (took %.4fms)"
+        "\n",
+        tid, "", (double)(end - start) / CLOCKS_PER_SEC * 1000
+    );
 
     if (conn->request->host.result > RX_REQUEST_HEADER_HOST_RESULT_OK)
     {
-        rx_route_4xx(conn->request, conn->response,
-                     RX_HTTP_STATUS_CODE_BAD_REQUEST);
+        rx_route_4xx(
+            conn->request, conn->response, RX_HTTP_STATUS_CODE_BAD_REQUEST
+        );
 
         goto end;
     }
 
     ret = rx_route_get(
         &route, conn->request->uri.path,
-        (size_t)(conn->request->uri.path_end - conn->request->uri.path));
+        (size_t)(conn->request->uri.path_end - conn->request->uri.path)
+    );
 
     if (ret != RX_OK)
     {
-        rx_route_4xx(conn->request, conn->response,
-                     RX_HTTP_STATUS_CODE_NOT_FOUND);
+        rx_route_4xx(
+            conn->request, conn->response, RX_HTTP_STATUS_CODE_NOT_FOUND
+        );
         goto end;
     }
 
-    if (conn->request->method == RX_REQUEST_METHOD_GET &&
-        route.handler.get != NULL)
+    if (conn->request->method == RX_REQUEST_METHOD_GET /***/
+        && route.handler.get != NULL)
     {
         route.handler.get(conn->request, conn->response);
     }
-    else if (conn->request->method == RX_REQUEST_METHOD_POST &&
-             route.handler.post != NULL)
+    else if (conn->request->method == RX_REQUEST_METHOD_POST /**/
+             && route.handler.post != NULL)
     {
+        if (conn->buffer_end > conn->body_start)
+        {
+            rx_log(
+                LOG_LEVEL_0, LOG_TYPE_INFO,
+                "[Thread %ld]%4.sBody is found in request (length = %ld)\n",
+                tid, "", conn->buffer_end - conn->body_start
+            );
+
+            // Check if the content length matches with the actual body length
+            if (conn->request->content_length == 0 ||
+                (conn->buffer_end - conn->body_start !=
+                 conn->request->content_length))
+            {
+                rx_route_4xx(
+                    conn->request, conn->response,
+                    RX_HTTP_STATUS_CODE_BAD_REQUEST
+                );
+
+                goto end;
+            }
+
+            // Check if the content type is one of the supported types
+            switch (conn->request->content_type)
+            {
+            case RX_HTTP_MIME_APPLICATION_XFORM:
+            case RX_HTTP_MIME_APPLICATION_JSON:
+                break;
+            default:
+                rx_route_4xx(
+                    conn->request, conn->response,
+                    RX_HTTP_STATUS_CODE_UNSUPPORTED_MEDIA_TYPE
+                );
+
+                goto end;
+            }
+        }
+
         route.handler.post(conn->request, conn->response);
     }
-    else if (conn->request->method == RX_REQUEST_METHOD_PUT &&
-             route.handler.put != NULL)
+    else if (conn->request->method == RX_REQUEST_METHOD_PUT /**/
+             && route.handler.put != NULL)
     {
         route.handler.put(conn->request, conn->response);
     }
-    else if (conn->request->method == RX_REQUEST_METHOD_DELETE &&
-             route.handler.delete != NULL)
+    else if (conn->request->method == RX_REQUEST_METHOD_DELETE /**/
+             && route.handler.delete != NULL)
     {
         route.handler.delete(conn->request, conn->response);
     }
-    else if (conn->request->method == RX_REQUEST_METHOD_HEAD &&
-             route.handler.head != NULL)
+    else if (conn->request->method == RX_REQUEST_METHOD_HEAD /**/
+             && route.handler.head != NULL)
     {
         route.handler.head(conn->request, conn->response);
     }
     else
     {
-        rx_route_4xx(conn->request, conn->response,
-                     RX_HTTP_STATUS_CODE_METHOD_NOT_ALLOWED);
+        rx_route_4xx(
+            conn->request, conn->response,
+            RX_HTTP_STATUS_CODE_METHOD_NOT_ALLOWED
+        );
 
         goto end;
     }
@@ -216,8 +280,10 @@ end:
         return RX_ERROR_PTR;
     }
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
-           "[Thread %ld]%4.sSubmit finished task to event poll\n", tid, "");
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_INFO,
+        "[Thread %ld]%4.sSubmit finished task to event poll\n", tid, ""
+    );
 
     return RX_OK_PTR;
 }

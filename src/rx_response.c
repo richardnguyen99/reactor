@@ -193,6 +193,8 @@ rx_response_mime_to_string(rx_http_mime_t mime)
         return RX_HTTP_MIME_APPLICATION_JSON_STR;
     case RX_HTTP_MIME_APPLICATION_XHTML:
         return RX_HTTP_MIME_APPLICATION_XHTML_STR;
+    case RX_HTTP_MIME_APPLICATION_XFORM:
+        return RX_HTTP_MIME_APPLICATION_XFORM_STR;
     case RX_HTTP_MIME_IMAGE_ICO:
         return RX_HTTP_MIME_IMAGE_ICO_STR;
     case RX_HTTP_MIME_IMAGE_GIF:
@@ -339,8 +341,6 @@ rx_response_construct(struct rx_response *res)
     tm  = gmtime(&now);
     strftime(date_buf, sizeof(date_buf), date_format, tm);
     buf = NULL;
-
-    memset(date_buf, '\0', sizeof(date_buf));
 
     // Build response headers
     buf_len = asprintf(&buf, headers, status_code, status_message, content_type,

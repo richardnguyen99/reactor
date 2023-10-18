@@ -173,9 +173,10 @@ rx_route_static(struct rx_request *req, struct rx_response *res)
     memcpy(resource, req->uri.path + 1, req->uri.path_end - req->uri.path);
     resource[resource_len] = '\0';
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
-           "[Thread %ld]%4.sStatic file request: %s\n", pthread_self(), "",
-           resource);
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_INFO, "[Thread %ld]%4.sStatic file request: %s\n",
+        pthread_self(), "", resource
+    );
 
     ret = rx_file_open(&file, resource, O_RDONLY);
 
@@ -210,9 +211,10 @@ void *
 rx_route_4xx(struct rx_request *req, struct rx_response *res, int code)
 {
 #ifdef RX_DEBUG
-    rx_log(LOG_LEVEL_0, LOG_TYPE_WARN,
-           "[Thread %ld]%4.sClient error with code %d\n", pthread_self(), "",
-           code);
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_WARN,
+        "[Thread %ld]%4.sClient error with code %d\n", pthread_self(), "", code
+    );
 #endif
     char msg[80], reason[3000], *buf;
     int buflen;
@@ -221,30 +223,44 @@ rx_route_4xx(struct rx_request *req, struct rx_response *res, int code)
     {
     case RX_HTTP_STATUS_CODE_NOT_FOUND:
         sprintf(msg, "Not Found");
-        sprintf(reason, "The requested resource (%s) could not be found.",
-                req->uri.raw_uri);
+        sprintf(
+            reason, "The requested resource (%s) could not be found.",
+            req->uri.raw_uri
+        );
 
         break;
 
     case RX_HTTP_STATUS_CODE_METHOD_NOT_ALLOWED:
         sprintf(msg, "Method Not Allowed");
-        sprintf(reason,
-                "The requested resource (%s) does not support the "
-                "method %s.",
-                req->uri.raw_uri, rx_request_method_str(req->method));
+        sprintf(
+            reason,
+            "The requested resource (%s) does not support the "
+            "method %s.",
+            req->uri.raw_uri, rx_request_method_str(req->method)
+        );
 
         break;
+
+    case RX_HTTP_STATUS_CODE_UNSUPPORTED_MEDIA_TYPE:
+        sprintf(msg, "Unsupported Media Type");
+        sprintf(
+            reason, "The server does not support the media type %s.",
+            rx_request_mime_str(req->content_type)
+        );
 
     case RX_HTTP_STATUS_CODE_BAD_REQUEST:
     default:
         sprintf(msg, "Bad Request");
-        sprintf(reason, "The server could not process this request due to "
-                        "malformed request.");
+        sprintf(
+            reason, "The server could not process this request due to "
+                    "malformed request."
+        );
         break;
     }
 
-    buflen = asprintf(&buf, rx_view_engine.client_error_template.data, code,
-                      msg, reason);
+    buflen = asprintf(
+        &buf, rx_view_engine.client_error_template.data, code, msg, reason
+    );
 
     if (buflen == RX_ERROR)
     {

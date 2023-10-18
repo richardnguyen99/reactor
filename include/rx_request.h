@@ -222,6 +222,10 @@ struct rx_request
     struct rx_header_user_agent user_agent;
     struct rx_header_accept_encoding accept_encoding;
     struct rx_qlist accept;
+
+    size_t content_length;
+    rx_http_mime_t content_type;
+    char *content;
 };
 
 int
@@ -231,44 +235,74 @@ void
 rx_request_destroy(struct rx_request *request);
 
 int
-rx_request_process_start_line(struct rx_request *request, const char *buffer,
-                              size_t len);
+rx_request_process_start_line(
+    struct rx_request *request, const char *buffer, size_t len
+);
 
 int
-rx_request_process_headers(struct rx_request *request, const char *buffer,
-                           size_t len);
+rx_request_process_headers(
+    struct rx_request *request, const char *buffer, size_t len
+);
 
 int
-rx_request_parse_header(const char *buffer, size_t len, const char **key,
-                        const char **key_end, const char **value,
-                        const char **value_end);
+rx_request_parse_header(
+    const char *buffer, size_t len, const char **key, const char **key_end,
+    const char **value, const char **value_end
+);
 
 int
-rx_request_proccess_method(rx_request_method_t *method, const char *buffer,
-                           size_t len);
+rx_request_proccess_method(
+    rx_request_method_t *method, const char *buffer, size_t len
+);
 
 int
-rx_request_process_uri(struct rx_request_uri *uri, const char *buffer,
-                       size_t len);
+rx_request_process_uri(
+    struct rx_request_uri *uri, const char *buffer, size_t len
+);
 
 int
-rx_request_process_version(struct rx_request_version *version,
-                           const char *buffer, size_t len);
+rx_request_process_version(
+    struct rx_request_version *version, const char *buffer, size_t len
+);
 
 int
-rx_request_process_header_host(struct rx_header_host *host, const char *buffer,
-                               size_t len);
+rx_request_process_header_host(
+    struct rx_header_host *host, const char *buffer, size_t len
+);
 
 int
 rx_request_process_header_accept_encoding(
     struct rx_header_accept_encoding *accept_encoding, const char *buffer,
-    size_t len);
+    size_t len
+);
 
 int
-rx_request_process_header_accept(struct rx_qlist *accept, const char *buffer,
-                                 size_t len);
+rx_request_process_header_accept(
+    struct rx_qlist *accept, const char *buffer, size_t len
+);
+
+int
+rx_request_process_header_content_length(
+    size_t *content_length, const char *buffer, size_t len
+);
+
+int
+rx_request_process_header_content_type(
+    rx_http_mime_t *content_type, const char *buffer, size_t len
+);
+
+int
+rx_request_process_content(
+    char *content, size_t content_length, const char *buffer, size_t len
+);
 
 const char *
 rx_request_method_str(rx_request_method_t method);
+
+const char *
+rx_request_mime_str(rx_http_mime_t mime);
+
+rx_http_mime_t
+rx_request_mime(const char *mime_str, size_t len);
 
 #endif /* __RX_REQUEST_H__ */
