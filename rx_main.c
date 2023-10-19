@@ -23,6 +23,7 @@
 
 #include <rx_config.h>
 #include <rx_core.h>
+#include <zlib.h>
 
 #define RX_TASK_TYPE_PROCESS_REQUEST  1
 #define RX_TASK_TYPE_PROCESS_RESPONSE 2
@@ -33,7 +34,7 @@ main(int argc, const char *argv[])
     NOOP(argc);
     NOOP(argv);
 
-    int ret;
+    int ret, n;
     struct sockaddr_storage client;
     socklen_t client_len;
 
@@ -55,9 +56,14 @@ main(int argc, const char *argv[])
         host, service
     );
 
-    // Main event loop
+    /* Main event loop */
     for (;;)
     {
+        /*
+           Get a list of file descriptors with events that need to be processed.
+
+           Otherwise, epoll_wait() will block indefinitely until an event.
+         */
         n = epoll_wait(epoll_fd, events, RX_MAX_EVENTS, -1);
         if (n == -1)
         {
@@ -67,6 +73,14 @@ main(int argc, const char *argv[])
 
         for (i = 0; i < n; ++i)
         {
+            /*
+               If the event comes from the server file descriptor, there is a
+               new client that wants to establish a connection with the
+               server.
+
+               The remaining events are from client file descriptors.
+             */
+
             if (events[i].data.fd == server_fd)
             {
                 memset(&client, 0, sizeof(client));
@@ -86,6 +100,8 @@ main(int argc, const char *argv[])
                         goto err_epoll;
                     }
                 }
+
+                /* Set client file descriptor to non blocking mode */
 
                 ret = fcntl(client_fd, F_SETFL, O_NONBLOCK);
                 if (ret == -1)
@@ -107,6 +123,13 @@ main(int argc, const char *argv[])
                     conn, epoll_fd, client_fd, *((struct sockaddr *)&client),
                     client_len
                 );
+
+                /*
+                   Each epoll_event struct allows client file descriptors to
+                   store a pointer. Therefore we can store a pointer to the
+                   connection.
+                 */
+
                 ev.events   = EPOLLIN | EPOLLET;
                 ev.data.ptr = conn;
 
@@ -128,6 +151,12 @@ main(int argc, const char *argv[])
 
                 continue;
             }
+
+            /*
+               If the event is an EPOLLIN event, the client has sent data
+               (request), and the server needs to read it.
+             */
+
             else if (events[i].events & EPOLLIN)
             {
                 struct rx_connection *conn = events[i].data.ptr;
@@ -239,7 +268,6 @@ main(int argc, const char *argv[])
 
                 // Check for buffer overflow while reading headers
                 size_t hdr_bufsize = conn->header_end - conn->buffer_start;
-                // size_t bufsize     = conn->buffer_end - conn->buffer_start;
 
                 switch (conn->state)
                 {
@@ -312,6 +340,13 @@ main(int argc, const char *argv[])
                     break;
                 }
             }
+
+            /*
+               If the evenet is an EPOLLOUT event, the server has finished the
+               processing of the request and needs to send the response to the
+               client.
+             */
+
             else if (events[i].events & EPOLLOUT)
             {
                 struct rx_connection *conn = events[i].data.ptr;
@@ -398,6 +433,13 @@ main(int argc, const char *argv[])
                     fd
                 );
             }
+
+            /*
+               If the event is an EPOLLERR or EPOLLRDHUP event, there might be
+               an error from the client. Mostly, the client has prematurely
+               closed the connection.
+             */
+
             else if (events[i].events & (EPOLLERR | EPOLLRDHUP))
             {
                 struct rx_connection *conn = events[i].data.ptr;

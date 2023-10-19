@@ -41,6 +41,13 @@ typedef enum rx_connection_state
     RX_CONNECTION_STATE_CLOSED,
 } rx_conn_state_t;
 
+/* The connection structure
+
+   The `rx_connection` represents a state object between a client and the
+   server. The structure contains a request and response structure, as well as
+   information about the client that is needed to process the request and
+   construct the response successfully.
+ */
 struct rx_connection
 {
     /* File descriptor for epoll instance */
@@ -97,19 +104,50 @@ struct rx_connection
     size_t content_length;
 
     struct rx_request *request;
+
     struct rx_response *response;
 };
 
-int
-rx_connection_init(struct rx_connection *conn, int efd, int fd,
-                   struct sockaddr addr, socklen_t addr_len);
+/* Initialize and establish connection between a client and the server
 
+   This function is used when a new client arrives (detected by the server via
+   the event loop) to initialize a new connection. Each connection represents
+   a communication channel between one client and the server at a time.
+ */
+int
+rx_connection_init(
+    struct rx_connection *conn, int efd, int fd, struct sockaddr addr,
+    socklen_t addr_len
+);
+
+/* Deallocate and free memory of a connection
+
+   This function is used by the server to deallocate and free memory of a
+   connection when the communication is closed (either a successful EPOLLOUT or
+   an error).
+ */
 void
 rx_connection_free(struct rx_connection *conn);
 
+/* Reset the state of a connection
+
+   This function is used to reset the state of connection. Instead of freeing
+   and reallocating new memory, the server can reuse the connection object when
+   the communication is done but the connection is still alive (keep-alive).
+ */
 void
 rx_connection_cleanup(struct rx_connection *conn);
 
+/* Dispatch a connection
+
+   This function is used in the thread pool by a consumer thread to process the
+   connection. This function should be called after the connection has fully
+   received the request buffer from the client.
+
+   After processing request, the function will continue to construct a response
+   based on the request and store the response into a buffer. Then, it will
+   notify the event loop to write the response back to the client.
+ */
 void *
 rx_connection_process(struct rx_connection *conn);
 

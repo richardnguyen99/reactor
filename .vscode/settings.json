@@ -61,7 +61,8 @@
         "new": "c",
         "ostream": "c",
         "sstream": "c",
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "zlib.h": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "editor.wordWrapColumn": 80

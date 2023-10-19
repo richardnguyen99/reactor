@@ -24,7 +24,7 @@
 #include <rx_config.h>
 #include <rx_core.h>
 
-int server_fd, client_fd, epoll_fd, n, i;
+int server_fd, client_fd, epoll_fd, i;
 socklen_t server_len;
 char msg[1024], host[NI_MAXHOST], service[NI_MAXSERV];
 
@@ -64,8 +64,9 @@ rx_core_gai()
 
     if (getaddrinfo(NULL, "8080", &hints, &res) != 0)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "getaddrinfo: %s\n",
-               strerror(errno));
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "getaddrinfo: %s\n", strerror(errno)
+        );
 
         exit(EXIT_FAILURE);
     }
@@ -81,14 +82,16 @@ rx_core_gai()
             continue;
         }
 
-        ret = setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &optval,
-                         sizeof(optval));
+        ret = setsockopt(
+            server_fd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)
+        );
 
         if (ret == -1)
         {
             assert(close(server_fd) == 0);
-            rx_log(LOG_LEVEL_0, LOG_TYPE_WARN, "setsockopt: %s\n",
-                   strerror(errno));
+            rx_log(
+                LOG_LEVEL_0, LOG_TYPE_WARN, "setsockopt: %s\n", strerror(errno)
+            );
 
             continue;
         }
@@ -124,13 +127,16 @@ rx_core_gni()
 {
     int ret;
 
-    ret = getnameinfo(&server, server_len, host, NI_MAXHOST, service,
-                      NI_MAXSERV, NI_NUMERICSERV);
+    ret = getnameinfo(
+        &server, server_len, host, NI_MAXHOST, service, NI_MAXSERV,
+        NI_NUMERICSERV
+    );
 
     if (ret != 0)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "getnameinfo: %s\n",
-               gai_strerror(ret));
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "getnameinfo: %s\n", gai_strerror(ret)
+        );
 
         exit(EXIT_FAILURE);
     }
@@ -160,8 +166,9 @@ rx_core_epoll_create()
 
     if (epoll_fd == -1)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "epoll_create1: %s\n",
-               strerror(errno));
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "epoll_create1: %s\n", strerror(errno)
+        );
 
         exit(EXIT_FAILURE);
     }
@@ -188,8 +195,9 @@ rx_core_load_view()
 
     if (ret != RX_OK)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "rx_view_init: %s\n",
-               strerror(errno));
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "rx_view_init: %s\n", strerror(errno)
+        );
 
         exit(EXIT_FAILURE);
     }
@@ -200,8 +208,10 @@ rx_core_load_view()
 
     if (ret != RX_OK)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "rx_view_load_template: %s\n",
-               strerror(errno));
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "rx_view_load_template: %s\n",
+            strerror(errno)
+        );
 
         exit(EXIT_FAILURE);
     }
@@ -212,8 +222,10 @@ rx_core_load_view()
 
     if (ret != RX_OK)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "rx_view_load_4xx: %s\n",
-               strerror(errno));
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "rx_view_load_4xx: %s\n",
+            strerror(errno)
+        );
 
         exit(EXIT_FAILURE);
     }
@@ -224,8 +236,10 @@ rx_core_load_view()
 
     if (ret != RX_OK)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "rx_view_load_5xx: %s\n",
-               strerror(errno));
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "rx_view_load_5xx: %s\n",
+            strerror(errno)
+        );
 
         exit(EXIT_FAILURE);
     }
@@ -253,8 +267,10 @@ rx_core_load_thread_pool()
 
     if (ret != RX_OK)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "rx_thread_pool_init: %s\n",
-               strerror(errno));
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "rx_thread_pool_init: %s\n",
+            strerror(errno)
+        );
 
         exit(EXIT_FAILURE);
     }

@@ -98,7 +98,6 @@ rx_connection_process(struct rx_connection *conn)
     char *startl, *endl;
     clock_t start, end;
     struct rx_route route;
-    struct epoll_event event;
 
     rx_log(
         LOG_LEVEL_0, LOG_TYPE_INFO,
@@ -126,7 +125,30 @@ rx_connection_process(struct rx_connection *conn)
         tid, "", conn->header_end - conn->buffer_start
     );
 
+    /*
+       Process the request buffer can be divided into 3 parts:
+           - Request start line (1)
+           - Request headers (2)
+           - Request body (only POST requires this part) (3)
+     */
+
     endl = strstr(startl, "\r\n");
+
+    /* Process the request start line (1)
+
+       An example of a request start line:
+
+       ```
+           GET  /                  HTTP/1.1\r\n
+           POST /login             HTTP/1.1\r\n
+           HEAD /public/index.html HTTP/1.1\r\n
+       ```
+
+         The request start line contains 3 parts:
+              - Request method
+              - Request URI
+              - Request version
+     */
 
     ret = rx_request_process_start_line(conn->request, startl, endl - startl);
     if (ret != RX_OK)
@@ -138,9 +160,27 @@ rx_connection_process(struct rx_connection *conn)
         return RX_ERROR_PTR;
     }
 
+    /* Skip CRLF and go to the next line */
+
     startl = endl + 2;
     endl   = strstr(startl, "\r\n");
-    ret    = rx_request_process_headers(conn->request, startl, endl - startl);
+
+    /* Process the headers (2)
+
+       An example of request headers:
+
+       ```
+              Host: localhost:8080\r\n
+              User-Agent: curl/7.68.0\r\n
+              Accept: ...\r\n
+              Content-Length: 0\r\n
+              Content-Type: application/x-www-form-urlencoded\r\n
+              ...
+              \r\n
+       ```
+     */
+
+    ret = rx_request_process_headers(conn->request, startl, endl - startl);
 
     if (ret != RX_OK)
     {
@@ -160,6 +200,10 @@ rx_connection_process(struct rx_connection *conn)
         tid, "", (double)(end - start) / CLOCKS_PER_SEC * 1000
     );
 
+    /* HTTP/1.1 REQUIREs request message to contain Host header, although this
+       information is not used any further in the server except for checking.
+     */
+
     if (conn->request->host.result > RX_REQUEST_HEADER_HOST_RESULT_OK)
     {
         rx_route_4xx(
@@ -168,6 +212,12 @@ rx_connection_process(struct rx_connection *conn)
 
         goto end;
     }
+
+    /* Get route handler from the router table based on the path that has been
+       parsed from the request start line.
+
+       If the route is not found, return 404 Not Found.
+     */
 
     ret = rx_route_get(
         &route, conn->request->uri.path,
@@ -182,6 +232,15 @@ rx_connection_process(struct rx_connection *conn)
         goto end;
     }
 
+    /* Route handler based on the request method
+
+       If the route is found, it will store the handler in the `route`
+       structure. The handler contains a function pointer that handles the
+       request based on the request method.
+
+       If the request method is not supported, return 405 (Method Not Allowed).
+     */
+
     if (conn->request->method == RX_REQUEST_METHOD_GET /***/
         && route.handler.get != NULL)
     {
@@ -190,6 +249,15 @@ rx_connection_process(struct rx_connection *conn)
     else if (conn->request->method == RX_REQUEST_METHOD_POST /**/
              && route.handler.post != NULL)
     {
+
+        /* Process the body of request (3)
+
+           A valid body in the request requires 2 things:
+               - Content-Length header (> 0)
+               - Content-Type header (supported types:
+                 application/x-www-form-urlencoded, application/json)
+         */
+
         if (conn->buffer_end > conn->body_start)
         {
             rx_log(
@@ -198,7 +266,10 @@ rx_connection_process(struct rx_connection *conn)
                 tid, "", conn->buffer_end - conn->body_start
             );
 
-            // Check if the content length matches with the actual body length
+            /* Check if the content length matches with the actual body length
+
+               If the content length is invalid, return 400 Bad Request.
+             */
             if (conn->request->content_length == 0 ||
                 ((size_t)(conn->buffer_end - conn->body_start) !=
                  conn->request->content_length))
@@ -211,7 +282,11 @@ rx_connection_process(struct rx_connection *conn)
                 goto end;
             }
 
-            // Check if the content type is one of the supported types
+            /* Check if the content type is one of the supported types
+
+               If the content type is not matched with any of the supported
+               types, return 415 (Unsupported Media Type).
+             */
             switch (conn->request->content_type)
             {
             case RX_HTTP_MIME_APPLICATION_XFORM:
@@ -256,34 +331,6 @@ rx_connection_process(struct rx_connection *conn)
 
 end:
     (void)rx_response_construct(conn->response);
-
-    conn->state = conn->state == RX_CONNECTION_STATE_CLOSING
-                      ? RX_CONNECTION_STATE_CLOSING
-                      : RX_CONNECTION_STATE_WRITING_RESPONSE;
-
-    if (conn->state == RX_CONNECTION_STATE_CLOSING)
-    {
-        event.events = EPOLLERR | EPOLLRDHUP | EPOLLET;
-    }
-    else
-    {
-        event.events = EPOLLOUT | EPOLLET;
-    }
-
-    event.data.ptr = conn;
-
-    ret = epoll_ctl(conn->efd, EPOLL_CTL_MOD, conn->fd, &event);
-
-    if (ret == -1)
-    {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "epoll_ctl: %s\n", strerror(errno));
-        return RX_ERROR_PTR;
-    }
-
-    rx_log(
-        LOG_LEVEL_0, LOG_TYPE_INFO,
-        "[Thread %ld]%4.sSubmit finished task to event poll\n", tid, ""
-    );
 
     return RX_OK_PTR;
 }

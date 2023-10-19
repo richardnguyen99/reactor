@@ -28,6 +28,7 @@ void *
 rx_thread_pool_worker(void *arg)
 {
     struct rx_thread_pool *pool = arg;
+    pthread_t tid               = pthread_self();
 
     for (;;)
     {
@@ -46,6 +47,40 @@ rx_thread_pool_worker(void *arg)
 
         task->handle(task->arg);
 
+        struct epoll_event event;
+        struct rx_connection *conn = task->arg;
+        int ret;
+
+        conn->state = conn->state == RX_CONNECTION_STATE_CLOSING
+                          ? RX_CONNECTION_STATE_CLOSING
+                          : RX_CONNECTION_STATE_WRITING_RESPONSE;
+
+        if (conn->state == RX_CONNECTION_STATE_CLOSING)
+        {
+            event.events = EPOLLERR | EPOLLRDHUP | EPOLLET;
+        }
+        else
+        {
+            event.events = EPOLLOUT | EPOLLET;
+        }
+
+        event.data.ptr = conn;
+
+        ret = epoll_ctl(conn->efd, EPOLL_CTL_MOD, conn->fd, &event);
+
+        if (ret == -1)
+        {
+            rx_log(
+                LOG_LEVEL_0, LOG_TYPE_ERROR, "epoll_ctl: %s\n", strerror(errno)
+            );
+            return RX_ERROR_PTR;
+        }
+
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_INFO,
+            "[Thread %ld]%4.sSubmit finished task to event poll\n", tid, ""
+        );
+
         free(task);
     }
 }
@@ -62,8 +97,10 @@ rx_thread_pool_init(struct rx_thread_pool *pool, struct rx_ring *ring)
 
     if (ret == -1)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "pthread_mutex_init: %s\n",
-               strerror(errno));
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "pthread_mutex_init: %s\n",
+            strerror(errno)
+        );
         return RX_ERROR;
     }
 
@@ -85,13 +122,16 @@ rx_thread_pool_init(struct rx_thread_pool *pool, struct rx_ring *ring)
 
     for (size_t i = 0; i < 8; i++)
     {
-        ret = pthread_create(&pool->threads[i], NULL, rx_thread_pool_worker,
-                             pool);
+        ret = pthread_create(
+            &pool->threads[i], NULL, rx_thread_pool_worker, pool
+        );
 
         if (ret != 0)
         {
-            rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "pthread_create: %s\n",
-                   strerror(errno));
+            rx_log(
+                LOG_LEVEL_0, LOG_TYPE_ERROR, "pthread_create: %s\n",
+                strerror(errno)
+            );
             pool->nthreads--;
         }
     }
@@ -116,8 +156,10 @@ rx_thread_pool_submit(struct rx_thread_pool *pool, struct rx_task *task)
 
     if (ret == -1)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "pthread_mutex_lock: %s\n",
-               strerror(errno));
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "pthread_mutex_lock: %s\n",
+            strerror(errno)
+        );
         return RX_ERROR;
     }
 
@@ -127,8 +169,10 @@ rx_thread_pool_submit(struct rx_thread_pool *pool, struct rx_task *task)
 
     if (ret == -1)
     {
-        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "pthread_mutex_unlock: %s\n",
-               strerror(errno));
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "pthread_mutex_unlock: %s\n",
+            strerror(errno)
+        );
         return RX_ERROR;
     }
 
