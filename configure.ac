@@ -21,12 +21,9 @@ LT_INIT
 # Check for libraries or dependencies (if needed)
 # Example: AC_CHECK_LIB([library_name], [function_name], [action-if-found], [action-if-not-found])
 AC_CHECK_LIB([pthread], [pthread_create], [], [AC_MSG_ERROR([pthread library not found])])
-AC_CHECK_LIB([sqlite3], [sqlite3_open],   [], [AC_MSG_ERROR([sqlite3 library not found])])
 
 # Check for header files (if needed)
 # Example: AC_CHECK_HEADERS([header_file], [action-if-found], [action-if-not-found])
-AC_CHECK_HEADERS([sqlite3.h],       [], [AC_MSG_ERROR([sqlite3.h not found])])
-AC_CHECK_HEADERS([sqlite3ext.h],    [], [AC_MSG_ERROR([sqlite3ext.h not found])])
 AC_CHECK_HEADERS([assert.h],        [], [AC_MSG_ERROR([assert.h not found])])
 AC_CHECK_HEADERS([pthread.h],       [], [AC_MSG_ERROR([pthread.h not found])])
 AC_CHECK_HEADERS([sys/epoll.h],     [], [AC_MSG_ERROR([sys/epoll.h not found])])

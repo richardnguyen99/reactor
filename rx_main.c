@@ -48,10 +48,12 @@ main(int argc, const char *argv[])
     rx_core_load_thread_pool(); /* Load thread pool */
     rx_core_boot();             /* Make the server listen to connections */
 
-    rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
-           "Server has been created."
-           "\n\n\tListening on %s:%s\n\n",
-           host, service);
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_INFO,
+        "Server has been created."
+        "\n\n\tListening on %s:%s\n\n",
+        host, service
+    );
 
     // Main event loop
     for (;;)
@@ -101,8 +103,10 @@ main(int argc, const char *argv[])
                     goto err_loop;
                 }
 
-                rx_connection_init(conn, epoll_fd, client_fd,
-                                   *((struct sockaddr *)&client), client_len);
+                rx_connection_init(
+                    conn, epoll_fd, client_fd, *((struct sockaddr *)&client),
+                    client_len
+                );
                 ev.events   = EPOLLIN | EPOLLET;
                 ev.data.ptr = conn;
 
@@ -117,8 +121,10 @@ main(int argc, const char *argv[])
                     goto err_loop;
                 }
 
-                rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
-                       "New connection from %s:%s\n", conn->host, conn->port);
+                rx_log(
+                    LOG_LEVEL_0, LOG_TYPE_INFO, "New connection from %s:%s\n",
+                    conn->host, conn->port
+                );
 
                 continue;
             }
@@ -166,16 +172,20 @@ main(int argc, const char *argv[])
                 // it needs to open connections to the server.
                 if (conn->task_num > 0)
                 {
-                    rx_log(LOG_LEVEL_0, LOG_TYPE_WARN,
-                           "Connection on fd %d is busy\n", fd);
+                    rx_log(
+                        LOG_LEVEL_0, LOG_TYPE_WARN,
+                        "Connection on fd %d is busy\n", fd
+                    );
                     continue;
                 }
 
                 conn->state = RX_CONNECTION_STATE_READING_HEADER;
                 conn->task_num++;
 
-                rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
-                       "No. tasks from fd %d: %ld\n", fd, conn->task_num);
+                rx_log(
+                    LOG_LEVEL_0, LOG_TYPE_INFO, "No. tasks from fd %d: %ld\n",
+                    fd, conn->task_num
+                );
 
             continue_reading:
                 nread = recv(fd, buf, sizeof(buf), 0);
@@ -194,8 +204,10 @@ main(int argc, const char *argv[])
                 }
                 else if (nread == 0)
                 {
-                    rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR,
-                           "Connection closed by peer\n");
+                    rx_log(
+                        LOG_LEVEL_0, LOG_TYPE_ERROR,
+                        "Connection closed by peer\n"
+                    );
 
                     events[i].data.ptr = conn;
                     events[i].events   = EPOLLRDHUP | EPOLLET;
@@ -203,22 +215,27 @@ main(int argc, const char *argv[])
 
                     if (ret == -1)
                     {
-                        sprintf(msg, "epoll_ctl (at %s:%d): %s\n", __FILE__,
-                                __LINE__, strerror(errno));
+                        sprintf(
+                            msg, "epoll_ctl (at %s:%d): %s\n", __FILE__,
+                            __LINE__, strerror(errno)
+                        );
                         goto err_loop;
                     }
 
-                    rx_log(LOG_LEVEL_0, LOG_TYPE_WARN,
-                           "\tSocket %d is scheduled to be terminated\n",
-                           conn->fd);
+                    rx_log(
+                        LOG_LEVEL_0, LOG_TYPE_WARN,
+                        "\tSocket %d is scheduled to be terminated\n", conn->fd
+                    );
 
                     continue;
                 }
 
                 buf[nread] = '\0';
 
-                rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-                       "Received %ld bytes from fd %d\n", nread, fd);
+                rx_log(
+                    LOG_LEVEL_0, LOG_TYPE_DEBUG,
+                    "Received %ld bytes from fd %d\n", nread, fd
+                );
 
                 // Check for buffer overflow while reading headers
                 size_t hdr_bufsize = conn->header_end - conn->buffer_start;
@@ -232,8 +249,10 @@ main(int argc, const char *argv[])
 
                     if (hdr_bufsize + nread >= RX_HEADER_BUFFER_SIZE)
                     {
-                        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR,
-                               "Header buffer overflow\n");
+                        rx_log(
+                            LOG_LEVEL_0, LOG_TYPE_ERROR,
+                            "Header buffer overflow\n"
+                        );
                         conn->state = RX_CONNECTION_STATE_CLOSING;
                         break;
                     }
@@ -246,9 +265,10 @@ main(int argc, const char *argv[])
 
                     if (end_of_header_ptr == NULL)
                     {
-                        rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG,
-                               "No end of header found\n\t%s",
-                               conn->buffer_start);
+                        rx_log(
+                            LOG_LEVEL_0, LOG_TYPE_DEBUG,
+                            "No end of header found\n\t%s", conn->buffer_start
+                        );
                         continue;
                     }
 
@@ -258,7 +278,7 @@ main(int argc, const char *argv[])
                     conn->state          = RX_CONNECTION_STATE_SERVING_REQUEST;
                     conn->request->state = RX_REQUEST_STATE_METHOD;
 
-                    struct rx_task *task = malloc(sizeof(*task));
+                    struct rx_task *task = malloc(sizeof(struct rx_task));
 
                     if (task == NULL)
                     {
@@ -266,10 +286,14 @@ main(int argc, const char *argv[])
                         goto err_loop;
                     }
 
-                    rx_log(LOG_LEVEL_2, LOG_TYPE_DEBUG, "Header Length: %ld\n",
-                           conn->header_end - conn->buffer_start);
-                    rx_log(LOG_LEVEL_2, LOG_TYPE_DEBUG, "Body Length: %ld\n",
-                           conn->buffer_end - conn->body_start);
+                    rx_log(
+                        LOG_LEVEL_2, LOG_TYPE_DEBUG, "Header Length: %ld\n",
+                        conn->header_end - conn->buffer_start
+                    );
+                    rx_log(
+                        LOG_LEVEL_2, LOG_TYPE_DEBUG, "Body Length: %ld\n",
+                        conn->buffer_end - conn->body_start
+                    );
 
                     task->arg    = conn;
                     task->handle = (void *(*)(void *))rx_connection_process;
@@ -298,10 +322,12 @@ main(int argc, const char *argv[])
 
                 if (conn->state == RX_CONNECTION_STATE_CLOSING)
                 {
-                    rx_log(LOG_LEVEL_0, LOG_TYPE_WARN,
-                           "[EPOLLOUT] Closing connection on fd %d\n "
-                           "detected\n",
-                           conn->fd);
+                    rx_log(
+                        LOG_LEVEL_0, LOG_TYPE_WARN,
+                        "[EPOLLOUT] Closing connection on fd %d\n "
+                        "detected\n",
+                        conn->fd
+                    );
 
                     goto close_connection;
                 }
@@ -313,9 +339,10 @@ main(int argc, const char *argv[])
 
                 for (nsend = 0; res->resp_buf_offset < res->resp_buf_size;)
                 {
-                    nsend = send(fd, res->resp_buf + res->resp_buf_offset,
-                                 res->resp_buf_size - res->resp_buf_offset,
-                                 MSG_NOSIGNAL);
+                    nsend = send(
+                        fd, res->resp_buf + res->resp_buf_offset,
+                        res->resp_buf_size - res->resp_buf_offset, MSG_NOSIGNAL
+                    );
 
                     if (nsend == -1)
                     {
@@ -326,8 +353,10 @@ main(int argc, const char *argv[])
                         else
                         {
                             conn->task_num--;
-                            sprintf(msg, "send (at %s:%d): %s\n", __FILE__,
-                                    __LINE__, strerror(errno));
+                            sprintf(
+                                msg, "send (at %s:%d): %s\n", __FILE__,
+                                __LINE__, strerror(errno)
+                            );
                             goto err_loop;
                         }
                     }
@@ -335,8 +364,10 @@ main(int argc, const char *argv[])
                     res->resp_buf_offset += (size_t)nsend;
                 }
 
-                rx_log(LOG_LEVEL_0, LOG_TYPE_DEBUG, "Sent %ld bytes to fd %d\n",
-                       nsend, fd);
+                rx_log(
+                    LOG_LEVEL_0, LOG_TYPE_DEBUG, "Sent %ld bytes to fd %d\n",
+                    nsend, fd
+                );
 
                 conn->task_num--;
                 if (conn->task_num > 0)
@@ -351,8 +382,10 @@ main(int argc, const char *argv[])
 
                 if (ret == -1)
                 {
-                    sprintf(msg, "epoll_ctl (at %s:%d): %s\n", __FILE__,
-                            __LINE__, strerror(errno));
+                    sprintf(
+                        msg, "epoll_ctl (at %s:%d): %s\n", __FILE__, __LINE__,
+                        strerror(errno)
+                    );
                     goto err_loop;
                 }
 
@@ -360,8 +393,10 @@ main(int argc, const char *argv[])
                 free(conn);
                 events[i].data.ptr = NULL;
 
-                rx_log(LOG_LEVEL_0, LOG_TYPE_INFO,
-                       "Connection closed on fd %d\n", fd);
+                rx_log(
+                    LOG_LEVEL_0, LOG_TYPE_INFO, "Connection closed on fd %d\n",
+                    fd
+                );
             }
             else if (events[i].events & (EPOLLERR | EPOLLRDHUP))
             {
@@ -383,13 +418,14 @@ main(int argc, const char *argv[])
                     free(conn);
                     events[i].data.ptr = NULL;
 
-                    rx_log(LOG_LEVEL_0, LOG_TYPE_WARN,
-                           "Connection closed on fd %d with error %s (event "
-                           "code = %ld)\n",
-                           fd,
-                           events[i].events & EPOLLERR ? "EPOLLERR"
-                                                       : "EPOLLRDHUP",
-                           events[i].events);
+                    rx_log(
+                        LOG_LEVEL_0, LOG_TYPE_WARN,
+                        "Connection closed on fd %d with error %s (event "
+                        "code = %ld)\n",
+                        fd,
+                        events[i].events & EPOLLERR ? "EPOLLERR" : "EPOLLRDHUP",
+                        events[i].events
+                    );
                 }
 
                 continue;
@@ -406,8 +442,10 @@ err_loop:
         {
             printf("Failed\n");
             rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, msg);
-            sprintf(msg, "close(event.fd=%d): %s\n", events[i].data.fd,
-                    strerror(errno));
+            sprintf(
+                msg, "close(event.fd=%d): %s\n", events[i].data.fd,
+                strerror(errno)
+            );
             goto err_epoll;
         }
 
@@ -416,8 +454,10 @@ err_loop:
             printf("Failed\n");
             rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, msg);
 
-            rx_log_warn(LOG_LEVEL_0, LOG_TYPE_WARN,
-                        "Closed connection on fd %d\n", events[i].data.fd);
+            rx_log_warn(
+                LOG_LEVEL_0, LOG_TYPE_WARN, "Closed connection on fd %d\n",
+                events[i].data.fd
+            );
         }
     }
 

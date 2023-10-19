@@ -52,9 +52,6 @@ rx_parse_accept_header(struct rx_qlist *accept, const char *buffer, size_t len);
 static double
 rx_parse_q_value(const char *buffer, size_t len);
 
-static int
-rx_request_hdrncmp(const char *str, size_t len, const char *key);
-
 int
 rx_request_init(struct rx_request *request)
 {
@@ -1084,10 +1081,4 @@ rx_parse_q_value(const char *buffer, size_t len)
         ans = 1.0;
 
     return ans;
-}
-
-static int
-rx_request_hdrncmp(const char *str, size_t len, const char *key)
-{
-    return (strlen(key) == len && strncasecmp(key, str, len) == 0);
 }

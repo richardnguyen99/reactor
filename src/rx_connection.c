@@ -200,7 +200,7 @@ rx_connection_process(struct rx_connection *conn)
 
             // Check if the content length matches with the actual body length
             if (conn->request->content_length == 0 ||
-                (conn->buffer_end - conn->body_start !=
+                ((size_t)(conn->buffer_end - conn->body_start) !=
                  conn->request->content_length))
             {
                 rx_route_4xx(

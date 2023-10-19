@@ -141,10 +141,6 @@ rx_route_login_post(struct rx_request *req, struct rx_response *res)
 {
     NOOP(req);
 
-    const char *body = "{\"data\": \"Hello, World!\", \"status\": 200}";
-
-    res->content_type = RX_HTTP_MIME_APPLICATION_JSON;
-
     rx_response_redirect(res, "/");
 
     return NULL;
@@ -247,6 +243,8 @@ rx_route_4xx(struct rx_request *req, struct rx_response *res, int code)
             reason, "The server does not support the media type %s.",
             rx_request_mime_str(req->content_type)
         );
+
+        break;
 
     case RX_HTTP_STATUS_CODE_BAD_REQUEST:
     default:
