@@ -15,6 +15,58 @@ Limitations:
 - [ ] No TLS support
 - [ ] Miss request timeout feature
 - [ ] Miss keep-alive feature
+- [ ] Dockerfile to support cross-platform build
+
+## File structure
+
+As the nature of C project, there are a lot of files and folders that associates
+with the development process. However, for the core components of the server,
+which is the HTTP server part, the following files and folders are the most
+important:
+
+```sh
+.   (root directory)
+├── configure                                 # configure script     (generated)
+├── configure.ac                              # autoconf template
+├── README.md
+├── Makefile.am                               # Automake template
+├── rx_main.c                                 # main program
+├── lib
+│   └── unity                                 # source for unity testing
+├── include                                   # header files
+├── m4/                                       # autoconf macros
+├── pages                                     # HTML pages
+├── public                                    # static files
+├── src                                       # source files
+└── test                                      # unit tests
+```
+
+The core program is in `rx_main.c`, which has the `main()` function. All the
+headers (`*.h`) are in the `include` folder. The source files (`*.c`) are in the
+`src` folder. The unit tests are in the `test` folder.
+
+All C source files include two core headers:
+
+- `rx_config.h`: Contain all the necessary standard C and Linux headers.
+- `rx_core.h`: Contain all the core HTTP, connection and thread headers.
+
+In order to access all core structures and public functions through these two
+headers, `rx_core.h` declares all the structures but the definitions fall into
+the corresponding header files. For example:
+
+```c
+// rx_core.h
+struct rx_response;
+
+#include <rx_response.h>
+
+// rx_response.h
+struct rx_response {
+  // ...
+};
+```
+
+More details about the file structure can be found in the `include/rx_core.h`.
 
 ## Description
 
@@ -100,6 +152,62 @@ producer thread, multiple consumer threads and a shared queue.
     semaphore will make the consumer threads blocked.
 
 ## Development
+
+### Prerequisites
+
+This project is developed and tested on Fedora 38. However, it should work on
+other Linux distributions as well as long as the following dependencies are
+installed:
+
+- `gcc`
+- `make`
+- `epoll(7)`
+- `pthread(7)`
+
+### Build
+
+1. Clone the project:
+
+```sh
+git clone https://github.com/richardnguyen99/reactor.git
+```
+
+2. Generate a `Makefile`:
+
+```sh
+./configure
+```
+
+3. Build the project:
+
+The following script is used to generate and build the project:
+
+```sh
+make
+./reactor
+```
+
+If you want to use the dev build, which is less strict and more verbose, you can
+use the following script:
+
+```sh
+make dev
+./reactor-dev
+```
+
+You can test the dev build with `valgrind` for memory leak detection:
+
+```sh
+valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --track-fds=yes  ./reactor-dev
+```
+
+### Test
+
+The following script is used to run the test suite:
+
+```sh
+make test
+```
 
 ## License
 
