@@ -770,7 +770,6 @@ rx_request_process_header_if_modified_since(
     }
 
     struct tm tm;
-    time_t timestamp;
 
     memset(&tm, 0, sizeof(tm));
     if (strptime(buffer, "%a, %d %b %Y %H:%M:%S %Z", &tm) == NULL)
