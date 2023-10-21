@@ -23,7 +23,6 @@
 
 #include <rx_config.h>
 #include <rx_core.h>
-#include <zlib.h>
 
 #define RX_TASK_TYPE_PROCESS_REQUEST  1
 #define RX_TASK_TYPE_PROCESS_RESPONSE 2
