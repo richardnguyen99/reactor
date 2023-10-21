@@ -211,6 +211,18 @@ struct rx_header_accept_encoding
     float qvalue;
 };
 
+struct rx_header_gmt
+{
+    char raw_gmt[RX_MAX_HEADER_LENGTH];
+    struct tm tm;
+};
+
+struct rx_header_if_modified_since
+{
+    char raw_if_modified_since[RX_MAX_HEADER_LENGTH];
+    struct tm tm;
+};
+
 struct rx_request
 {
     rx_request_state_t state;
@@ -222,6 +234,8 @@ struct rx_request
     struct rx_header_user_agent user_agent;
     struct rx_header_accept_encoding accept_encoding;
     struct rx_qlist accept;
+
+    struct rx_header_gmt *if_modified_since;
 
     size_t content_length;
     rx_http_mime_t content_type;
@@ -279,6 +293,11 @@ rx_request_process_header_accept_encoding(
 int
 rx_request_process_header_accept(
     struct rx_qlist *accept, const char *buffer, size_t len
+);
+
+int
+rx_request_process_header_if_modified_since(
+    struct rx_header_gmt *ims, const char *buffer, size_t len
 );
 
 int

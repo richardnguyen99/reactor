@@ -103,12 +103,12 @@ rx_route_get(struct rx_route *storage, const char *endpoint, size_t ep_len)
 
         memset(&storage->handler, 0, sizeof(struct rx_router_handler));
 
-        storage->handler.get    = rx_route_static;
+        storage->handler.get    = rx_route_static_get;
         storage->handler.post   = NULL;
         storage->handler.put    = NULL;
         storage->handler.patch  = NULL;
         storage->handler.delete = NULL;
-        storage->handler.head   = NULL;
+        storage->handler.head   = rx_route_static_head;
 
         return RX_OK;
     }
@@ -157,7 +157,7 @@ rx_route_about_get(struct rx_request *req, struct rx_response *res)
 }
 
 void *
-rx_route_static(struct rx_request *req, struct rx_response *res)
+rx_route_static_get(struct rx_request *req, struct rx_response *res)
 {
     const size_t resource_len = req->uri.path_end - req->uri.path - 1;
 
@@ -190,6 +190,20 @@ rx_route_static(struct rx_request *req, struct rx_response *res)
         return RX_ERROR_PTR;
     }
 
+    res->last_modified = malloc(sizeof(struct timespec));
+
+    if (res->last_modified == NULL)
+    {
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_ERROR, "(%s) malloc: %s\n", __func__,
+            strerror(errno)
+        );
+
+        return RX_ERROR_PTR;
+    }
+
+    memcpy(res->last_modified, &file.mod, sizeof(struct timespec));
+
     res->is_content_mmapd = 1;
     res->content          = buf;
     res->content_length   = file.size;
@@ -198,6 +212,98 @@ rx_route_static(struct rx_request *req, struct rx_response *res)
     res->status_message =
         (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
 
+    rx_file_close(&file);
+
+    return RX_OK_PTR;
+}
+
+void *
+rx_route_static_head(struct rx_request *req, struct rx_response *res)
+{
+    const size_t resource_len = req->uri.path_end - req->uri.path - 1;
+
+    int ret;
+    struct rx_file file;
+    char resource[resource_len], *buf;
+
+    memset(&file, 0, sizeof(file));
+    memcpy(resource, req->uri.path + 1, req->uri.path_end - req->uri.path);
+    resource[resource_len] = '\0';
+
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_INFO, "[Thread %ld]%4.sStatic file request: %s\n",
+        pthread_self(), "", resource
+    );
+
+    ret = rx_file_open(&file, resource, O_RDONLY);
+
+    if (ret == RX_FATAL_WITH_ERROR)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "Failed to open file\n");
+        return RX_ERROR_PTR;
+    }
+
+    buf = (char *)mmap(NULL, file.size, PROT_READ, MAP_PRIVATE, file.fd, 0);
+
+    if (buf == MAP_FAILED)
+    {
+        rx_log(LOG_LEVEL_0, LOG_TYPE_ERROR, "mmap: %s\n", strerror(errno));
+        return RX_ERROR_PTR;
+    }
+
+    res->is_content_mmapd = 0;
+    res->content          = NULL;
+    res->content_length   = file.size;
+    res->content_type     = file.mime;
+    res->status_code      = RX_HTTP_STATUS_CODE_OK;
+    res->status_message =
+        (char *)rx_response_status_message(RX_HTTP_STATUS_CODE_OK);
+
+    if (req->if_modified_since != NULL)
+    {
+        time_t if_modified_since = mktime(&req->if_modified_since->tm);
+        time_t last_modifed      = file.mod.tv_sec;
+
+        /* Check if the file has been modified since the last request */
+        if (difftime(last_modifed, if_modified_since) <= 0)
+        {
+            res->status_code    = RX_HTTP_STATUS_CODE_NOT_MODIFIED;
+            res->status_message = (char *)rx_response_status_message(
+                RX_HTTP_STATUS_CODE_NOT_MODIFIED
+            );
+
+            rx_log(
+                LOG_LEVEL_0, LOG_TYPE_INFO,
+                "[Thread %ld]%4.sFile not modified since last request\n",
+                pthread_self(), ""
+            );
+        }
+        else
+        {
+            rx_log(
+                LOG_LEVEL_0, LOG_TYPE_INFO,
+                "[Thread %ld]%4.sFile modified since last request\n",
+                pthread_self(), ""
+            );
+        }
+
+        res->is_content_mmapd = 0;
+        res->last_modified    = malloc(sizeof(struct timespec));
+
+        if (res->last_modified == NULL)
+        {
+            rx_log(
+                LOG_LEVEL_0, LOG_TYPE_ERROR, "(%s) malloc: %s\n", __func__,
+                strerror(errno)
+            );
+
+            goto end;
+        }
+
+        memcpy(res->last_modified, &file.mod, sizeof(struct timespec));
+    }
+
+end:
     rx_file_close(&file);
 
     return RX_OK_PTR;

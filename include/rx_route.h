@@ -84,6 +84,9 @@ void *
 rx_route_login_post(struct rx_request *req, struct rx_response *res);
 
 void *
-rx_route_static(struct rx_request *req, struct rx_response *res);
+rx_route_static_get(struct rx_request *req, struct rx_response *res);
+
+void *
+rx_route_static_head(struct rx_request *req, struct rx_response *res);
 
 #endif /* __RX_ROUTE_H__ */

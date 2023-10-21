@@ -77,109 +77,12 @@ rx_response_destroy(struct rx_response *res)
         free(res->location);
         res->location = NULL;
     }
-}
 
-int
-rx_response_check_mime(struct rx_qlist *accept, const char *mime)
-{
-    if (accept == NULL || accept->size == 0 || mime == NULL)
-        return RX_OK;
-
-    struct rx_qlist_node *node;
-    int accept_bits;
-
-    node        = accept->head->next;
-    accept_bits = 0;
-
-    while (node != NULL)
+    if (res->last_modified != NULL)
     {
-        if (strcmp(node->value, "*/*") == 0)
-            return RX_OK;
-
-        if (strcmp(node->value, "text/*") == 0)
-            accept_bits |= RX_RESPONSE_TEXT_ALL;
-
-        if (strcmp(node->value, "image/*") == 0)
-            accept_bits |= RX_RESPONSE_IMAGE_ALL;
-
-        if (strcmp(node->value, mime) == 0)
-        {
-            if (strcmp(node->value, "text/plain") == 0)
-                return RX_OK;
-            else if (strcmp(node->value, "text/html") == 0)
-                return RX_OK;
-            else if (strcmp(node->value, "text/css") == 0)
-                return RX_OK;
-            else if (strcmp(node->value, "text/javascript") == 0)
-                return RX_OK;
-        }
-
-        node = node->next;
+        free(res->last_modified);
+        res->location = NULL;
     }
-
-    if (accept_bits & RX_RESPONSE_TEXT_ALL && strncasecmp("text", mime, 4) == 0)
-        return RX_OK;
-
-    if (accept_bits & RX_RESPONSE_IMAGE_ALL &&
-        strncasecmp("image", mime, 5) == 0)
-        return RX_OK;
-
-    return RX_ERROR;
-}
-
-rx_response_mime_t
-rx_response_get_content_type(struct rx_qlist *accept, const char *mime)
-{
-    int accept_bits = 0;
-    int type_bits   = 0;
-    struct rx_qlist_node *node;
-
-    if (accept == NULL || accept->size == 0)
-        return RX_RESPONSE_TEXT_ALL;
-
-    node = accept->head->next;
-
-    if (strncasecmp("text", mime, 4) == 0)
-        type_bits |= RX_RESPONSE_TEXT_ALL;
-    else if (strncasecmp("image", mime, 5) == 0)
-        type_bits |= RX_RESPONSE_IMAGE_ALL;
-
-    while (node != NULL)
-    {
-        if (strcmp(node->value, "*/*") == 0)
-        {
-            accept_bits |= RX_RESPONSE_ALL;
-        }
-
-        if (strcmp(node->value, "text/*") == 0)
-        {
-            accept_bits |= RX_RESPONSE_TEXT_ALL;
-        }
-
-        if (strcmp(node->value, "image/*") == 0)
-        {
-            accept_bits |= RX_RESPONSE_IMAGE_ALL;
-        }
-
-        if (strcmp(node->value, mime) == 0)
-        {
-            if (strcmp(node->value, "text/plain") == 0)
-                return RX_RESPONSE_TEXT_PLAIN;
-            else if (strcmp(node->value, "text/html") == 0)
-                return RX_RESPONSE_TEXT_HTML;
-            else if (strcmp(node->value, "text/css") == 0)
-                return RX_RESPONSE_TEXT_CSS;
-            else if (strcmp(node->value, "text/javascript") == 0)
-                return RX_RESPONSE_TEXT_JS;
-        }
-
-        node = node->next;
-    }
-
-    if (accept_bits & RX_RESPONSE_TEXT_ALL)
-        return RX_RESPONSE_TEXT_ALL;
-
-    return RX_RESPONSE_NONE;
 }
 
 const char *
@@ -225,6 +128,8 @@ rx_response_status_message(rx_http_status_t status_code)
     {
     case RX_HTTP_STATUS_CODE_OK:
         return RX_HTTP_STATUS_MSG_OK;
+    case RX_HTTP_STATUS_CODE_NOT_MODIFIED:
+        return RX_HTTP_STATUS_MSG_NOT_MODIFIED;
     case RX_HTTP_STATUS_CODE_BAD_REQUEST:
         return RX_HTTP_STATUS_MSG_BAD_REQUEST;
     case RX_HTTP_STATUS_CODE_NOT_FOUND:
@@ -379,7 +284,7 @@ rx_response_construct(struct rx_response *res)
     pthread_t tid;
     time_t now;
     struct tm *tm;
-    char date_buf[128], extra_header_buf[1024], *buf, *full_buf;
+    char date_buf[128], extra_header_buf[2048], *buf, *full_buf;
     ssize_t buf_len, ehb_offset;
 
     memset(extra_header_buf, '\0', sizeof(extra_header_buf));
@@ -398,9 +303,24 @@ rx_response_construct(struct rx_response *res)
 
     if (res->location)
     {
-        ehb_offset = snprintf(
+        ehb_offset += snprintf(
             extra_header_buf + ehb_offset, 1024 - ehb_offset,
             "Location: %s\r\n", res->location
+        );
+    }
+
+    if (res->last_modified)
+    {
+        char last_modified[128];
+        time_t secs = res->last_modified->tv_sec;
+        struct tm lmtm;
+
+        gmtime_r(&secs, &lmtm);
+        strftime(last_modified, sizeof(last_modified), date_format, &lmtm);
+
+        ehb_offset += snprintf(
+            extra_header_buf + ehb_offset, 1024 - ehb_offset,
+            "Last-Modified: %s\r\n", last_modified
         );
     }
 
@@ -444,9 +364,13 @@ rx_response_construct(struct rx_response *res)
 
     // Copy content into full buffer. The content should be available from
     // router at this point.
-    memcpy(full_buf + buf_len, res->content, res->content_length);
-    full_buf[buf_len + res->content_length] = '\0';
-    buf_len += res->content_length;
+
+    if (res->content != NULL)
+    {
+        memcpy(full_buf + buf_len, res->content, res->content_length);
+        full_buf[buf_len + res->content_length] = '\0';
+        buf_len += res->content_length;
+    }
 
     free(buf);
 

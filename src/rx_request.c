@@ -68,6 +68,8 @@ rx_request_init(struct rx_request *request)
     rx_memset_header_accept_encoding(&request->accept_encoding);
     rx_memset_header_accept(&request->accept);
 
+    request->if_modified_since = NULL;
+
     request->state = RX_REQUEST_STATE_READY;
 
     return RX_OK;
@@ -77,6 +79,15 @@ void
 rx_request_destroy(struct rx_request *request)
 {
     rx_qlist_destroy(&request->accept);
+
+    if (request->if_modified_since != NULL)
+    {
+        free(request->if_modified_since);
+        request->if_modified_since = NULL;
+    }
+
+    /* content does not need to be free'd as it's a pointer to the temporary
+       buffer allocated by the connection. */
 }
 
 int
@@ -205,6 +216,31 @@ rx_request_process_headers(
         {
             ret = rx_request_process_header_accept_encoding(
                 &request->accept_encoding, value_begin,
+                value_end - value_begin);
+
+            if (ret != RX_OK)
+            {
+                goto end;
+            }
+        }
+        else if (strlen("If-Modified-Since") == (key_end - key_begin) 
+                 && strncasecmp("If-Modified-Since", 
+                                key_begin, 
+                                key_end - key_begin) == 0)
+        {
+            request->if_modified_since = malloc(sizeof(struct rx_header_gmt));
+            
+            if (request->if_modified_since == NULL)
+            {
+                ret = RX_ERROR;
+                goto end;
+            }
+
+            memset(request->if_modified_since, 0, sizeof(struct rx_header_gmt));
+
+
+            ret = rx_request_process_header_if_modified_since(
+                request->if_modified_since, value_begin,
                 value_end - value_begin);
 
             if (ret != RX_OK)
@@ -709,6 +745,48 @@ rx_request_process_header_accept(
 
     if (comma == NULL && begin != end)
         rx_parse_accept_header(accept, begin, end - begin);
+
+    return RX_OK;
+}
+
+int
+rx_request_process_header_if_modified_since(
+    struct rx_header_gmt *ims, const char *buffer, size_t len
+)
+{
+#if defined(RX_DEBUG)
+    pthread_t tid = pthread_self();
+
+    rx_log(
+        LOG_LEVEL_0, LOG_TYPE_DEBUG,
+        "[Thread %ld]%4.sIf-Modified-Since header: %.*s\n", tid, "", (int)len,
+        buffer
+    );
+#endif
+
+    if (buffer == NULL || len == 0)
+    {
+        return RX_ERROR;
+    }
+
+    struct tm tm;
+    time_t timestamp;
+
+    memset(&tm, 0, sizeof(tm));
+    if (strptime(buffer, "%a, %d %b %Y %H:%M:%S %Z", &tm) == NULL)
+    {
+#if defined(RX_DEBUG)
+        rx_log(
+            LOG_LEVEL_0, LOG_TYPE_DEBUG,
+            "[Thread %ld]%8.sInvalid date format\n", tid, ""
+        );
+#endif
+
+        return RX_ERROR;
+    }
+
+    memcpy(&ims->tm, &tm, sizeof(struct tm));
+    memcpy(ims->raw_gmt, buffer, len);
 
     return RX_OK;
 }

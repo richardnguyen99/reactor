@@ -290,8 +290,9 @@ rx_connection_process(struct rx_connection *conn)
             switch (conn->request->content_type)
             {
             case RX_HTTP_MIME_APPLICATION_XFORM:
-            case RX_HTTP_MIME_APPLICATION_JSON:
+                conn->request->content = conn->body_start;
                 break;
+
             default:
                 rx_route_4xx(
                     conn->request, conn->response,

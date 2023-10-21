@@ -38,6 +38,7 @@ struct rx_file
     rx_http_mime_t mime;
 
     size_t size;
+    struct timespec mod;
 };
 
 int

@@ -65,6 +65,9 @@ rx_file_open(struct rx_file *fstruct, const char *path, int flags)
     fstruct->mime = rx_file_get_mime(fstruct->ext);
     fstruct->size = st.st_size;
 
+    memset(&fstruct->mod, 0, sizeof(struct timespec));
+    memcpy(&fstruct->mod, &st.st_mtim, sizeof(struct timespec));
+
     return RX_OK;
 }
 

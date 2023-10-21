@@ -27,27 +27,13 @@
 #include <rx_config.h>
 #include <rx_core.h>
 
-enum RX_RESPONSE_SUPPORTED_MIME
-{
-    RX_RESPONSE_NONE       = 0x000000000,
-    RX_RESPONSE_ALL        = 0x000000010,
-    RX_RESPONSE_TEXT_ALL   = 0x000000008,
-    RX_RESPONSE_TEXT_PLAIN = 0x000000009,
-    RX_RESPONSE_TEXT_HTML  = 0x00000000A,
-    RX_RESPONSE_TEXT_CSS   = 0x00000000B,
-    RX_RESPONSE_TEXT_JS    = 0x00000000C,
-    RX_RESPONSE_IMAGE_ALL  = 0x000000020,
-    RX_RESPONSE_IMAGE_ICO  = 0x000000011,
-};
-
-typedef enum RX_RESPONSE_SUPPORTED_MIME rx_response_mime_t;
-
 struct rx_response
 {
     rx_http_status_t status_code;
     char *status_message;
 
     char *location;
+    struct timespec *last_modified;
 
     int is_content_mmapd;
     char *content;
@@ -65,15 +51,6 @@ rx_response_init(struct rx_response *response);
 
 void
 rx_response_destroy(struct rx_response *response);
-
-int
-rx_response_check_mime(struct rx_qlist *accept, const char *mime);
-
-rx_response_mime_t
-rx_response_get_content_type(struct rx_qlist *accept, const char *ext);
-
-const char *
-rx_response_mime_to_string(rx_http_mime_t mime);
 
 char *
 rx_response_status_message(rx_http_status_t status_code);

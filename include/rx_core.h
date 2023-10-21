@@ -62,6 +62,7 @@ enum rx_http_status_enum
     RX_HTTP_STATUS_CODE_UNSET                  = 0,
     RX_HTTP_STATUS_CODE_OK                     = 200,
     RX_HTTP_STATUS_CODE_FOUND                  = 302,
+    RX_HTTP_STATUS_CODE_NOT_MODIFIED           = 304,
     RX_HTTP_STATUS_CODE_BAD_REQUEST            = 400,
     RX_HTTP_STATUS_CODE_NOT_FOUND              = 404,
     RX_HTTP_STATUS_CODE_METHOD_NOT_ALLOWED     = 405,
@@ -72,6 +73,7 @@ enum rx_http_status_enum
 #define RX_HTTP_STATUS_MSG_UNSET                  "Unset"
 #define RX_HTTP_STATUS_MSG_OK                     "OK"
 #define RX_HTTP_STATUS_MSG_FOUND                  "Found"
+#define RX_HTTP_STATUS_MSG_NOT_MODIFIED           "Not Modified"
 #define RX_HTTP_STATUS_MSG_BAD_REQUEST            "Bad Request"
 #define RX_HTTP_STATUS_MSG_NOT_FOUND              "Not Found"
 #define RX_HTTP_STATUS_MSG_METHOD_NOT_ALLOWED     "Method Not Allowed"
