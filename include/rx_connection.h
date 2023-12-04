@@ -83,7 +83,7 @@ struct rx_connection
 
     /* Buffer to store HTTP Header part
 
-        If the buffer exceeds (RX_HDR_MAXSIZE - 1) bytes, which is 8911,
+        If the buffer exceeds (RX_HDR_MAXSIZE) bytes, which is 8912,
         the server will return 413 (Request Entity Too Large). */
     char buffer_start[RX_HEADER_BUFFER_SIZE + RX_BODY_BUFFER_SIZE];
 

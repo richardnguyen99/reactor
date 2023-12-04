@@ -15,7 +15,7 @@ librx_la_SOURCES =      \
 
 librx_la_CFLAGS = \
     -I$(top_srcdir)/include \
-    -Wall -Wextra -Werror -pedantic -std=c99 -fPIC -O3 
+    -Wall -Wextra -Werror -pedantic -std=c11 -fPIC -O3 
 
 # if BUILD_DEV
 # lib_LTLIBRARIES += librx-dev.la

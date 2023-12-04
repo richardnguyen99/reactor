@@ -57,6 +57,11 @@ typedef struct rx_string rx_str_t;
 #define RX_ALLOC_FAILED_PTR ((void *)RX_ALLOC_FAILED)
 #define RX_AGAIN_PTR        ((void *)RX_AGAIN)
 
+/* List of HTTP status codes that are supported by the server
+
+   The status codes are used to indicate the status of the request and are sent
+   back to the client in the response.
+ */
 enum rx_http_status_enum
 {
     RX_HTTP_STATUS_CODE_UNSET                  = 0,
@@ -70,6 +75,12 @@ enum rx_http_status_enum
     RX_HTTP_STATUS_CODE_INTERNAL_SERVER_ERROR  = 500,
 };
 
+/* List of HTTP status messages associated with the enum `rx_http_status_enum`
+
+   The status messages are used to represent the status indicated in the
+   response in a human-readable format.
+ */
+
 #define RX_HTTP_STATUS_MSG_UNSET                  "Unset"
 #define RX_HTTP_STATUS_MSG_OK                     "OK"
 #define RX_HTTP_STATUS_MSG_FOUND                  "Found"
@@ -82,6 +93,23 @@ enum rx_http_status_enum
 
 /* Should be used when parsing requests or reading files for fast comparison. */
 
+/* List of HTTP support media types (MIME)
+
+   With the support of enum, the server can check and compare the medie type
+   efficiently by comparing two integers instead of two strings.
+
+   The MIME types are masked with binary flags. For example:
+
+   ```c
+   if (mime & RX_HTTP_MIME_TEXT_ALL == RX_HTTP_MIME_TEXT_ALL) {...}
+   ```
+
+   This will check if the client accepts all text media types.
+
+   TEXT_ALL:    00001000
+   TEXT_PLAIN:  00001001
+
+ */
 enum rx_http_mime_enum
 {
     RX_HTTP_MIME_NONE              = 0x000000000,

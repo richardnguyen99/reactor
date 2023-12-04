@@ -88,7 +88,7 @@ AC_CONFIG_FILES([
 ])
 
 # Output the configuration summary
-COMMON_CFLAGS="-Werror -std=c99"
+COMMON_CFLAGS="-Werror -std=c11"
 AC_SUBST(COMMON_CFLAGS)
 
 AC_OUTPUT

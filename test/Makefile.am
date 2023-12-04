@@ -16,7 +16,7 @@ rx_test_SOURCES = \
 rx_test_CFLAGS =                                                               \
     -I$(top_srcdir)/include                                                    \
     -I$(top_srcdir)/lib                                                        \
-    -Wall -Wextra -Werror -Wpedantic
+    -Wall -Wextra -Werror -Wpedantic -std=c11
 
 rx_test_LDFLAGS = \
     -L$(top_srcdir)/lib/unity \

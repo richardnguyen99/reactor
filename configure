@@ -13484,7 +13484,7 @@ ac_config_files="$ac_config_files Makefile src/Makefile lib/Makefile lib/unity/M
 
 
 # Output the configuration summary
-COMMON_CFLAGS="-Werror -std=c99"
+COMMON_CFLAGS="-Werror -std=c11"
 
 
 cat >confcache <<\_ACEOF
