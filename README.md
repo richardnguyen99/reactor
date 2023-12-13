@@ -1,5 +1,7 @@
 # Reactor
 
+[Screencast.webm](https://github.com/richardnguyen99/reactor/assets/58826215/632d2af5-f029-417b-b8e5-aed12e0fca0a)
+
 Reactor is an HTTP server written in pure C:
 
 - [x] **Experimental** and **Educational** purpose only
